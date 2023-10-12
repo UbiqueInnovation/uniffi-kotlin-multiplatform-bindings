@@ -41,11 +41,15 @@ actual fun RustBuffer.free() =
 actual fun allocRustBuffer(buffer: Buffer): RustBuffer =
     rustCall { status ->
         val size = buffer.size
+        var readPosition = 0L
         UniFFILib.{{ ci.ffi_rustbuffer_alloc().name() }}(size.toInt(), status).also { rustBuffer: RustBuffer ->
             val data = rustBuffer.data
                 ?: throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=${size})")
             rustBuffer.writeField("len", size.toInt())
-            buffer.read(data.getByteBuffer(0, size))
+            // Loop until the buffer is completed read, okio reads max 8192 bytes
+            while (readPosition < size) {
+                readPosition += buffer.read(data.getByteBuffer(readPosition, size - readPosition))
+            }
         }
     }
 
