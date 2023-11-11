@@ -5,12 +5,9 @@
 
 package {{ config.package_name() }}
 
-//import kotlin.coroutines.cancellation.CancellationException
-//import kotlin.coroutines.resumeWithException
-//import kotlin.coroutines.suspendCoroutine
-//import kotlinx.coroutines.coroutineScope
-
 import okio.Buffer
+import kotlinx.coroutines.CancellableContinuation
+import kotlin.coroutines.resume
 
 {%- for req in self.imports() %}
 {{ req.render() }}

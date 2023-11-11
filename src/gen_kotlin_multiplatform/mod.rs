@@ -284,21 +284,13 @@ impl KotlinCodeOracle {
             FfiType::RustBuffer(_) => "RustBuffer".to_string(),
             FfiType::ForeignBytes => "ForeignBytes".to_string(),
             FfiType::ForeignCallback => "ForeignCallback".to_string(),
-
-            // FfiType::ForeignExecutorHandle => "ULong".to_string(),
-            // FfiType::ForeignExecutorCallback => "UniFfiForeignExecutorCallback".to_string(),
-            // FfiType::FutureCallback { return_type } => {
-            //     format!("UniFfiFutureCallback{}", return_type.canonical_name())
-            // }
-            // FfiType::FutureCallbackData => "Pointer".to_string(),
-
-            FfiType::ForeignExecutorHandle => "Pointer".to_string(),
+            FfiType::ForeignExecutorHandle => "ULong".to_string(),
             FfiType::ForeignExecutorCallback => "UniFfiForeignExecutorCallback".to_string(),
             FfiType::RustFutureHandle => "Pointer".to_string(),
             FfiType::RustFutureContinuationCallback => {
-                "Pointer".to_string()
+                "UniFfiRustFutureContinuationCallbackType".to_string()
             }
-            FfiType::RustFutureContinuationData => "Pointer".to_string(),
+            FfiType::RustFutureContinuationData => "ULong".to_string(),
         }
     }
 
@@ -318,20 +310,11 @@ impl KotlinCodeOracle {
             FfiType::RustBuffer(_) => "RustBuffer".into(),
             FfiType::ForeignBytes => "ForeignBytes".into(),
             FfiType::ForeignCallback => "ForeignCallback  _Nonnull".into(),
-
-            // FfiType::ForeignExecutorHandle => "size_t".into(),
-            // FfiType::ForeignExecutorCallback => "UniFfiForeignExecutorCallback _Nonnull".into(),
-            // FfiType::FutureCallback { return_type } => format!(
-            //     "UniFfiFutureCallback{} _Nonnull",
-            //     return_type.canonical_name()
-            // ),
-            // FfiType::FutureCallbackData => "void* _Nonnull".into(),
-
-            FfiType::ForeignExecutorHandle => "void*".into(),
+            FfiType::ForeignExecutorHandle => "size_t".into(),
             FfiType::ForeignExecutorCallback => "UniFfiForeignExecutorCallback _Nonnull".into(),
             FfiType::RustFutureHandle => "void*".into(),
-            FfiType::RustFutureContinuationCallback => { "void*".into() }
-            FfiType::RustFutureContinuationData => "void* _Nonnull".to_string(),
+            FfiType::RustFutureContinuationCallback => { "UniFfiRustFutureContinuation _Nonnull".into() }
+            FfiType::RustFutureContinuationData => "size_t".to_string(),
         }
     }
 }
@@ -386,7 +369,7 @@ impl<T: AsType> AsCodeType for T {
 pub mod filters {
     pub use uniffi_bindgen::backend::filters::*;
     use uniffi_bindgen::backend::Literal;
-    use uniffi_bindgen::interface::ResultType;
+    use uniffi_bindgen::interface::{ExternalKind, ResultType};
 
     use super::*;
 
@@ -511,6 +494,47 @@ pub mod filters {
     /// `Error` with `Exception`.
     pub fn exception_name(nm: &str) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.error_name(nm))
+    }
+
+    pub fn async_poll(
+        callable: impl Callable,
+        ci: &ComponentInterface,
+    ) -> Result<String, askama::Error> {
+        let ffi_func = callable.ffi_rust_future_poll(ci);
+        Ok(format!(
+            "{{ future, callback, continuation -> UniFFILib.{ffi_func}(future, callback, continuation) }}"
+        ))
+    }
+
+    pub fn async_complete(
+        callable: impl Callable,
+        ci: &ComponentInterface,
+    ) -> Result<String, askama::Error> {
+        let ffi_func = callable.ffi_rust_future_complete(ci);
+        let call = format!("UniFFILib.{ffi_func}(future, continuation)");
+        let call = match callable.return_type() {
+            Some(Type::External {
+                     kind: ExternalKind::DataClass,
+                     name,
+                     ..
+                 }) => {
+                // Need to convert the RustBuffer from our package to the RustBuffer of the external package
+                let suffix = KotlinCodeOracle.class_name(&name);
+                format!("{call}.let {{ RustBuffer{suffix}.create(it.capacity, it.len, it.data) }}")
+            }
+            _ => call,
+        };
+        Ok(format!("{{ future, continuation -> {call} }}"))
+    }
+
+    pub fn async_free(
+        callable: impl Callable,
+        ci: &ComponentInterface,
+    ) -> Result<String, askama::Error> {
+        let ffi_func = callable.ffi_rust_future_free(ci);
+        Ok(format!(
+            "{{ future -> UniFFILib.{ffi_func}(future) }}"
+        ))
     }
 
     /// Remove the "`" chars we put around function/variable names

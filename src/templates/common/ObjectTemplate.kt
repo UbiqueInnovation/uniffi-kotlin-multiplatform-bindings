@@ -46,40 +46,31 @@ class {{ type_name }}(
     {%- if meth.is_async() %}
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun {{ meth.name()|fn_name }}({%- call kt::arg_list_decl(meth) -%}){% match meth.return_type() %}{% when Some with (return_type) %} : {{ return_type|type_name }}{% when None %}{%- endmatch %} {
-        // Create a new `CoroutineScope` for this operation, suspend the coroutine, and call the
-        // scaffolding function, passing it one of the callback handlers from `AsyncTypes.kt`.
-        //
-        // Make sure to retain a reference to the callback handler to ensure that it's not GCed before
-        // it's invoked
-        var callbackDataHolder: {{ func.result_type().borrow()|future_callback_handler }}Data? = null
-        try {
-            return coroutineScope {
-                val scope = this
-                return@coroutineScope suspendCoroutine { continuation ->
-                    try {
-                        val callbackData = create{{ meth.result_type().borrow()|future_callback_handler }}Data(continuation)
-                        callbackDataHolder = callbackData
-                        callWithPointer { thisPtr ->
-                            rustCall { status ->
-                                UniFFILib.{{ meth.ffi_func().name() }}(
-                                        thisPtr,
-                                // FIXME create macro that handles the comma
-                                {% call kt::_arg_list_ffi_call(meth) %}{% if func.arguments().len() > 0 %},{% endif %}
-                                FfiConverterForeignExecutor.lower(scope),
-                                callbackData.resultHandler,
-                                callbackData.continuationRef,
-                                status,
-                                )
-                            }
-                        }
-                    } catch (e: Exception) {
-                        continuation.resumeWithException(e)
-                    }
-                }
-            }
-        } finally {
-            callbackDataHolder?.dropHandle?.dropIt()
-        }
+        return uniffiRustCallAsync(
+            callWithPointer { thisPtr ->
+                UniFFILib.{{ meth.ffi_func().name() }}(
+                    thisPtr,
+                    {% call kt::arg_list_lowered(meth) %}
+                )
+            },
+            {{ meth|async_poll(ci) }},
+            {{ meth|async_complete(ci) }},
+            {{ meth|async_free(ci) }},
+            // lift function
+            {%- match meth.return_type() %}
+            {%- when Some(return_type) %}
+            { {{ return_type|lift_fn }}(it) },
+            {%- when None %}
+            { Unit },
+            {% endmatch %}
+            // Error FFI converter
+            {%- match meth.throws_type() %}
+            {%- when Some(e) %}
+            {{ e|error_type_name }}.ErrorHandler,
+            {%- when None %}
+                    NullCallStatusErrorHandler,
+            {%- endmatch %}
+        )
     }
     {%- else -%}
     {%- match meth.return_type() -%}

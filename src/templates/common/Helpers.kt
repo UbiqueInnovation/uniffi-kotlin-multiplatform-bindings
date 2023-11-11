@@ -6,9 +6,9 @@
 @Suppress("NO_ACTUAL_FOR_EXPECT")
 expect class RustCallStatus
 
-internal const val RUST_CALL_STATUS_SUCCESS : Byte = 0
-internal const val RUST_CALL_STATUS_ERROR : Byte = 1
-internal const val RUST_CALL_STATUS_PANIC : Byte = 2
+internal const val RUST_CALL_STATUS_SUCCESS: Byte = 0
+internal const val RUST_CALL_STATUS_ERROR: Byte = 1
+internal const val RUST_CALL_STATUS_PANIC: Byte = 2
 
 fun RustCallStatus.isSuccess(): Boolean = statusCode == RUST_CALL_STATUS_SUCCESS
 
@@ -38,7 +38,10 @@ interface CallStatusErrorHandler<E> {
 // synchronize itself
 
 // Call a rust function that returns a Result<>.  Pass in the Error class companion that corresponds to the Err
-internal inline fun <U, E: Exception> rustCallWithError(errorHandler: CallStatusErrorHandler<E>, crossinline callback: (RustCallStatus) -> U): U =
+internal inline fun <U, E : Exception> rustCallWithError(
+    errorHandler: CallStatusErrorHandler<E>,
+    crossinline callback: (RustCallStatus) -> U,
+): U =
     withRustCallStatus { status ->
         val return_value = callback(status)
         checkCallStatus(errorHandler, status)
@@ -46,7 +49,7 @@ internal inline fun <U, E: Exception> rustCallWithError(errorHandler: CallStatus
     }
 
 // Check RustCallStatus and throw an error if the call wasn't successful
-internal fun<E: Exception> checkCallStatus(errorHandler: CallStatusErrorHandler<E>, status: RustCallStatus) {
+internal fun <E : Exception> checkCallStatus(errorHandler: CallStatusErrorHandler<E>, status: RustCallStatus) {
     if (status.isSuccess()) {
         return
     } else if (status.isError()) {
@@ -89,14 +92,23 @@ internal inline fun <U> rustCall(crossinline callback: (RustCallStatus) -> U): U
 // Rust when it needs an opaque pointer.
 //
 // TODO: refactor callbacks to use this class
-expect class UniFfiHandleMap<T: Any>() {
+expect class UniFfiHandleMap<T : Any>() {
     val size: Int
     fun insert(obj: T): ULong
     fun get(handle: ULong): T?
-    fun remove(handle: ULong)
+    fun remove(handle: ULong): T?
 }
 
 // FFI type for Rust future continuations
-//internal interface UniFffiRustFutureContinuationCallbackType : com.sun.jna.Callback {
-//    fun callback(continuationHandle: USize, pollResult: Short);
-//}
+
+private val uniffiContinuationHandleMap = UniFfiHandleMap<CancellableContinuation<Short>>()
+
+internal fun resumeContinutation(continuationHandle: ULong, pollResult: Short) {
+    uniffiContinuationHandleMap.remove(continuationHandle)?.resume(pollResult)
+}
+
+// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
+@Suppress("NO_ACTUAL_FOR_EXPECT")
+internal expect class UniFfiRustFutureContinuationCallbackType
+
+internal expect fun createUniFfiRustFutureContinuationCallback(): UniFfiRustFutureContinuationCallbackType

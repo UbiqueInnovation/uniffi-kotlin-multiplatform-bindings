@@ -45,8 +45,8 @@ actual class UniFfiHandleMap<T : Any> {
         return synchronizedMapAccess { map.get(handle) }
     }
 
-    actual fun remove(handle: ULong) {
-        synchronizedMapAccess { map.remove(handle) }
+    actual fun remove(handle: ULong): T? {
+        return synchronizedMapAccess { map.remove(handle) }
     }
 
     fun <T> synchronizedMapAccess(block: () -> T): T {
@@ -58,3 +58,14 @@ actual class UniFfiHandleMap<T : Any> {
         }
     }
 }
+
+// FFI type for Rust future continuations
+
+// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
+@Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
+internal actual typealias UniFfiRustFutureContinuationCallbackType = CPointer<CFunction<(ULong, Short) -> Unit>>
+
+internal actual fun createUniFfiRustFutureContinuationCallback(): UniFfiRustFutureContinuationCallbackType =
+    staticCFunction<ULong, Short, Unit> { continuationHandle: ULong, pollResult: Short ->
+        resumeContinutation(continuationHandle, pollResult)
+    }

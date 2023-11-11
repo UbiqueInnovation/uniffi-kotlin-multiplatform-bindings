@@ -18,9 +18,7 @@ object {{ ffi_converter_name }}: FfiConverterCallbackInterface<{{ type_name }}>(
     private val foreignCallback = {{ foreign_callback_name }}.toForeignCallback()
 
     override fun register(lib: UniFFILib) {
-        rustCall { status ->
-            lib.{{ cbi.ffi_init_callback().name() }}(foreignCallback, status)
-        }
+        lib.{{ cbi.ffi_init_callback().name() }}(foreignCallback)
     }
 }
 

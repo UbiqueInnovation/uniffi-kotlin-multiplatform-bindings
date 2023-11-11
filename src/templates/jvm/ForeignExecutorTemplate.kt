@@ -1,5 +1,3 @@
-{{ self.add_import("com.sun.jna.Callback") }}
-{{ self.add_import("com.sun.jna.Pointer") }}
 {{ self.add_import("kotlinx.coroutines.delay") }}
 {{ self.add_import("kotlinx.coroutines.launch") }}
 

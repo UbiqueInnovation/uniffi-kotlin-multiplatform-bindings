@@ -21,8 +21,9 @@ actual fun <T> withRustCallStatus(block: (RustCallStatus) -> T): T {
 @Suppress("NO_ACTUAL_FOR_EXPECT")
 actual open class RustCallStatusByValue : RustCallStatus(), ByValue
 
-actual class UniFfiHandleMap<T: Any> {
+actual class UniFfiHandleMap<T : Any> {
     private val map = ConcurrentHashMap<ULong, T>()
+
     // Use AtomicInteger for our counter, since we may be on a 32-bit system.  4 billion possible
     // values seems like enough. If somehow we generate 4 billion handles, then this will wrap
     // around back to zero and we can assume the first handle generated will have been dropped by
@@ -42,7 +43,18 @@ actual class UniFfiHandleMap<T: Any> {
         return map.get(handle)
     }
 
-    actual fun remove(handle: ULong) {
-        map.remove(handle)
+    actual fun remove(handle: ULong): T? {
+        return map.remove(handle)
     }
 }
+
+// FFI type for Rust future continuations
+
+internal class UniFfiRustFutureContinuationCallbackImpl() : Callback {
+    fun invoke(continuationHandle: ULong, pollResult: Short) = resumeContinutation(continuationHandle, pollResult)
+}
+
+internal actual typealias UniFfiRustFutureContinuationCallbackType = UniFfiRustFutureContinuationCallbackImpl
+
+internal actual fun createUniFfiRustFutureContinuationCallback(): UniFfiRustFutureContinuationCallbackType =
+    UniFfiRustFutureContinuationCallbackImpl()

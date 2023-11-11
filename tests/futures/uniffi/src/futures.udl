@@ -1,0 +1,4 @@
+namespace futures {
+    [Async]
+    boolean always_ready();
+};

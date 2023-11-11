@@ -1,5 +1,3 @@
-{{- self.add_import("com.sun.jna.Callback") }}
-
 class NativeCallback(
     private val invokeImpl: (
         handle: Handle,
