@@ -350,4 +350,5 @@ impl ThreadsafeCounter {
     }
 }
 
-include!(concat!(env!("OUT_DIR"), "/coverall.uniffi.rs"));
+uniffi::include_scaffolding!("coverall");
+uniffi_reexport_scaffolding!();

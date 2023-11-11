@@ -1,12 +1,13 @@
 use std::borrow::Borrow;
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::collections::{BTreeSet, HashSet};
 
 use anyhow::{Context, Result};
 use askama::Template;
 use heck::{ToLowerCamelCase, ToShoutySnakeCase, ToUpperCamelCase};
-use uniffi_bindgen::backend::{CodeType};
-use uniffi_bindgen::interface::{Callable, AsType, CallbackInterface, Enum, FfiType, Object, ObjectImpl, Record, Type};
+use uniffi_bindgen::backend::CodeType;
 use uniffi_bindgen::ComponentInterface;
+use uniffi_bindgen::interface::{AsType, Callable, FfiType, Type};
 
 use crate::{Config, KotlinMultiplatformBindings};
 
@@ -22,18 +23,158 @@ mod object;
 mod primitives;
 mod record;
 
-macro_rules! kotlin_template {
+pub fn generate_bindings(
+    config: &Config,
+    ci: &ComponentInterface,
+) -> Result<KotlinMultiplatformBindings> {
+    let common = KotlinCommonWrapper::new(config.clone(), ci)
+        .render()
+        .context("failed to render Kotlin/Common bindings")?;
+
+    let jvm = KotlinJvmWrapper::new(config.clone(), ci)
+        .render()
+        .context("failed to render Kotlin/Jvm bindings")?;
+
+    let native = KotlinNativeWrapper::new(config.clone(), ci)
+        .render()
+        .context("failed to render Kotlin/Native bindings")?;
+
+    let header = KotlinHeaderWrapper::new(config.clone(), ci)
+        .render()
+        .context("failed to render Kotlin/Native header")?;
+
+    Ok(KotlinMultiplatformBindings {
+        common,
+        jvm,
+        native,
+        header,
+    })
+}
+
+/// A struct to record a Kotlin import statement.
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum ImportRequirement {
+    /// The name we are importing.
+    Import { name: String },
+    /// Import the name with the specified local name.
+    ImportAs { name: String, as_name: String },
+}
+
+impl ImportRequirement {
+    /// Render the Kotlin import statement.
+    fn render(&self) -> String {
+        match &self {
+            ImportRequirement::Import { name } => format!("import {name}"),
+            ImportRequirement::ImportAs { name, as_name } => {
+                format!("import {name} as {as_name}")
+            }
+        }
+    }
+}
+
+macro_rules! kotlin_type_renderer_template {
     ($KotlinTemplate:ident, $source_file:literal) => {
+        /// Renders Kotlin helper code for all types
+        ///
+        /// This template is a bit different than others in that it stores internal state from the render
+        /// process.  Make sure to only call `render()` once.
         #[derive(Template)]
         #[template(syntax = "kt", escape = "none", path = $source_file)]
-        pub struct $KotlinTemplate<'ci> {
-            config: Config,
-            ci: &'ci ComponentInterface,
+        pub struct $KotlinTemplate<'a> {
+            #[allow(dead_code)]
+            config: &'a Config,
+            ci: &'a ComponentInterface,
+            // Track included modules for the `include_once()` macro
+            include_once_names: RefCell<HashSet<String>>,
+            // Track imports added with the `add_import()` macro
+            imports: RefCell<BTreeSet<ImportRequirement>>,
         }
 
-        impl<'ci> $KotlinTemplate<'ci> {
+        impl<'a> $KotlinTemplate<'a> {
+            fn new(config: &'a Config, ci: &'a ComponentInterface) -> Self {
+                Self {
+                    config,
+                    ci,
+                    include_once_names: RefCell::new(HashSet::new()),
+                    imports: RefCell::new(BTreeSet::new()),
+                }
+            }
+
+            // Get the package name for an external type
+            #[allow(dead_code)]
+            fn external_type_package_name(&self, module_path: &str, namespace: &str) -> String {
+                // config overrides are keyed by the crate name, default fallback is the namespace.
+                let crate_name = module_path.split("::").next().unwrap();
+                match self.config.external_packages.get(crate_name) {
+                    Some(name) => name.clone(),
+                    // unreachable in library mode - all deps are in our config with correct namespace.
+                    None => format!("uniffi.{namespace}"),
+                }
+            }
+
+            // The following methods are used by the `Types.kt` macros.
+
+            // Helper for the including a template, but only once.
+            //
+            // The first time this is called with a name it will return true, indicating that we should
+            // include the template.  Subsequent calls will return false.
+            fn include_once_check(&self, name: &str) -> bool {
+                self.include_once_names
+                    .borrow_mut()
+                    .insert(name.to_string())
+            }
+
+            // Helper to add an import statement
+            //
+            // Call this inside your template to cause an import statement to be added at the top of the
+            // file.  Imports will be sorted and de-deuped.
+            //
+            // Returns an empty string so that it can be used inside an askama `{{ }}` block.
+            #[allow(dead_code)]
+            fn add_import(&self, name: &str) -> &str {
+                self.imports.borrow_mut().insert(ImportRequirement::Import {
+                    name: name.to_owned(),
+                });
+                ""
+            }
+
+            // Like add_import, but arranges for `import name as as_name`
+            #[allow(dead_code)]
+            fn add_import_as(&self, name: &str, as_name: &str) -> &str {
+                self.imports
+                    .borrow_mut()
+                    .insert(ImportRequirement::ImportAs {
+                        name: name.to_owned(),
+                        as_name: as_name.to_owned(),
+                    });
+                ""
+            }
+        }
+    };
+}
+
+macro_rules! kotlin_wrapper_template {
+    ($KotlinWrapperTemplate:ident, $KotlinTypeRenderer:ident, $source_file:literal) => {
+        #[derive(Template)]
+        #[template(syntax = "kt", escape = "none", path = $source_file)]
+        pub struct $KotlinWrapperTemplate<'ci> {
+            config: Config,
+            ci: &'ci ComponentInterface,
+            type_helper_code: String,
+            type_imports: BTreeSet<ImportRequirement>,
+        }
+
+        impl<'ci> $KotlinWrapperTemplate<'ci> {
             pub fn new(config: Config, ci: &'ci ComponentInterface) -> Self {
-                Self { config, ci }
+                let type_renderer = $KotlinTypeRenderer::new(&config, ci);
+                let type_helper_code = type_renderer.render().unwrap();
+                let type_imports = type_renderer.imports.into_inner();
+                Self {
+                    config,
+                    ci,
+                    type_helper_code,
+                    type_imports,
+                }
             }
 
             pub fn initialization_fns(&self) -> Vec<String> {
@@ -43,491 +184,38 @@ macro_rules! kotlin_template {
                     .filter_map(|ct| ct.initialization_fn())
                     .collect()
             }
+
+            pub fn imports(&self) -> Vec<ImportRequirement> {
+        self.type_imports.iter().cloned().collect()
+    }
         }
     };
 }
 
-// Dummy templates are copied as is. They are useful to reuse the existing logic
-macro_rules! kotlin_dummy_template {
-    ($KotlinTemplate:ident, $source_file:literal) => {
-        #[derive(Template)]
-        #[template(syntax = "kt", escape = "none", path = $source_file)]
-        pub struct $KotlinTemplate {}
+kotlin_type_renderer_template!(KotlinCommonTypeRenderer, "common/Types.kt");
+kotlin_wrapper_template!(KotlinCommonWrapper, KotlinCommonTypeRenderer, "common/wrapper.kt");
 
-        impl $KotlinTemplate {
-            pub fn new() -> Self {
-                Self { }
-            }
-        }
-    };
-}
+kotlin_type_renderer_template!(KotlinJvmTypeRenderer, "jvm/Types.kt");
+kotlin_wrapper_template!(KotlinJvmWrapper, KotlinJvmTypeRenderer, "jvm/wrapper.kt");
 
-macro_rules! kotlin_callback_interface_template {
-    ($KotlinTemplate:ident, $source_file:literal) => {
-        #[derive(Template)]
-        #[template(syntax = "kt", escape = "none", path = $source_file)]
-        pub struct $KotlinTemplate<'cbi> {
-            cbi: &'cbi CallbackInterface,
-            type_name: String,
-            foreign_callback_name: String,
-            ffi_converter_name: String,
-        }
-
-        impl<'cbi> $KotlinTemplate<'cbi> {
-            pub fn new(
-                cbi: &'cbi CallbackInterface,
-                type_name: String,
-                foreign_callback_name: String,
-                ffi_converter_name: String,
-            ) -> Self {
-                Self {
-                    cbi,
-                    type_name,
-                    foreign_callback_name,
-                    ffi_converter_name,
-                }
-            }
-        }
-    };
-}
+kotlin_type_renderer_template!(KotlinNativeTypeRenderer, "native/Types.kt");
+kotlin_wrapper_template!(KotlinNativeWrapper, KotlinNativeTypeRenderer, "native/wrapper.kt");
 
 #[derive(Template)]
-#[template(
-syntax = "kt",
-escape = "none",
-path = "common/CustomTypeTemplate.kt.j2"
-)]
-pub struct CustomTypeTemplateCommon {
+#[template(syntax = "c", escape = "none", path = "headers/wrapper.h")]
+pub struct KotlinHeaderWrapper<'ci> {
+    #[allow(dead_code)]
     config: Config,
-    name: String,
-    ffi_converter_name: String,
-    builtin: Box<Type>,
-}
-
-impl CustomTypeTemplateCommon {
-    pub fn new(
-        config: Config,
-        name: String,
-        ffi_converter_name: String,
-        builtin: Box<Type>,
-    ) -> Self {
-        Self {
-            config,
-            ffi_converter_name,
-            name,
-            builtin,
-        }
-    }
-}
-
-#[derive(Template)]
-#[template(syntax = "kt", escape = "none", path = "common/EnumTemplate.kt.j2")]
-pub struct EnumTemplateCommon<'e> {
-    e: &'e Enum,
-    type_name: String,
-    contains_object_references: bool,
-}
-
-impl<'e> EnumTemplateCommon<'e> {
-    pub fn new(e: &'e Enum, type_name: String, contains_object_references: bool) -> Self {
-        Self {
-            e,
-            type_name,
-            contains_object_references,
-        }
-    }
-}
-
-#[derive(Template)]
-#[template(syntax = "kt", escape = "none", path = "common/ErrorTemplate.kt.j2")]
-pub struct ErrorTemplateCommon<'e> {
-    e: &'e Enum,
-    type_name: String,
-    contains_object_references: bool,
-}
-
-impl<'e> ErrorTemplateCommon<'e> {
-    pub fn new(e: &'e Enum, type_name: String, contains_object_references: bool) -> Self {
-        Self {
-            e,
-            type_name,
-            contains_object_references,
-        }
-    }
-}
-
-#[derive(Template)]
-#[template(syntax = "kt", escape = "none", path = "common/MapTemplate.kt.j2")]
-pub struct MapTemplateCommon {
-    key_type: Box<Type>,
-    value_type: Box<Type>,
-    ffi_converter_name: String,
-}
-
-impl MapTemplateCommon {
-    pub fn new(key_type: Box<Type>, value_type: Box<Type>, ffi_converter_name: String) -> Self {
-        Self {
-            key_type,
-            value_type,
-            ffi_converter_name,
-        }
-    }
-}
-
-#[derive(Template)]
-#[template(syntax = "kt", escape = "none", path = "common/ObjectTemplate.kt.j2")]
-pub struct ObjectTemplateCommon<'e> {
-    obj: &'e Object,
-    type_name: String,
-}
-
-impl<'e> ObjectTemplateCommon<'e> {
-    pub fn new(obj: &'e Object, type_name: String) -> Self {
-        Self { obj, type_name }
-    }
-}
-
-#[derive(Template)]
-#[template(syntax = "kt", escape = "none", path = "common/OptionalTemplate.kt.j2")]
-pub struct OptionalTemplateCommon {
-    ffi_converter_name: String,
-    inner_type_name: String,
-    inner_type: Box<Type>,
-}
-
-impl OptionalTemplateCommon {
-    pub fn new(ffi_converter_name: String, inner_type_name: String, inner_type: Box<Type>) -> Self {
-        Self {
-            ffi_converter_name,
-            inner_type_name,
-            inner_type,
-        }
-    }
-}
-
-#[derive(Template)]
-#[template(syntax = "kt", escape = "none", path = "common/RecordTemplate.kt.j2")]
-pub struct RecordTemplateCommon<'rec> {
-    rec: &'rec Record,
-    type_name: String,
-    contains_object_references: bool,
-}
-
-impl<'rec> RecordTemplateCommon<'rec> {
-    pub fn new(rec: &'rec Record, type_name: String, contains_object_references: bool) -> Self {
-        Self {
-            rec,
-            type_name,
-            contains_object_references,
-        }
-    }
-}
-
-#[derive(Template)]
-#[template(syntax = "kt", escape = "none", path = "common/SequenceTemplate.kt.j2")]
-pub struct SequenceTemplateCommon {
-    ffi_converter_name: String,
-    inner_type_name: String,
-    inner_type: Box<Type>,
-}
-
-impl SequenceTemplateCommon {
-    pub fn new(ffi_converter_name: String, inner_type_name: String, inner_type: Box<Type>) -> Self {
-        Self {
-            ffi_converter_name,
-            inner_type_name,
-            inner_type,
-        }
-    }
-}
-
-#[derive(Template)]
-#[template(
-syntax = "c",
-escape = "none",
-path = "headers/BridgingHeaderTemplate.h.j2"
-)]
-pub struct BridgingHeader<'ci> {
-    _config: Config,
     ci: &'ci ComponentInterface,
 }
 
-impl<'ci> BridgingHeader<'ci> {
+impl<'ci> KotlinHeaderWrapper<'ci> {
     pub fn new(config: Config, ci: &'ci ComponentInterface) -> Self {
         Self {
-            _config: config,
+            config,
             ci,
         }
     }
-}
-
-macro_rules! render_kotlin_template {
-    ($template:ident, $file_name:literal, $map:ident) => {
-        let file_name = $file_name.to_string();
-        let context = format!("failed to render kotlin binding {}", stringify!($T));
-        $map.insert(file_name, $template.render().context(context).unwrap());
-    };
-
-    ($template:ident, $file_name:ident, $map:ident) => {
-        let file_name = $file_name;
-        let context = format!("failed to render kotlin binding {}", stringify!($T));
-        $map.insert(file_name, $template.render().context(context).unwrap());
-    };
-}
-
-kotlin_dummy_template!(
-    FfiConverterForeignExecutorTemplateCommon,
-    "common/FfiConverterForeignExecutor.kt.j2"
-);
-kotlin_dummy_template!(
-    UniFfiForeignExecutorCallbackTemplateCommon,
-    "common/UniFfiForeignExecutorCallback.kt.j2"
-);
-// kotlin_template!(AsyncTypesTemplateCommon, "common/AsyncTypesTemplate.kt.j2");
-kotlin_template!(TopLevelFunctionsTemplateCommon,"common/TopLevelFunctionsTemplate.kt.j2");
-kotlin_template!(UniFFILibTemplateCommon, "common/UniFFILibTemplate.kt.j2");
-kotlin_callback_interface_template!(
-    CallbackInterfaceTemplateCommon,
-    "common/CallbackInterfaceTemplate.kt.j2"
-);
-
-kotlin_dummy_template!(
-    UniFfiForeignExecutorCallbackTemplateJvm,
-    "jvm/UniFfiForeignExecutorCallback.kt.j2"
-);
-// kotlin_template!(AsyncTypesTemplateJvm, "jvm/AsyncTypesTemplate.kt.j2");
-kotlin_template!(RustBufferTemplateJvm, "jvm/RustBufferTemplate.kt.j2");
-kotlin_template!(UniFFILibTemplateJvm, "jvm/UniFFILibTemplate.kt.j2");
-kotlin_callback_interface_template!(
-    CallbackInterfaceTemplateJvm,
-    "jvm/CallbackInterfaceTemplate.kt.j2"
-);
-
-kotlin_dummy_template!(
-    UniFfiForeignExecutorCallbackTemplateNative,
-    "native/UniFfiForeignExecutorCallback.kt.j2"
-);
-// kotlin_template!(AsyncTypesTemplateNative, "native/AsyncTypesTemplate.kt.j2");
-kotlin_template!(ForeignBytesTemplateNative, "native/ForeignBytesTemplate.kt.j2");
-kotlin_template!(RustBufferTemplateNative, "native/RustBufferTemplate.kt.j2");
-kotlin_template!(RustCallStatusTemplateNative, "native/RustCallStatusTemplate.kt.j2");
-kotlin_template!(UniFFILibTemplateNative, "native/UniFFILibTemplate.kt.j2");
-kotlin_callback_interface_template!(
-    CallbackInterfaceTemplateNative,
-    "native/CallbackInterfaceTemplate.kt.j2"
-);
-
-pub fn generate_bindings(
-    config: &Config,
-    ci: &ComponentInterface,
-) -> Result<KotlinMultiplatformBindings> {
-    let mut common_wrapper: HashMap<String, String> = HashMap::new();
-    // let async_types_template_common = AsyncTypesTemplateCommon::new(
-    //     config.clone(),
-    //     ci,
-    // );
-    // render_kotlin_template!(async_types_template_common, "AsyncTypes.kt", common_wrapper);
-    let top_level_functions_template_common =
-        TopLevelFunctionsTemplateCommon::new(config.clone(), ci);
-    render_kotlin_template!(
-        top_level_functions_template_common,
-        "TopLevelFunctions.kt",
-        common_wrapper
-    );
-    let uniffilib_template_common = UniFFILibTemplateCommon::new(config.clone(), ci);
-    render_kotlin_template!(uniffilib_template_common, "UniFFILib.kt", common_wrapper);
-    for type_ in ci.iter_types() {
-        let canonical_type_name = filters::canonical_name(type_).unwrap();
-        let ffi_converter_name = filters::ffi_converter_name(type_).unwrap();
-        let contains_object_references = ci.item_contains_object_references(type_);
-        match type_ {
-            Type::CallbackInterface { name, .. } => {
-                let cbi: &CallbackInterface = ci.get_callback_interface_definition(name).unwrap();
-                let type_name = filters::type_name(cbi).unwrap();
-                let template = CallbackInterfaceTemplateCommon::new(
-                    cbi,
-                    type_name.clone(),
-                    format!("ForeignCallback{}", canonical_type_name),
-                    ffi_converter_name,
-                );
-                let file_name = format!("{}.kt", type_name);
-                render_kotlin_template!(template, file_name, common_wrapper);
-            }
-
-            Type::Custom { name, builtin, .. } => {
-                let template = CustomTypeTemplateCommon::new(
-                    config.clone(),
-                    name.clone(),
-                    ffi_converter_name,
-                    builtin.clone(),
-                );
-                let file_name = format!("{}.kt", name);
-                render_kotlin_template!(template, file_name, common_wrapper);
-            }
-
-            Type::Enum { name, .. } => {
-                if !ci.is_name_used_as_error(name) {
-                    let e: &Enum = ci.get_enum_definition(name).unwrap();
-                    let type_name = filters::type_name(type_).unwrap();
-                    let template =
-                        EnumTemplateCommon::new(e, type_name.clone(), contains_object_references);
-                    let file_name = format!("{}.kt", type_name);
-                    render_kotlin_template!(template, file_name, common_wrapper);
-                } else {
-                    let e: &Enum = ci.get_enum_definition(name).unwrap();
-                    let type_name = filters::error_type_name(type_).unwrap();
-                    let template =
-                        ErrorTemplateCommon::new(e, type_name.clone(), contains_object_references);
-                    let file_name = format!("{}.kt", type_name);
-                    render_kotlin_template!(template, file_name, common_wrapper);
-                }
-            }
-
-            Type::External { name, .. } => {
-                // TODO this need specific imports in some classes.
-            }
-
-            Type::ForeignExecutor => {
-                // The presence of the ForeignExecutor type indicates that we need to add the async infrastructure
-                let executor_template_common = FfiConverterForeignExecutorTemplateCommon::new();
-                render_kotlin_template!(executor_template_common, "FfiConverterForeignExecutor.kt", common_wrapper);
-                let callback_template_common = UniFfiForeignExecutorCallbackTemplateCommon::new();
-                render_kotlin_template!(callback_template_common, "UniFfiForeignExecutorCallback.kt", common_wrapper);
-            }
-
-            Type::Map { key_type, value_type } => {
-                let template = MapTemplateCommon::new(
-                    key_type.clone(),
-                    value_type.clone(),
-                    ffi_converter_name.clone(),
-                );
-                let file_name = format!("{}.kt", ffi_converter_name);
-                render_kotlin_template!(template, file_name, common_wrapper);
-            }
-
-            Type::Object { name, .. } => {
-                let obj: &Object = ci.get_object_definition(name).unwrap();
-                let type_name = filters::type_name(type_).unwrap();
-                let template = ObjectTemplateCommon::new(
-                    obj, type_name.clone(),
-                );
-                let file_name = format!("{}.kt", type_name);
-                render_kotlin_template!(template, file_name, common_wrapper);
-            }
-
-            Type::Optional { inner_type } => {
-                let inner_type_name = filters::type_name(inner_type).unwrap();
-                let template = OptionalTemplateCommon::new(
-                    ffi_converter_name.clone(), inner_type_name, inner_type.clone(),
-                );
-                let file_name = format!("{}.kt", ffi_converter_name);
-                render_kotlin_template!(template, file_name, common_wrapper);
-            }
-
-            Type::Record { name, .. } => {
-                let rec: &Record = ci.get_record_definition(name).unwrap();
-                let type_name = filters::type_name(type_).unwrap();
-                let template = RecordTemplateCommon::new(
-                    rec, type_name.clone(), contains_object_references,
-                );
-                let file_name = format!("{}.kt", type_name);
-                render_kotlin_template!(template, file_name, common_wrapper);
-            }
-
-            Type::Sequence { inner_type } => {
-                let inner_type_name = filters::type_name(inner_type).unwrap();
-                let template = SequenceTemplateCommon::new(
-                    ffi_converter_name.clone(), inner_type_name, inner_type.clone(),
-                );
-                let file_name = format!("{}.kt", ffi_converter_name);
-                render_kotlin_template!(template, file_name, common_wrapper);
-            }
-            _ => {}
-        }
-    }
-
-    let mut jvm_wrapper: HashMap<String, String> = HashMap::new();
-    // let async_types_template_jvm = AsyncTypesTemplateJvm::new(config.clone(), ci);
-    // render_kotlin_template!(async_types_template_jvm, "AsyncTypes.kt", jvm_wrapper);
-    let rust_buffer_template_jvm = RustBufferTemplateJvm::new(config.clone(), ci);
-    render_kotlin_template!(rust_buffer_template_jvm, "RustBuffer.kt", jvm_wrapper);
-    let uniffilib_template_jvm = UniFFILibTemplateJvm::new(config.clone(), ci);
-    render_kotlin_template!(uniffilib_template_jvm, "UniFFILib.kt", jvm_wrapper);
-    for type_ in ci.iter_types() {
-        let canonical_type_name = filters::canonical_name(type_).unwrap();
-        let ffi_converter_name = filters::ffi_converter_name(type_).unwrap();
-        match type_ {
-            Type::CallbackInterface { name, .. } => {
-                let cbi: &CallbackInterface = ci.get_callback_interface_definition(name).unwrap();
-                let type_name = filters::type_name(cbi).unwrap();
-                let template = CallbackInterfaceTemplateJvm::new(
-                    cbi,
-                    type_name.clone(),
-                    format!("ForeignCallback{}", canonical_type_name),
-                    ffi_converter_name,
-                );
-                let file_name = format!("{}.kt", type_name);
-                render_kotlin_template!(template, file_name, jvm_wrapper);
-            }
-
-            Type::ForeignExecutor => {
-                // The presence of the ForeignExecutor type indicates that we need to add the async infrastructure
-                let template = UniFfiForeignExecutorCallbackTemplateJvm::new();
-                render_kotlin_template!(template, "UniFfiForeignExecutorCallback.kt", jvm_wrapper);
-            }
-
-            _ => {}
-        }
-    }
-
-    let mut native_wrapper: HashMap<String, String> = HashMap::new();
-    // let async_types_template_native = AsyncTypesTemplateNative::new(config.clone(), ci);
-    // render_kotlin_template!(async_types_template_native, "AsyncTypes.kt", native_wrapper);
-    let foreign_bytes_template_native = ForeignBytesTemplateNative::new(config.clone(), ci);
-    render_kotlin_template!(foreign_bytes_template_native, "ForeignBytes.kt", native_wrapper);
-    let rust_buffer_template_native = RustBufferTemplateNative::new(config.clone(), ci);
-    render_kotlin_template!(rust_buffer_template_native, "RustBuffer.kt", native_wrapper);
-    let rust_call_status_template_native = RustCallStatusTemplateNative::new(config.clone(), ci);
-    render_kotlin_template!(rust_call_status_template_native, "RustCallStatus.kt", native_wrapper);
-    let uniffilib_template_native = UniFFILibTemplateNative::new(config.clone(), ci);
-    render_kotlin_template!(uniffilib_template_native, "UniFFILib.kt", native_wrapper);
-    for type_ in ci.iter_types() {
-        let canonical_type_name = filters::canonical_name(type_).unwrap();
-        let ffi_converter_name = filters::ffi_converter_name(type_).unwrap();
-        match type_ {
-            Type::CallbackInterface { name, .. } => {
-                let cbi: &CallbackInterface = ci.get_callback_interface_definition(name).unwrap();
-                let type_name = filters::type_name(cbi).unwrap();
-                let template = CallbackInterfaceTemplateNative::new(
-                    cbi,
-                    type_name.clone(),
-                    format!("ForeignCallback{}", canonical_type_name),
-                    ffi_converter_name,
-                );
-                let file_name = format!("{}.kt", type_name);
-                render_kotlin_template!(template, file_name, native_wrapper);
-            }
-
-            Type::ForeignExecutor => {
-                // The presence of the ForeignExecutor type indicates that we need to add the async infrastructure
-                let template = UniFfiForeignExecutorCallbackTemplateNative::new();
-                render_kotlin_template!(template, "UniFfiForeignExecutorCallback.kt", native_wrapper);
-            }
-
-            _ => {}
-        }
-    }
-
-    let header = BridgingHeader::new(config.clone(), ci)
-        .render()
-        .context("failed to render Kotlin/Native bridging header")?;
-
-    Ok(KotlinMultiplatformBindings {
-        common: common_wrapper,
-        jvm: jvm_wrapper,
-        native: native_wrapper,
-        header,
-    })
 }
 
 #[derive(Clone)]
@@ -646,27 +334,6 @@ impl KotlinCodeOracle {
             FfiType::RustFutureContinuationData => "void* _Nonnull".to_string(),
         }
     }
-
-    /// Get the name of the interface and class name for an object.
-    ///
-    /// This depends on the `ObjectImpl`:
-    ///
-    /// For struct impls, the class name is the object name and the interface name is derived from that.
-    /// For trait impls, the interface name is the object name, and the class name is derived from that.
-    ///
-    /// This split is needed because of the `FfiConverter` interface.  For struct impls, `lower`
-    /// can only lower the concrete class.  For trait impls, `lower` can lower anything that
-    /// implement the interface.
-    fn object_names(&self, obj: &Object) -> (String, String) {
-        let class_name = self.class_name(obj.name());
-        match obj.imp() {
-            ObjectImpl::Struct => (format!("{class_name}Interface"), class_name),
-            ObjectImpl::Trait => {
-                let interface_name = format!("{class_name}Impl");
-                (class_name, interface_name)
-            }
-        }
-    }
 }
 
 pub trait AsCodeType {
@@ -701,7 +368,7 @@ impl<T: AsType> AsCodeType for T {
             Type::Duration => Box::new(miscellany::DurationCodeType),
 
             Type::Enum { name, .. } => Box::new(enum_::EnumCodeType::new(name)),
-            Type::Object { name, imp, .. } => Box::new(object::ObjectCodeType::new(name)),
+            Type::Object { name, .. } => Box::new(object::ObjectCodeType::new(name)),
             Type::Record { name, .. } => Box::new(record::RecordCodeType::new(name)),
             Type::CallbackInterface { name, .. } => {
                 Box::new(callback_interface::CallbackInterfaceCodeType::new(name))
@@ -717,10 +384,11 @@ impl<T: AsType> AsCodeType for T {
 }
 
 pub mod filters {
-    use super::*;
     pub use uniffi_bindgen::backend::filters::*;
     use uniffi_bindgen::backend::Literal;
     use uniffi_bindgen::interface::ResultType;
+
+    use super::*;
 
     pub fn type_name(as_ct: &impl AsCodeType) -> Result<String, askama::Error> {
         Ok(as_ct.as_code_type().type_label())

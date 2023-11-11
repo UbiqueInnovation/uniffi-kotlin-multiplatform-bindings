@@ -1,0 +1,13 @@
+internal object FfiConverterBoolean : FfiConverter<Boolean, Byte> {
+    override fun lift(value: Byte): Boolean = value.toInt() != 0
+
+    override fun read(source: NoCopySource): Boolean = lift(source.readByte())
+
+    override fun lower(value: Boolean): Byte = if (value) 1.toByte() else 0.toByte()
+
+    override fun allocationSize(value: Boolean) = 1
+
+    override fun write(value: Boolean, buf: Buffer) {
+        buf.writeByte(lower(value).toInt())
+    }
+}

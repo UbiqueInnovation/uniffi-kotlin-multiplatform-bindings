@@ -15,4 +15,5 @@ fn get_combined_type(existing: Option<CombinedType>) -> CombinedType {
     })
 }
 
-include!(concat!(env!("OUT_DIR"), "/external_types.uniffi.rs"));
+uniffi::include_scaffolding!("external_types");
+uniffi_reexport_scaffolding!();

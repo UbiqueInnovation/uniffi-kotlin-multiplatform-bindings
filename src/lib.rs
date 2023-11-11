@@ -5,10 +5,9 @@ use std::io::Write;
 
 use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
-use include_dir::{include_dir, Dir};
 use serde::{Deserialize, Serialize};
-use uniffi_bindgen::backend::TemplateExpression;
 use uniffi_bindgen::{BindingGenerator, BindingsConfig, ComponentInterface};
+use uniffi_bindgen::backend::TemplateExpression;
 
 pub use gen_kotlin_multiplatform::generate_bindings;
 
@@ -52,7 +51,7 @@ impl BindingsConfig for Config {
         self.cdylib_name.get_or_insert_with(|| cdylib_name.to_string());
     }
 
-    fn update_from_dependency_configs(&mut self, config_map: HashMap<&str, &Self>) {
+    fn update_from_dependency_configs(&mut self, _config_map: HashMap<&str, &Self>) {
         // unused
     }
 }
@@ -66,9 +65,9 @@ pub struct CustomTypeConfig {
 }
 
 pub struct KotlinMultiplatformBindings {
-    common: HashMap<String, String>,
-    jvm: HashMap<String, String>,
-    native: HashMap<String, String>,
+    common: String,
+    jvm: String,
+    native: String,
     header: String,
 }
 
@@ -85,9 +84,9 @@ impl BindingGenerator for KotlinBindingGenerator {
     ) -> Result<()> {
         let bindings = generate_bindings(config, ci)?;
 
-        create_target(config, include_dir!("kotlin-uniffi-base/src/commonMain/kotlin"), out_dir, "commonMain", bindings.common);
-        create_target(config, include_dir!("kotlin-uniffi-base/src/jvmMain/kotlin"), out_dir, "jvmMain", bindings.jvm);
-        create_target(config, include_dir!("kotlin-uniffi-base/src/nativeMain/kotlin"), out_dir, "nativeMain", bindings.native);
+        create_target(ci, config, out_dir, "common", bindings.common);
+        create_target(ci, config, out_dir, "jvm", bindings.jvm);
+        create_target(ci, config, out_dir, "native", bindings.native);
 
         create_cinterop(ci, out_dir, bindings.header);
 
@@ -101,29 +100,23 @@ impl BindingGenerator for KotlinBindingGenerator {
     }
 }
 
-fn create_target(config: &Config, base_dir: Dir, out_dir: &Utf8Path, name: &str, files: HashMap<String, String>) {
-    let mut all_files: HashMap<String, String> = HashMap::new();
-    for base_file in base_dir.files() {
-        let file_name = base_file.path().file_name().unwrap().to_str().unwrap().to_string();
-        let file_content = base_file.contents_utf8().unwrap().to_string();
-        all_files.insert(file_name, file_content);
-    }
-    all_files.extend(files);
-
+fn create_target(ci: &ComponentInterface, config: &Config, out_dir: &Utf8Path, name: &str, content: String) {
+    let source_set_name = format!("{}Main", name);
     let package_path: Utf8PathBuf = config.package_name().split(".").collect();
-    let dst_dir = Utf8PathBuf::from(out_dir).join(&name).join("kotlin").join(package_path);
+    let file_name = format!("{}.{}.kt", ci.namespace(), name);
+
+    let dst_dir = Utf8PathBuf::from(out_dir)
+        .join(&source_set_name).join("kotlin").join(package_path);
+    let file_path = Utf8PathBuf::from(&dst_dir).join(file_name);
+
     fs::create_dir_all(&dst_dir).unwrap();
-    for (file_name, file_content) in all_files {
-        let file_path = Utf8PathBuf::from(&dst_dir).join(file_name);
-        let mut f = File::create(&file_path).unwrap();
-        writeln!(f, "package {}", config.package_name()).unwrap();
-        writeln!(f, "").unwrap();
-        write!(f, "{}", file_content).unwrap();
-    }
+    let mut f = File::create(&file_path).unwrap();
+    write!(f, "{}", content).unwrap();
 }
 
 fn create_cinterop(ci: &ComponentInterface, out_dir: &Utf8Path, content: String) {
-    let dst_dir = Utf8PathBuf::from(out_dir).join("nativeInterop").join("cinterop").join("headers").join(ci.namespace());
+    let dst_dir = Utf8PathBuf::from(out_dir)
+        .join("nativeInterop").join("cinterop").join("headers").join(ci.namespace());
     fs::create_dir_all(&dst_dir).unwrap();
     let file_path = Utf8PathBuf::from(dst_dir).join(format!("{}.h", ci.namespace()));
     let mut f = File::create(&file_path).unwrap();
