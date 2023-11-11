@@ -3,16 +3,16 @@ import okio.Buffer
 object FfiConverterString : FfiConverter<String, RustBuffer> {
     override fun lift(value: RustBuffer): String {
         try {
-            val byteArr = value.toBuffer().readByteArray(value.dataSize.toLong())
+            val byteArr = value.asSource().readByteArray(value.dataSize.toLong())
             return byteArr.decodeToString()
         } finally {
             value.free()
         }
     }
 
-    override fun read(buf: Buffer): String {
-        val len = buf.readInt()
-        val byteArr = buf.readByteArray(len.toLong())
+    override fun read(source: NoCopySource): String {
+        val len = source.readInt()
+        val byteArr = source.readByteArray(len.toLong())
         return byteArr.decodeToString()
     }
 

@@ -8,7 +8,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use include_dir::{include_dir, Dir};
 use serde::{Deserialize, Serialize};
 use uniffi_bindgen::backend::TemplateExpression;
-use uniffi_bindgen::{BindingGenerator, BindingGeneratorConfig, ComponentInterface};
+use uniffi_bindgen::{BindingGenerator, BindingsConfig, ComponentInterface};
 
 pub use gen_kotlin_multiplatform::generate_bindings;
 
@@ -23,14 +23,6 @@ pub struct Config {
     #[serde(default)]
     external_packages: HashMap<String, String>,
 }
-
-// impl<'de> Deserialize<'de> for Config {
-//     fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
-//         where D: serde::Deserializer<'de>,
-//     {
-//         _deserializer.deserialize_any()
-//     }
-// }
 
 impl Config {
     pub fn package_name(&self) -> String {
@@ -50,20 +42,18 @@ impl Config {
     }
 }
 
-impl BindingGeneratorConfig for Config {
-    fn get_entry_from_bindings_table(_bindings: &toml::value::Value) -> Option<toml::value::Value> {
-        if let Some(table) = _bindings.as_table() {
-            table.get("kotlin-native").map(|v| v.clone())
-        } else {
-            None
-        }
+impl BindingsConfig for Config {
+    fn update_from_ci(&mut self, ci: &ComponentInterface) {
+        self.package_name.get_or_insert_with(|| ci.namespace().into());
+        self.cdylib_name.get_or_insert_with(|| format!("{}", ci.namespace()));
     }
 
-    fn get_config_defaults(ci: &ComponentInterface) -> Vec<(String, toml::value::Value)> {
-        vec![
-            ("package_name".to_string(), toml::value::Value::String(ci.namespace().to_string())),
-            ("cdylib_name".to_string(), toml::value::Value::String(ci.namespace().to_string())),
-        ]
+    fn update_from_cdylib_name(&mut self, cdylib_name: &str) {
+        self.cdylib_name.get_or_insert_with(|| cdylib_name.to_string());
+    }
+
+    fn update_from_dependency_configs(&mut self, config_map: HashMap<&str, &Self>) {
+        // unused
     }
 }
 
@@ -89,18 +79,24 @@ impl BindingGenerator for KotlinBindingGenerator {
 
     fn write_bindings(
         &self,
-        ci: ComponentInterface,
-        config: Self::Config,
+        ci: &ComponentInterface,
+        config: &Self::Config,
         out_dir: &Utf8Path,
     ) -> Result<()> {
-        let bindings = generate_bindings(&config, &ci)?;
+        let bindings = generate_bindings(config, ci)?;
 
-        create_target(&config, include_dir!("kotlin-uniffi-base/src/commonMain/kotlin"), out_dir, "commonMain", bindings.common);
-        create_target(&config, include_dir!("kotlin-uniffi-base/src/jvmMain/kotlin"), out_dir, "jvmMain", bindings.jvm);
-        create_target(&config, include_dir!("kotlin-uniffi-base/src/nativeMain/kotlin"), out_dir, "nativeMain", bindings.native);
+        create_target(config, include_dir!("kotlin-uniffi-base/src/commonMain/kotlin"), out_dir, "commonMain", bindings.common);
+        create_target(config, include_dir!("kotlin-uniffi-base/src/jvmMain/kotlin"), out_dir, "jvmMain", bindings.jvm);
+        create_target(config, include_dir!("kotlin-uniffi-base/src/nativeMain/kotlin"), out_dir, "nativeMain", bindings.native);
 
-        create_cinterop(&ci, out_dir, bindings.header);
+        create_cinterop(ci, out_dir, bindings.header);
 
+        Ok(())
+    }
+
+    fn check_library_path(&self, _library_path: &Utf8Path, _cdylib_name: Option<&str>) -> Result<()> {
+        // FIXME should we do something meaningful here?
+        // TODO debug when this method is called and what arguments are passed here
         Ok(())
     }
 }

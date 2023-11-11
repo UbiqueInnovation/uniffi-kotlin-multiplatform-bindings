@@ -4,8 +4,8 @@ import kotlinx.cinterop.*
 @Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
 actual typealias RustCallStatus = CPointer<{{ config.package_name() }}.cinterop.RustCallStatus>
 
-actual val RustCallStatus.statusCode: Int
-    get() = pointed.code.toInt()
+actual val RustCallStatus.statusCode: Byte
+    get() = pointed.code
 actual val RustCallStatus.errorBuffer: RustBuffer
     get() = pointed.errorBuf.readValue()
 
@@ -14,3 +14,9 @@ actual fun <T> withRustCallStatus(block: (RustCallStatus) -> T): T =
         val allocated = alloc<{{ config.package_name() }}.cinterop.RustCallStatus>().ptr
         block(allocated)
     }
+
+val RustCallStatusByValue.statusCode: Byte
+    get() = useContents { code }
+
+@Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
+actual typealias RustCallStatusByValue = CValue<{{ config.package_name() }}.cinterop.RustCallStatus>

@@ -1,6 +1,10 @@
 {% import "helpers.j2" as helpers %}
 import okio.Buffer
 
+{%- let type_name = e|error_type_name %}
+{%- let ffi_converter_name = e|error_ffi_converter_name %}
+{%- let canonical_type_name = e|error_canonical_name %}
+
 {% if e.is_flat() %}
 sealed class {{ type_name }}(message: String): Exception(message){% if contains_object_references %}, Disposable {% endif %} {
         {% for variant in e.variants() -%}
@@ -8,7 +12,7 @@ sealed class {{ type_name }}(message: String): Exception(message){% if contains_
         {% endfor %}
 
     companion object ErrorHandler : CallStatusErrorHandler<{{ type_name }}> {
-        override fun lift(error_buf: RustBuffer): {{ type_name }} = {{ e|lift_fn }}(error_buf)
+        override fun lift(errorBuffer: RustBuffer): {{ type_name }} = {{ ffi_converter_name }}.lift(errorBuffer)
     }
 }
 {%- else %}
@@ -26,7 +30,7 @@ sealed class {{ type_name }}: Exception(){% if contains_object_references %}, Di
     {% endfor %}
 
     companion object ErrorHandler : CallStatusErrorHandler<{{ type_name }}> {
-        override fun lift(error_buf: RustBuffer): {{ type_name }} = {{ e|lift_fn }}(error_buf)
+        override fun lift(errorBuffer: RustBuffer): {{ type_name }} = {{ ffi_converter_name }}.lift(errorBuffer)
     }
 
     {% if contains_object_references %}
@@ -47,22 +51,21 @@ sealed class {{ type_name }}: Exception(){% if contains_object_references %}, Di
 }
 {%- endif %}
 
-object {{ e|ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}> {
-    override fun read(buf: Buffer): {{ type_name }} {
+object {{ ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}> {
+    override fun read(source: NoCopySource): {{ type_name }} {
         {% if e.is_flat() %}
-            return when(buf.readInt()) {
+        return when(source.readInt()) {
             {%- for variant in e.variants() %}
-            {{ loop.index }} -> {{ type_name }}.{{ variant.name()|exception_name }}({{ TypeIdentifier::String.borrow()|read_fn }}(buf))
+            {{ loop.index }} -> {{ type_name }}.{{ variant.name()|exception_name }}({{ Type::String.borrow()|read_fn }}(source))
             {%- endfor %}
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
         {% else %}
-
-        return when(buf.readInt()) {
+        return when(source.readInt()) {
             {%- for variant in e.variants() %}
             {{ loop.index }} -> {{ type_name }}.{{ variant.name()|exception_name }}({% if variant.has_fields() %}
                 {% for field in variant.fields() -%}
-                {{ field|read_fn }}(buf),
+                {{ field|read_fn }}(source),
                 {% endfor -%}
             {%- endif -%})
             {%- endfor %}

@@ -36,14 +36,6 @@ subprojects {
     val crateTargetDir = crateDir.resolve("target")
     val crateTargetBindingsDir = crateTargetDir.resolve("bindings")
     val crateTargetLibDir = crateTargetDir.resolve("debug")
-//    fun resolveDynamicLibFile(crate: String, lib: String = crate) =
-//        resolveTargetLibDir(crate).resolve("lib$lib.so")
-
-//    val crates = listOf("coverall", "callbacks", "external_types")
-//    val cratesDynamicLibs = crates.map { resolveDynamicLibFile(it) } + listOf(
-////    resolveDynamicLibFile("external_types", "crate_one"),
-////    resolveDynamicLibFile("external_types", "crate_two")
-//    )
 
     val buildCrate = tasks.register("buildCrate", Exec::class) {
         group = "uniffi"
@@ -51,11 +43,18 @@ subprojects {
         commandLine("cargo", "build")
     }
 
+    val createBindings = tasks.register("createBindings", Exec::class) {
+        group = "uniffi"
+        workingDir(crateDir)
+        commandLine("cargo", "run", "--bin", "uniffi-bindgen")
+        dependsOn(buildCrate)
+    }
+
     val copyBindings = tasks.register("copyBindings", Copy::class) {
         group = "uniffi"
         from(crateTargetBindingsDir)
         into(generatedDir)
-        dependsOn(buildCrate)
+        dependsOn(createBindings)
     }
 
     val copyBinariesToProcessedRessources = tasks.register("copyBinaries", Copy::class) {
@@ -127,6 +126,7 @@ subprojects {
                 dependencies {
                     implementation("com.squareup.okio:okio:3.2.0")
                     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
+                    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
                 }
             }
             val commonTest by getting {

@@ -2,9 +2,9 @@ import kotlinx.datetime.Instant
 import okio.Buffer
 
 object FfiConverterInstant : FfiConverterRustBuffer<Instant> {
-    override fun read(buf: Buffer): Instant {
-        val seconds = buf.readLong()
-        val nanoseconds = buf.readInt()
+    override fun read(source: NoCopySource): Instant {
+        val seconds = source.readLong()
+        val nanoseconds = source.readInt()
         val instant = Instant.fromEpochSeconds(seconds, nanoseconds)
         if (nanoseconds < 0) {
             throw IllegalArgumentException("Instant nanoseconds exceed minimum or maximum supported by uniffi")

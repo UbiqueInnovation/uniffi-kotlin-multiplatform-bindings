@@ -4,10 +4,11 @@ import okio.Buffer
 @Suppress("NO_ACTUAL_FOR_EXPECT")
 expect class RustBuffer
 
+// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("NO_ACTUAL_FOR_EXPECT")
 expect class RustBufferPointer
 
-expect fun RustBuffer.toBuffer(): Buffer
+expect fun RustBuffer.asSource(): NoCopySource
 
 expect val RustBuffer.dataSize: Int
 

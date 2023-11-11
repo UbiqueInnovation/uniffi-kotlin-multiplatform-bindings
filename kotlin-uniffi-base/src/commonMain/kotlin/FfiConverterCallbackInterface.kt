@@ -42,6 +42,11 @@ internal class ConcurrentHandleMap<T>(
 // to free the callback once it's dropped by Rust.
 internal const val IDX_CALLBACK_FREE = 0
 
+// Callback return codes
+internal const val UNIFFI_CALLBACK_SUCCESS = 0
+internal const val UNIFFI_CALLBACK_ERROR = 1
+internal const val UNIFFI_CALLBACK_UNEXPECTED_ERROR = 2
+
 abstract class FfiConverterCallbackInterface<CallbackInterface> : FfiConverter<CallbackInterface, Handle> {
     private val handleMap = ConcurrentHandleMap<CallbackInterface>()
 
@@ -57,7 +62,7 @@ abstract class FfiConverterCallbackInterface<CallbackInterface> : FfiConverter<C
         return handleMap.get(value) ?: throw InternalException("No callback in handlemap; this is a Uniffi bug")
     }
 
-    override fun read(buf: Buffer) = lift(buf.readLong().toULong())
+    override fun read(source: NoCopySource) = lift(source.readLong().toULong())
 
     override fun lower(value: CallbackInterface) =
         handleMap.insert(value).also {

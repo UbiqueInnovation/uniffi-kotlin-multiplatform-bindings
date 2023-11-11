@@ -8,7 +8,7 @@ interface FfiConverter<KotlinType, FfiType> {
     }
 
     fun liftFromRustBuffer(rbuf: RustBuffer): KotlinType {
-        val byteBuf = rbuf.toBuffer()
+        val byteBuf = rbuf.asSource()
         try {
             val item = read(byteBuf)
             if (!byteBuf.exhausted()) {
@@ -22,7 +22,7 @@ interface FfiConverter<KotlinType, FfiType> {
 
     fun lift(value: FfiType): KotlinType
     fun lower(value: KotlinType): FfiType
-    fun read(buf: Buffer): KotlinType
+    fun read(source: NoCopySource): KotlinType
     fun allocationSize(value: KotlinType): Int
     fun write(value: KotlinType, buf: Buffer)
 }

@@ -26,7 +26,8 @@ typedef struct RustBuffer
     uint8_t *_Nullable data;
 } RustBuffer;
 
-typedef int32_t (*ForeignCallback)(uint64_t, int32_t, RustBuffer, RustBuffer *_Nonnull);
+// *_Nonnull is ignored by cinterop
+typedef int32_t (*ForeignCallback)(uint64_t, int32_t, const uint8_t *_Nonnull, int32_t, RustBuffer *_Nonnull);
 
 typedef struct ForeignBytes
 {

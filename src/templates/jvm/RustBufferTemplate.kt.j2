@@ -25,10 +25,7 @@ actual class RustBufferPointer : ByReference(16) {
     }
 }
 
-actual fun RustBuffer.toBuffer(): Buffer =
-    requireNotNull(data).getByteBuffer(0, len.toLong()).let { byteBuffer ->
-        Buffer().also { it.write(byteBuffer) }
-    }
+actual fun RustBuffer.asSource(): NoCopySource = requireNotNull(data).asSource(len.toLong())
 
 actual val RustBuffer.dataSize: Int
     get() = len

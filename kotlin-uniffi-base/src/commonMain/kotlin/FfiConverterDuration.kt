@@ -4,9 +4,9 @@ import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.Duration.Companion.seconds
 
 object FfiConverterDuration : FfiConverterRustBuffer<Duration> {
-    override fun read(buf: Buffer): Duration {
-        val seconds = buf.readLong().seconds
-        val nanoseconds = buf.readInt().nanoseconds
+    override fun read(source: NoCopySource): Duration {
+        val seconds = source.readLong().seconds
+        val nanoseconds = source.readInt().nanoseconds
         val duration = seconds + nanoseconds
         if (duration < 0.nanoseconds) {
             throw IllegalArgumentException("Duration nanoseconds exceed minimum or maximum supported by uniffi")

@@ -7,7 +7,7 @@ typealias {{ ffi_converter_name }} = {{ builtin|ffi_converter_name }}
 
 {%- when Some with (config) %}
 
-{%- let ffi_type_name=builtin.ffi_type().borrow()|ffi_type_name %}
+{%- let ffi_type_name=builtin|ffi_type|ffi_type_name %}
 
 {# When the config specifies a different type name, create a typealias for it #}
 {%- match config.type_name %}
@@ -36,8 +36,8 @@ object {{ ffi_converter_name }}: FfiConverter<{{ name }}, {{ ffi_type_name }}> {
         return {{ builtin|lower_fn }}(builtinValue)
     }
 
-    override fun read(buf: Buffer): {{ name }} {
-        val builtinValue = {{ builtin|read_fn }}(buf)
+    override fun read(source: NoCopySource): {{ name }} {
+        val builtinValue = {{ builtin|read_fn }}(source)
         return {{ config.into_custom.render("builtinValue") }}
     }
 

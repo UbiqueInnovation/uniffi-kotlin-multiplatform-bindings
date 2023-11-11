@@ -20,10 +20,10 @@ data class {{ type_name }} (
 }
 
 object {{ rec|ffi_converter_name }}: FfiConverterRustBuffer<{{ type_name }}> {
-    override fun read(buf: Buffer): {{ type_name }} {
+    override fun read(source: NoCopySource): {{ type_name }} {
         return {{ type_name }}(
         {%- for field in rec.fields() %}
-            {{ field|read_fn }}(buf),
+            {{ field|read_fn }}(source),
         {%- endfor %}
         )
     }

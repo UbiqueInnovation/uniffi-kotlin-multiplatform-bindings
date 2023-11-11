@@ -7,10 +7,10 @@ actual typealias RustBuffer = CValue<{{ config.package_name() }}.cinterop.RustBu
 @Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
 actual typealias RustBufferPointer = CPointer<{{ config.package_name() }}.cinterop.RustBuffer>
 
-actual fun RustBuffer.toBuffer(): Buffer {
+actual fun RustBuffer.asSource(): NoCopySource {
     val data = useContents { data }
     val len = useContents { len }
-    return Buffer().write(requireNotNull(data).readBytes(len))
+    return requireNotNull(data).asSource(len.toLong())
 }
 
 actual val RustBuffer.dataSize: Int

@@ -1,7 +1,7 @@
 {%- macro to_ffi_call(func) -%}
     {%- match func.throws_type() %}
     {%- when Some with (e) %}
-    rustCallWithError({{ e|type_name}})
+    rustCallWithError({{ e|error_type_name}})
     {%- else %}
     rustCall()
     {%- endmatch %} { _status ->
@@ -11,7 +11,7 @@
 {%- macro to_ffi_call_with_prefix(prefix, func) %}
     {%- match func.throws_type() %}
     {%- when Some with (e) %}
-    rustCallWithError({{ e|type_name}})
+    rustCallWithError({{ e|error_type_name}})
     {%- else %}
     rustCall()
     {%- endmatch %} { _status ->
@@ -53,13 +53,13 @@
     {%- for arg in func.arguments() %}
         {{- arg.name()|var_name }}: {{ arg.type_().borrow()|ffi_type_name -}},
     {%- endfor %}
-    _uniffi_out_err: RustCallStatus
+    {%- if func.has_rust_call_status_arg() %}_uniffi_out_err: RustCallStatus, {% endif %}
 {%- endmacro -%}
 {%- macro arg_list_ffi_call(func) %}
     {%- for arg in func.arguments() %}
         {{- arg.name()|var_name }},
     {%- endfor %}
-    _uniffi_out_err
+    {%- if func.has_rust_call_status_arg() %}_uniffi_out_err{% endif %}
 {%- endmacro -%}
 {%- macro arg_list_ffi_header_decl(func) %}
     {%- for arg in func.arguments() %}

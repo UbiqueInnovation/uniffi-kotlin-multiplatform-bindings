@@ -3,7 +3,7 @@ import okio.Buffer
 object FfiConverterFloat : FfiConverter<Float, Float> {
     override fun lift(value: Float): Float = value
 
-    override fun read(buf: Buffer): Float = Float.fromBits(buf.readInt())
+    override fun read(source: NoCopySource): Float = Float.fromBits(source.readInt())
 
     override fun lower(value: Float): Float = value
 

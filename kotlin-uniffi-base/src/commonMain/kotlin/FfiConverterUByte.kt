@@ -3,7 +3,7 @@ import okio.Buffer
 object FfiConverterUByte : FfiConverter<UByte, UByte> {
     override fun lift(value: UByte): UByte = value
 
-    override fun read(buf: Buffer): UByte = lift(buf.readByte().toUByte())
+    override fun read(source: NoCopySource): UByte = lift(source.readByte().toUByte())
 
     override fun lower(value: UByte): UByte = value
 

@@ -4,16 +4,18 @@ class NativeCallback(
     private val invokeImpl: (
         handle: Handle,
         method: Int,
-        args: RustBuffer,
-        outBuf: RustBufferPointer
+        argsData: UBytePointer,
+        argsLen: Int,
+        outBuf: RustBufferPointer // RustBufferByReference
     ) -> Int
 ) : Callback {
     fun invoke(
         handle: Handle,
         method: Int,
-        args: RustBuffer,
-        outBuf: RustBufferPointer
-    ): Int = invokeImpl(handle, method, args, outBuf)
+        argsData: UBytePointer,
+        argsLen: Int,
+        outBuf: RustBufferPointer // RustBufferByReference
+    ): Int = invokeImpl(handle, method, argsData, argsLen, outBuf)
 }
 
 actual typealias ForeignCallback = NativeCallback
