@@ -1,0 +1,29 @@
+stages:
+  - prepare
+  - build
+
+variables:
+  PROJECT_REGISTRY: $CI_REGISTRY/trixnity/uniffi-kotlin-multiplatform-bindings
+
+default:
+  tags:
+    - saas-linux-medium-amd64
+  image: $PROJECT_REGISTRY/build-image:latest
+
+meta-build-image:
+  image: docker:stable
+  services:
+    - docker:dind
+  stage: prepare
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - cd .meta/build-image
+    - docker build -t $PROJECT_REGISTRY/build-image:latest .
+    - docker push $PROJECT_REGISTRY/build-image:latest
+
+build-all:
+  stage: build
+  script:
+    - cargo build --verbose
+    - cargo test --verbose
+    - (cd tests && ./gradlew build)
