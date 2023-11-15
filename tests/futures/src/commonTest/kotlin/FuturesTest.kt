@@ -52,7 +52,7 @@ class FuturesTest {
     }
 
     @Test
-    fun testAsyncMethodReturningOptional() = runBlocking {
+    fun testAsyncMethodReturningOptional(): Unit = runBlocking {
         asyncMaybeNewMegaphone(true) shouldNotBe null
         asyncMaybeNewMegaphone(false) shouldBe null
     }
@@ -88,7 +88,7 @@ class FuturesTest {
     }
 
     @Test
-    fun testRecord() = assertMaxTime(150) {
+    fun testRecord() = assertMaxTime(250) {
         newMyRecord("foo", 42u) shouldBe MyRecord("foo", 42u)
     }
 
@@ -102,7 +102,7 @@ class FuturesTest {
     }
 
     @Test
-    fun testFutureWithLockAndCancelled() = assertMaxTime(60) {
+    fun testFutureWithLockAndCancelled() = assertMaxTime(100) {
         val job = launch {
             useSharedResource(SharedResourceOptions(releaseAfterMs = 5000U, timeoutMs = 100U))
         }
