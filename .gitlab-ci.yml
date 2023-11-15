@@ -26,4 +26,4 @@ build-all:
   script:
     - cargo build --verbose
     - cargo test --verbose
-    - (cd tests && ./gradlew build)
+    - ./gradlew build

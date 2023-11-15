@@ -1,4 +1,6 @@
 target
+build
 Cargo.lock
+.gradle
 .idea
 .DS_Store
