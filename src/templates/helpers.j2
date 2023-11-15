@@ -1,30 +1,33 @@
 {%- macro to_ffi_call(func) -%}
     {%- match func.throws_type() %}
     {%- when Some with (e) %}
-    rustCallWithError({{ e|type_name}})
+    rustCallWithError({{ e|error_type_name}})
     {%- else %}
     rustCall()
     {%- endmatch %} { _status ->
-    UniFFILib.{{ func.ffi_func().name() }}({% call _arg_list_ffi_call(func) -%}{% if func.arguments().len() > 0 %},{% endif %} _status)
+    UniFFILib.{{ func.ffi_func().name() }}({% call arg_list_lowered(func) -%}{% if func.arguments().len() > 0 %},{% endif %} _status)
 }
 {%- endmacro -%}
+
 {%- macro to_ffi_call_with_prefix(prefix, func) %}
     {%- match func.throws_type() %}
     {%- when Some with (e) %}
-    rustCallWithError({{ e|type_name}})
+    rustCallWithError({{ e|error_type_name}})
     {%- else %}
     rustCall()
     {%- endmatch %} { _status ->
     UniFFILib.{{ func.ffi_func().name() }}(
-        {{- prefix }}, {% call _arg_list_ffi_call(func) %}{% if func.arguments().len() > 0 %}, {% endif %} _status)
+        {{- prefix }}, {% call arg_list_lowered(func) %}{% if func.arguments().len() > 0 %}, {% endif %} _status)
 }
 {%- endmacro %}
-{%- macro _arg_list_ffi_call(func) %}
+
+{%- macro arg_list_lowered(func) %}
     {%- for arg in func.arguments() %}
         {{- arg|lower_fn }}({{ arg.name()|var_name }})
         {%- if !loop.last %}, {% endif %}
     {%- endfor %}
 {%- endmacro -%}
+
 {#-
 // Arglist as used in kotlin declarations of methods, functions and constructors.
 // Note the var_name and type_name filters.
@@ -39,12 +42,14 @@
         {%- if !loop.last %}, {% endif -%}
     {%- endfor %}
 {%- endmacro %}
+
 {% macro arg_list_protocol(func) %}
     {%- for arg in func.arguments() -%}
         {{ arg.name()|var_name }}: {{ arg|type_name -}}
         {%- if !loop.last %}, {% endif -%}
     {%- endfor %}
 {%- endmacro %}
+
 {#-
 // Arglist as used in the UniFFILib function declations.
 // Note unfiltered name but ffi_type_name filters.
@@ -53,20 +58,23 @@
     {%- for arg in func.arguments() %}
         {{- arg.name()|var_name }}: {{ arg.type_().borrow()|ffi_type_name -}},
     {%- endfor %}
-    _uniffi_out_err: RustCallStatus
+    {%- if func.has_rust_call_status_arg() %}_uniffi_out_err: RustCallStatus, {% endif %}
 {%- endmacro -%}
+
 {%- macro arg_list_ffi_call(func) %}
     {%- for arg in func.arguments() %}
         {{- arg.name()|var_name }},
     {%- endfor %}
-    _uniffi_out_err
+    {%- if func.has_rust_call_status_arg() %}_uniffi_out_err{% endif %}
 {%- endmacro -%}
+
 {%- macro arg_list_ffi_header_decl(func) %}
     {%- for arg in func.arguments() %}
         {{- arg.type_().borrow()|ffi_header_type_name }} {{ arg.name() -}},
     {%- endfor %}
     RustCallStatus *_Nonnull out_status
 {%- endmacro -%}
+
 // Macro for destroying fields
 {%- macro destroy_fields(member) %}
     Disposable.destroy(
@@ -74,6 +82,7 @@
         this.{{ field.name()|var_name }}{%- if !loop.last %}, {% endif -%}
     {% endfor -%})
 {%- endmacro -%}
+
 {%- macro ffi_function_definition(func) %}
 fun {{ func.name()|fn_name }}(
     {%- call arg_list_ffi_decl(func) %}
