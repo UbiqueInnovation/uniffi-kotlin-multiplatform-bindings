@@ -68,26 +68,22 @@ tasks.withType<CInteropProcess> {
     dependsOn(copyBinariesToProcessedRessources, copyBindings)
 }
 
-tasks.clean {
+tasks.named<Delete>("clean") {
     dependsOn(cleanBindings, cleanCrate)
 }
 
 kotlin {
+    jvmToolchain(17)
+
     jvm {
-        compilations.all {
-            kotlinOptions.jvmTarget = "1.8"
-        }
         withJava()
-        testRuns["test"].executionTask.configure {
-            useJUnitPlatform()
-        }
     }
 
     val hostOs = System.getProperty("os.name")
     val nativeTarget = when {
-        hostOs == "Mac OS X" -> macosX64("native")
-        hostOs == "Linux" -> linuxX64("native")
-        hostOs.startsWith("Windows") -> mingwX64("native")
+        hostOs == "Mac OS X" -> macosX64()
+        hostOs == "Linux" -> linuxX64()
+        hostOs.startsWith("Windows") -> mingwX64()
         else -> throw GradleException("Host OS is not supported in Kotlin/Native.")
     }
 
@@ -104,8 +100,22 @@ kotlin {
         }
     }
 
+    targets.all {
+        compilations.getByName("main") {
+            kotlinOptions {
+                freeCompilerArgs += "-Xexpect-actual-classes"
+            }
+        }
+    }
+
     sourceSets {
-        val commonMain by getting {
+        all {
+            languageSettings {
+                optIn("kotlinx.cinterop.ExperimentalForeignApi")
+            }
+        }
+
+        commonMain {
             kotlin.srcDir(generatedDir.map { it.dir("commonMain/kotlin") })
 
             dependencies {
@@ -115,34 +125,30 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
             }
         }
-        val commonTest by getting {
+
+        commonTest {
             dependencies {
                 implementation(kotlin("test"))
                 implementation(libs.kotlinx.coroutines.test)
                 implementation(libs.kotest.assertions.core)
             }
         }
-        val jvmMain by getting {
+
+        jvmMain {
             kotlin.srcDir(generatedDir.map { it.dir("jvmMain/kotlin") })
             dependencies {
                 implementation(libs.jna)
             }
         }
-        val jvmTest by getting
-        val nativeMain by getting {
+
+        nativeMain {
             kotlin.srcDir(generatedDir.map { it.dir("nativeMain/kotlin") })
         }
-        val nativeTest by getting
-    }
-}
-
-tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions {
-        freeCompilerArgs += "-Xexpect-actual-classes"
     }
 }
 
 tasks.withType<Test> {
+    useJUnitPlatform()
     reports {
         junitXml.required.set(true)
     }
