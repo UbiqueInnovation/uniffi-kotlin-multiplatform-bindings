@@ -1,4 +1,5 @@
 use std::env;
+use std::env::consts::DLL_EXTENSION;
 use camino::Utf8Path;
 
 use uniffi_kotlin_multiplatform::KotlinBindingGenerator;
@@ -12,7 +13,7 @@ fn main() {
     let udl_file_path = format!("./src/{}.udl", test);
     let udl_file = Utf8Path::new(&udl_file_path);
 
-    let library_file_path = format!("./target/debug/lib{}.so", test);
+    let library_file_path = format!("./target/debug/lib{}.{}", test, DLL_EXTENSION);
     let library_file = Utf8Path::new(&library_file_path);
     let out_dir = Utf8Path::new("./target/bindings");
     uniffi_bindgen::generate_external_bindings(
