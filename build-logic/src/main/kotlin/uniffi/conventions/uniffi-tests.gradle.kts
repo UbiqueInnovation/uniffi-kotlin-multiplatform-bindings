@@ -51,8 +51,8 @@ val cleanBindings = tasks.register<Delete>("cleanBindings") {
 val copyBinaries = tasks.register<Copy>("copyBinaries") {
     group = "uniffi"
     from(crateTargetLibDir)
-    include("*.so")
-    into(layout.buildDirectory.dir("processedResources/jvm/main/linux-x86-64"))
+    include("*.so", "*.dll", "*.dylib")
+    into(layout.buildDirectory.dir("processedResources/jvm/main/${com.sun.jna.Platform.RESOURCE_PREFIX}"))
     dependsOn(buildCrate)
 }
 
@@ -81,7 +81,7 @@ kotlin {
 
     val hostOs = System.getProperty("os.name")
     val nativeTarget = when {
-        hostOs == "Mac OS X" -> macosX64()
+        hostOs == "Mac OS X" -> macosArm64()
         hostOs == "Linux" -> linuxX64()
         hostOs.startsWith("Windows") -> mingwX64()
         else -> throw GradleException("Host OS is not supported in Kotlin/Native.")
