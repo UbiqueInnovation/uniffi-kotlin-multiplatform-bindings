@@ -10,8 +10,11 @@ plugins {
 // https://github.com/gradle/gradle/issues/15383
 val libs = the<LibrariesForLibs>()
 
+val bindgenInstallDir = layout.buildDirectory.dir("bindgen-install")
+
 val generatedDir = layout.buildDirectory.dir("generated/uniffi")
 val crateDir = layout.projectDirectory.dir("uniffi")
+val crateName = layout.projectDirectory.asFile.name
 
 val crateTargetDir = crateDir.dir("target")
 val crateTargetBindingsDir = crateTargetDir.dir("bindings")
@@ -29,11 +32,46 @@ val cleanCrate = tasks.register<Exec>("cleanCrate") {
     commandLine("cargo", "clean")
 }
 
-val buildBindings = tasks.register<Exec>("buildBindings") {
+val installBindgen = tasks.register<Exec>("installBindgen") {
     group = "uniffi"
     workingDir(crateDir)
-    commandLine("cargo", "run", "--bin", "uniffi-bindgen")
-    dependsOn(buildCrate)
+    commandLine(
+        "cargo",
+        "install",
+        "--root",
+        bindgenInstallDir.get().asFile.canonicalPath,
+        "--bins",
+        "--path",
+        rootProject.rootDir.canonicalFile
+    )
+}
+
+val buildBindings = tasks.register<Task>("buildBindings") {
+    group = "uniffi"
+
+    doLast {
+        exec {
+            workingDir(crateDir)
+
+            val library = crateTargetLibDir.asFileTree
+                .matching {
+                    include("lib$crateName.so", "lib$crateName.dylib", "$crateName.dll")
+                }.elements.map { it.single() }
+
+            commandLine(
+                bindgenInstallDir.get().file("bin/uniffi-bindgen-kotlin-multiplatform"),
+                "--out-dir",
+                crateTargetBindingsDir,
+                "--lib-file",
+                library.get(),
+                "--crate",
+                crateName,
+                crateDir.file("src/$crateName.udl")
+            )
+        }.assertNormalExitValue()
+    }
+
+    dependsOn(buildCrate, installBindgen)
 }
 
 val copyBindings = tasks.register<Copy>("copyBindings") {
@@ -51,7 +89,7 @@ val cleanBindings = tasks.register<Delete>("cleanBindings") {
 val copyBinaries = tasks.register<Copy>("copyBinaries") {
     group = "uniffi"
     from(crateTargetLibDir)
-    include("*.so", "*.dll", "*.dylib")
+    include("lib$crateName.so", "lib$crateName.dylib", "$crateName.dll")
     into(layout.buildDirectory.dir("processedResources/jvm/main/${com.sun.jna.Platform.RESOURCE_PREFIX}"))
     dependsOn(buildCrate)
 }
