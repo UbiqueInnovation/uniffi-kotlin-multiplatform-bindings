@@ -18,3 +18,11 @@ clap = { version = "4", features = ["cargo", "std", "derive"] }
 [[bin]]
 name = "uniffi-bindgen-kotlin-multiplatform"
 path = "src/main.rs"
+
+[workspace]
+members = [
+    "tests/callbacks/uniffi",
+    "tests/coverall/uniffi",
+    "tests/external_types/uniffi",
+    "tests/futures/uniffi",
+]

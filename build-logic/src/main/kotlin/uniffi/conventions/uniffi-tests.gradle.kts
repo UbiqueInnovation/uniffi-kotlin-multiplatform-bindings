@@ -16,9 +16,7 @@ val generatedDir = layout.buildDirectory.dir("generated/uniffi")
 val crateDir = layout.projectDirectory.dir("uniffi")
 val crateName = layout.projectDirectory.asFile.name
 
-val crateTargetDir = crateDir.dir("target")
-val crateTargetBindingsDir = crateTargetDir.dir("bindings")
-val crateTargetLibDir = crateTargetDir.dir("debug")
+val crateTargetLibDir = rootProject.layout.projectDirectory.dir("target/debug")
 
 val buildCrate = tasks.register<Exec>("buildCrate") {
     group = "uniffi"
@@ -61,7 +59,7 @@ val buildBindings = tasks.register<Task>("buildBindings") {
             commandLine(
                 bindgenInstallDir.get().file("bin/uniffi-bindgen-kotlin-multiplatform"),
                 "--out-dir",
-                crateTargetBindingsDir,
+                generatedDir.get(),
                 "--lib-file",
                 library.get(),
                 "--crate",
@@ -74,16 +72,9 @@ val buildBindings = tasks.register<Task>("buildBindings") {
     dependsOn(buildCrate, installBindgen)
 }
 
-val copyBindings = tasks.register<Copy>("copyBindings") {
-    group = "uniffi"
-    from(crateTargetBindingsDir)
-    into(generatedDir)
-    dependsOn(buildBindings)
-}
-
 val cleanBindings = tasks.register<Delete>("cleanBindings") {
     group = "uniffi"
-    delete(crateTargetBindingsDir)
+    delete(generatedDir)
 }
 
 val copyBinaries = tasks.register<Copy>("copyBinaries") {
@@ -99,11 +90,11 @@ tasks.withType<ProcessResources> {
 }
 
 tasks.withType<KotlinCompile<*>> {
-    dependsOn(copyBindings)
+    dependsOn(buildBindings)
 }
 
 tasks.withType<CInteropProcess> {
-    dependsOn(copyBinaries, copyBindings)
+    dependsOn(copyBinaries, buildBindings)
 }
 
 tasks.named<Delete>("clean") {
