@@ -1,6 +1,6 @@
 import org.gradle.accessors.dm.LibrariesForLibs
+import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
 import org.jetbrains.kotlin.gradle.tasks.CInteropProcess
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("multiplatform")
@@ -48,7 +48,7 @@ val cleanBindings = tasks.register<Delete>("cleanBindings") {
     delete(crateTargetBindingsDir)
 }
 
-val copyBinariesToProcessedRessources = tasks.register<Copy>("copyBinaries") {
+val copyBinaries = tasks.register<Copy>("copyBinaries") {
     group = "uniffi"
     from(crateTargetLibDir)
     include("*.so")
@@ -57,15 +57,15 @@ val copyBinariesToProcessedRessources = tasks.register<Copy>("copyBinaries") {
 }
 
 tasks.withType<ProcessResources> {
-    dependsOn(copyBinariesToProcessedRessources)
+    dependsOn(copyBinaries)
 }
 
-tasks.withType<KotlinCompile> {
+tasks.withType<KotlinCompile<*>> {
     dependsOn(copyBindings)
 }
 
 tasks.withType<CInteropProcess> {
-    dependsOn(copyBinariesToProcessedRessources, copyBindings)
+    dependsOn(copyBinaries, copyBindings)
 }
 
 tasks.named<Delete>("clean") {
