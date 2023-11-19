@@ -109,12 +109,12 @@ actual val RustBuffer.dataSize: Int
     get() = useContents { len }
 
 actual fun RustBuffer.free(): Unit =
-    rustCall { status ->
+    rustCall { status: RustCallStatus ->
         UniFFILib.{{ ci.ffi_rustbuffer_free().name() }}(this, status)
     }
 
 actual fun allocRustBuffer(buffer: Buffer): RustBuffer =
-    rustCall { status ->
+    rustCall { status: RustCallStatus ->
         val size = buffer.size
         UniFFILib.{{ ci.ffi_rustbuffer_alloc().name() }}(size.toInt(), status).also {
             it.useContents {

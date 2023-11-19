@@ -42,7 +42,7 @@ internal inline fun <U, E : Exception> rustCallWithError(
     errorHandler: CallStatusErrorHandler<E>,
     crossinline callback: (RustCallStatus) -> U,
 ): U =
-    withRustCallStatus { status ->
+    withRustCallStatus { status: RustCallStatus ->
         val return_value = callback(status)
         checkCallStatus(errorHandler, status)
         return_value

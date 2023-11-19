@@ -3,8 +3,8 @@
     {%- when Some with (e) %}
     rustCallWithError({{ e|error_type_name}})
     {%- else %}
-    rustCall()
-    {%- endmatch %} { _status ->
+    rustCall
+    {%- endmatch %} { _status: RustCallStatus ->
     UniFFILib.{{ func.ffi_func().name() }}({% call arg_list_lowered(func) -%}{% if func.arguments().len() > 0 %},{% endif %} _status)
 }
 {%- endmacro -%}
@@ -14,8 +14,8 @@
     {%- when Some with (e) %}
     rustCallWithError({{ e|error_type_name}})
     {%- else %}
-    rustCall()
-    {%- endmatch %} { _status ->
+    rustCall
+    {%- endmatch %} { _status: RustCallStatus ->
     UniFFILib.{{ func.ffi_func().name() }}(
         {{- prefix }}, {% call arg_list_lowered(func) %}{% if func.arguments().len() > 0 %}, {% endif %} _status)
 }

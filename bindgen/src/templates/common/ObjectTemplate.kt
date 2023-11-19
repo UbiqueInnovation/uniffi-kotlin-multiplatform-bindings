@@ -32,7 +32,7 @@ class {{ type_name }}(
     {%- endmatch %}
 
     override protected fun freeRustArcPtr() {
-        rustCall() { status ->
+        rustCall { status: RustCallStatus ->
             UniFFILib.{{ obj.ffi_object_free().name() }}(this.pointer, status)
         }
     }
