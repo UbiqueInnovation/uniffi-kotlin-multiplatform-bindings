@@ -1,6 +1,6 @@
 // TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
-actual typealias RustCallStatus = CPointer<{{ config.package_name() }}.cinterop.RustCallStatus>
+actual typealias RustCallStatus = CPointer<{{ ci.namespace() }}.cinterop.RustCallStatus>
 
 actual val RustCallStatus.statusCode: kotlin.Byte
     get() = pointed.code
@@ -9,7 +9,7 @@ actual val RustCallStatus.errorBuffer: RustBuffer
 
 actual fun <T> withRustCallStatus(block: (RustCallStatus) -> T): T =
     memScoped {
-        val allocated = alloc<{{ config.package_name() }}.cinterop.RustCallStatus>().ptr
+        val allocated = alloc<{{ ci.namespace() }}.cinterop.RustCallStatus>().ptr
         block(allocated)
     }
 
@@ -17,7 +17,7 @@ val RustCallStatusByValue.statusCode: kotlin.Byte
     get() = useContents { code }
 
 @Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
-actual typealias RustCallStatusByValue = CValue<{{ config.package_name() }}.cinterop.RustCallStatus>
+actual typealias RustCallStatusByValue = CValue<{{ ci.namespace() }}.cinterop.RustCallStatus>
 
 // This is actually common kotlin but inefficient because of the coarse granular locking...
 // TODO either create some real implementation or at least measure if protecting the counter

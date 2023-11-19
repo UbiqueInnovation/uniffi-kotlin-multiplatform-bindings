@@ -94,10 +94,10 @@ actual fun UBytePointer.asSource(len: kotlin.Long): NoCopySource = object : NoCo
 
 // TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
-actual typealias RustBuffer = CValue<{{ config.package_name() }}.cinterop.RustBuffer>
+actual typealias RustBuffer = CValue<{{ ci.namespace() }}.cinterop.RustBuffer>
 
 @Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
-actual typealias RustBufferPointer = CPointer<{{ config.package_name() }}.cinterop.RustBuffer>
+actual typealias RustBufferPointer = CPointer<{{ ci.namespace() }}.cinterop.RustBuffer>
 
 actual fun RustBuffer.asSource(): NoCopySource {
     val data = useContents { data }
@@ -145,4 +145,4 @@ actual fun emptyRustBuffer(): RustBuffer {
 
 // TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
-actual typealias ForeignBytes = CValue<{{ config.package_name() }}.cinterop.ForeignBytes>
+actual typealias ForeignBytes = CValue<{{ ci.namespace() }}.cinterop.ForeignBytes>

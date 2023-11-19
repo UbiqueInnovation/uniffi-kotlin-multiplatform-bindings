@@ -12,7 +12,7 @@ actual internal object UniFFILib {
     actual fun {{ func.name() }}(
     {%- call kt::arg_list_ffi_decl(func) %}
     ){%- match func.return_type() -%}{%- when Some with (type_) %}: {{ type_.borrow()|ffi_type_name }}{% when None %}: Unit{% endmatch %} =
-    requireNotNull({{ config.package_name() }}.cinterop.{{ func.name() }}(
+    requireNotNull({{ ci.namespace() }}.cinterop.{{ func.name() }}(
     {%- call kt::arg_list_ffi_call(func) %}
     ))
 
