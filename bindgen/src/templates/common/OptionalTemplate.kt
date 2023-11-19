@@ -8,7 +8,7 @@ object {{ ffi_converter_name }}: FfiConverterRustBuffer<{{ inner_type_name }}?> 
         return {{ inner_type|read_fn }}(source)
     }
 
-    override fun allocationSize(value: {{ inner_type_name }}?): Int {
+    override fun allocationSize(value: {{ inner_type_name }}?): kotlin.Int {
         if (value == null) {
             return 1
         } else {

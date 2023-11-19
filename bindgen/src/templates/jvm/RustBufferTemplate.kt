@@ -1,32 +1,32 @@
 actual typealias Pointer = com.sun.jna.Pointer
 
-actual fun Long.toPointer() = com.sun.jna.Pointer(this)
+actual fun kotlin.Long.toPointer() = com.sun.jna.Pointer(this)
 
-actual fun Pointer.toLong(): Long = com.sun.jna.Pointer.nativeValue(this)
+actual fun Pointer.toLong(): kotlin.Long = com.sun.jna.Pointer.nativeValue(this)
 
 actual typealias UBytePointer = com.sun.jna.Pointer
 
-actual fun UBytePointer.asSource(len: Long): NoCopySource = object : NoCopySource {
+actual fun UBytePointer.asSource(len: kotlin.Long): NoCopySource = object : NoCopySource {
     val buffer = getByteBuffer(0, len).also {
         it.order(java.nio.ByteOrder.BIG_ENDIAN)
     }
 
-    override fun exhausted(): Boolean = !buffer.hasRemaining()
+    override fun exhausted(): kotlin.Boolean = !buffer.hasRemaining()
 
-    override fun readByte(): Byte = buffer.get()
+    override fun readByte(): kotlin.Byte = buffer.get()
 
-    override fun readInt(): Int = buffer.getInt()
+    override fun readInt(): kotlin.Int = buffer.getInt()
 
-    override fun readLong(): Long = buffer.getLong()
+    override fun readLong(): kotlin.Long = buffer.getLong()
 
-    override fun readShort(): Short = buffer.getShort()
+    override fun readShort(): kotlin.Short = buffer.getShort()
 
     override fun readByteArray(): ByteArray {
         val remaining = buffer.remaining()
         return readByteArray(remaining.toLong())
     }
 
-    override fun readByteArray(len: Long): ByteArray {
+    override fun readByteArray(len: kotlin.Long): ByteArray {
         val startIndex = buffer.position().toLong()
         val indexAfterLast = (startIndex + len).toInt()
         val byteArray = getByteArray(startIndex, len.toInt())
@@ -38,10 +38,10 @@ actual fun UBytePointer.asSource(len: Long): NoCopySource = object : NoCopySourc
 @Structure.FieldOrder("capacity", "len", "data")
 open class RustBufferStructure : Structure() {
     @JvmField
-    var capacity: Int = 0
+    var capacity: kotlin.Int = 0
 
     @JvmField
-    var len: Int = 0
+    var len: kotlin.Int = 0
 
     @JvmField
     var data: Pointer? = null
@@ -59,7 +59,7 @@ actual class RustBufferPointer : ByReference(16) {
 
 actual fun RustBuffer.asSource(): NoCopySource = requireNotNull(data).asSource(len.toLong())
 
-actual val RustBuffer.dataSize: Int
+actual val RustBuffer.dataSize: kotlin.Int
     get() = len
 
 actual fun RustBuffer.free() =
@@ -95,7 +95,7 @@ actual fun emptyRustBuffer(): RustBuffer = RustBuffer()
 @Structure.FieldOrder("len", "data")
 actual open class ForeignBytes : Structure() {
     @JvmField
-    var len: Int = 0
+    var len: kotlin.Int = 0
 
     @JvmField
     var data: Pointer? = null

@@ -3,7 +3,7 @@
 {{- self.add_import("kotlinx.atomicfu.locks.reentrantLock") }}
 {{- self.add_import("kotlinx.atomicfu.locks.withLock") }}
 
-typealias Handle = ULong
+typealias Handle = kotlin.ULong
 internal class ConcurrentHandleMap<T>(
     private val leftMap: MutableMap<Handle, T> = mutableMapOf(),
     private val rightMap: MutableMap<T, Handle> = mutableMapOf()

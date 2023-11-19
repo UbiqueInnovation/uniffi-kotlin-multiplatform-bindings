@@ -70,16 +70,16 @@ macro_rules! impl_code_type_for_primitive {
     };
 }
 
-impl_code_type_for_primitive!(BooleanCodeType, "Boolean", "Boolean");
-impl_code_type_for_primitive!(StringCodeType, "String", "String");
-impl_code_type_for_primitive!(Int8CodeType, "Byte", "Byte");
-impl_code_type_for_primitive!(Int16CodeType, "Short", "Short");
-impl_code_type_for_primitive!(Int32CodeType, "Int", "Int");
-impl_code_type_for_primitive!(Int64CodeType, "Long", "Long");
-impl_code_type_for_primitive!(UInt8CodeType, "UByte", "UByte");
-impl_code_type_for_primitive!(UInt16CodeType, "UShort", "UShort");
-impl_code_type_for_primitive!(UInt32CodeType, "UInt", "UInt");
-impl_code_type_for_primitive!(UInt64CodeType, "ULong", "ULong");
-impl_code_type_for_primitive!(Float32CodeType, "Float", "Float");
-impl_code_type_for_primitive!(Float64CodeType, "Double", "Double");
-impl_code_type_for_primitive!(BytesCodeType, "ByteArray", "ByteArray");
+impl_code_type_for_primitive!(BooleanCodeType, "kotlin.Boolean", "Boolean");
+impl_code_type_for_primitive!(StringCodeType, "kotlin.String", "String");
+impl_code_type_for_primitive!(Int8CodeType, "kotlin.Byte", "Byte");
+impl_code_type_for_primitive!(Int16CodeType, "kotlin.Short", "Short");
+impl_code_type_for_primitive!(Int32CodeType, "kotlin.Int", "Int");
+impl_code_type_for_primitive!(Int64CodeType, "kotlin.Long", "Long");
+impl_code_type_for_primitive!(UInt8CodeType, "kotlin.UByte", "UByte");
+impl_code_type_for_primitive!(UInt16CodeType, "kotlin.UShort", "UShort");
+impl_code_type_for_primitive!(UInt32CodeType, "kotlin.UInt", "UInt");
+impl_code_type_for_primitive!(UInt64CodeType, "kotlin.ULong", "ULong");
+impl_code_type_for_primitive!(Float32CodeType, "kotlin.Float", "Float");
+impl_code_type_for_primitive!(Float64CodeType, "kotlin.Double", "Double");
+impl_code_type_for_primitive!(BytesCodeType, "kotlin.ByteArray", "ByteArray");

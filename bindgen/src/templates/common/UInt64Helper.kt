@@ -1,13 +1,13 @@
-object FfiConverterULong : FfiConverter<ULong, ULong> {
-    override fun lift(value: ULong): ULong = value
+object FfiConverterULong : FfiConverter<kotlin.ULong, kotlin.ULong> {
+    override fun lift(value: kotlin.ULong): kotlin.ULong = value
 
-    override fun read(source: NoCopySource): ULong = lift(source.readLong().toULong())
+    override fun read(source: NoCopySource): kotlin.ULong = lift(source.readLong().toULong())
 
-    override fun lower(value: ULong): ULong = value
+    override fun lower(value: kotlin.ULong): kotlin.ULong = value
 
-    override fun allocationSize(value: ULong) = 8
+    override fun allocationSize(value: kotlin.ULong) = 8
 
-    override fun write(value: ULong, buf: Buffer) {
+    override fun write(value: kotlin.ULong, buf: Buffer) {
         buf.writeLong(value.toLong())
     }
 }

@@ -6,17 +6,17 @@
 @Suppress("NO_ACTUAL_FOR_EXPECT")
 expect class RustCallStatus
 
-internal const val RUST_CALL_STATUS_SUCCESS: Byte = 0
-internal const val RUST_CALL_STATUS_ERROR: Byte = 1
-internal const val RUST_CALL_STATUS_PANIC: Byte = 2
+internal const val RUST_CALL_STATUS_SUCCESS: kotlin.Byte = 0
+internal const val RUST_CALL_STATUS_ERROR: kotlin.Byte = 1
+internal const val RUST_CALL_STATUS_PANIC: kotlin.Byte = 2
 
-fun RustCallStatus.isSuccess(): Boolean = statusCode == RUST_CALL_STATUS_SUCCESS
+fun RustCallStatus.isSuccess(): kotlin.Boolean = statusCode == RUST_CALL_STATUS_SUCCESS
 
-fun RustCallStatus.isError(): Boolean = statusCode == RUST_CALL_STATUS_ERROR
+fun RustCallStatus.isError(): kotlin.Boolean = statusCode == RUST_CALL_STATUS_ERROR
 
-fun RustCallStatus.isPanic(): Boolean = statusCode == RUST_CALL_STATUS_PANIC
+fun RustCallStatus.isPanic(): kotlin.Boolean = statusCode == RUST_CALL_STATUS_PANIC
 
-expect val RustCallStatus.statusCode: Byte
+expect val RustCallStatus.statusCode: kotlin.Byte
 
 expect val RustCallStatus.errorBuffer: RustBuffer
 
@@ -26,7 +26,7 @@ expect fun <T> withRustCallStatus(block: (RustCallStatus) -> T): T
 @Suppress("NO_ACTUAL_FOR_EXPECT")
 expect class RustCallStatusByValue
 
-class InternalException(message: String) : Exception(message)
+class InternalException(message: kotlin.String) : Exception(message)
 
 // Each top-level error class has a companion object that can lift the error from the call status's rust buffer
 interface CallStatusErrorHandler<E> {
@@ -93,17 +93,17 @@ internal inline fun <U> rustCall(crossinline callback: (RustCallStatus) -> U): U
 //
 // TODO: refactor callbacks to use this class
 expect class UniFfiHandleMap<T : Any>() {
-    val size: Int
-    fun insert(obj: T): ULong
-    fun get(handle: ULong): T?
-    fun remove(handle: ULong): T?
+    val size: kotlin.Int
+    fun insert(obj: T): kotlin.ULong
+    fun get(handle: kotlin.ULong): T?
+    fun remove(handle: kotlin.ULong): T?
 }
 
 // FFI type for Rust future continuations
 
-private val uniffiContinuationHandleMap = UniFfiHandleMap<CancellableContinuation<Short>>()
+private val uniffiContinuationHandleMap = UniFfiHandleMap<CancellableContinuation<kotlin.Short>>()
 
-internal fun resumeContinutation(continuationHandle: ULong, pollResult: Short) {
+internal fun resumeContinutation(continuationHandle: kotlin.ULong, pollResult: kotlin.Short) {
     uniffiContinuationHandleMap.remove(continuationHandle)?.resume(pollResult)
 }
 

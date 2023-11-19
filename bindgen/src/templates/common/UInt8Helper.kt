@@ -1,13 +1,13 @@
-object FfiConverterUByte : FfiConverter<UByte, UByte> {
-    override fun lift(value: UByte): UByte = value
+object FfiConverterUByte : FfiConverter<kotlin.UByte, kotlin.UByte> {
+    override fun lift(value: kotlin.UByte): kotlin.UByte = value
 
-    override fun read(source: NoCopySource): UByte = lift(source.readByte().toUByte())
+    override fun read(source: NoCopySource): kotlin.UByte = lift(source.readByte().toUByte())
 
-    override fun lower(value: UByte): UByte = value
+    override fun lower(value: kotlin.UByte): kotlin.UByte = value
 
-    override fun allocationSize(value: UByte) = 1
+    override fun allocationSize(value: kotlin.UByte) = 1
 
-    override fun write(value: UByte, buf: Buffer) {
+    override fun write(value: kotlin.UByte, buf: Buffer) {
         buf.writeByte(value.toInt())
     }
 }

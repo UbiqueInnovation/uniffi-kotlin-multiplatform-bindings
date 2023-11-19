@@ -8,7 +8,7 @@ object {{ ffi_converter_name }}: FfiConverterRustBuffer<List<{{ inner_type_name 
         }
     }
 
-    override fun allocationSize(value: List<{{ inner_type_name }}>): Int {
+    override fun allocationSize(value: List<{{ inner_type_name }}>): kotlin.Int {
         val sizeForLength = 4
         val sizeForItems = value.map { {{ inner_type|allocation_size_fn }}(it) }.sum()
         return sizeForLength + sizeForItems

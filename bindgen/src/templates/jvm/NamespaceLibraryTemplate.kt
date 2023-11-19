@@ -1,5 +1,5 @@
 @Synchronized
-private fun findLibraryName(): String {
+private fun findLibraryName(): kotlin.String {
     val componentName = "{{ ci.namespace() }}"
     val libOverride = System.getProperty("uniffi.component.$componentName.libraryOverride")
     if (libOverride != null) {

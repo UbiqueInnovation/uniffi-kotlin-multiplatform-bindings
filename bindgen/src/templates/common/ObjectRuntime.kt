@@ -135,7 +135,7 @@ abstract class FFIObject(
             if (c == 0L) {
                 throw IllegalStateException("${this::class.simpleName} object has already been destroyed")
             }
-            if (c == Long.MAX_VALUE) {
+            if (c == kotlin.Long.MAX_VALUE) {
                 throw IllegalStateException("${this::class.simpleName} call counter would overflow")
             }
         } while (!this.callCounter.compareAndSet(expect = c, update = c + 1L))

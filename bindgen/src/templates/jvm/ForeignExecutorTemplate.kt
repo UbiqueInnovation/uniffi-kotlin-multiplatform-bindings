@@ -8,29 +8,29 @@ interface UniFfiRustTaskCallback: Callback {
 
 class UniFfiForeignExecutorCallbackImpl(
     private val invokeImpl: (
-        handle: ULong,
-        delayMs: Int,
+        handle: kotlin.ULong,
+        delayMs: kotlin.Int,
         rustTask: UniFfiRustTaskCallback?,
         rustTaskData: Pointer?
     ) -> Unit
 ) : Callback {
     fun invoke(
-        handle: ULong,
-        delayMs: Int,
+        handle: kotlin.ULong,
+        delayMs: kotlin.Int,
         rustTask: UniFfiRustTaskCallback?,
         rustTaskData: Pointer?
     ) = invokeImpl(handle, delayMs, rustTask, rustTaskData)
 }
 
 fun createUniFfiForeignExecutorCallbackImpl(
-    block: (handle: ULong, delayMs: Int, rustTask: UniFfiRustTaskCallback?, rustTaskData: Pointer?) -> Unit
+    block: (handle: kotlin.ULong, delayMs: kotlin.Int, rustTask: UniFfiRustTaskCallback?, rustTaskData: Pointer?) -> Unit
 ): UniFfiForeignExecutorCallback = UniFfiForeignExecutorCallbackImpl(block)
 
 actual typealias UniFfiForeignExecutorCallback = UniFfiForeignExecutorCallbackImpl
 
 fun invokeUniFfiForeignExecutorCallback(
-    handle: ULong,
-    delayMs: Int,
+    handle: kotlin.ULong,
+    delayMs: kotlin.Int,
     rustTask: UniFfiRustTaskCallback?,
     rustTaskData: Pointer?
 ) {

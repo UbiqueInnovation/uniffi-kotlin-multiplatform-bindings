@@ -1,9 +1,8 @@
-{{ self.add_import("kotlin.time.Duration") }}
 {{ self.add_import("kotlin.time.Duration.Companion.nanoseconds") }}
 {{ self.add_import("kotlin.time.Duration.Companion.seconds") }}
 
-object FfiConverterDuration : FfiConverterRustBuffer<Duration> {
-    override fun read(source: NoCopySource): Duration {
+object FfiConverterDuration : FfiConverterRustBuffer<kotlin.time.Duration> {
+    override fun read(source: NoCopySource): kotlin.time.Duration {
         val seconds = source.readLong().seconds
         val nanoseconds = source.readInt().nanoseconds
         val duration = seconds + nanoseconds
@@ -13,9 +12,9 @@ object FfiConverterDuration : FfiConverterRustBuffer<Duration> {
         return duration
     }
 
-    override fun allocationSize(value: Duration) = 12
+    override fun allocationSize(value: kotlin.time.Duration) = 12
 
-    override fun write(value: Duration, buf: Buffer) {
+    override fun write(value: kotlin.time.Duration, buf: Buffer) {
         if (value < 0.nanoseconds) {
             throw IllegalArgumentException("Invalid duration, must be non-negative")
         }

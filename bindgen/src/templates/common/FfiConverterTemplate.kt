@@ -25,7 +25,7 @@ interface FfiConverter<KotlinType, FfiType> {
     fun lift(value: FfiType): KotlinType
     fun lower(value: KotlinType): FfiType
     fun read(source: NoCopySource): KotlinType
-    fun allocationSize(value: KotlinType): Int
+    fun allocationSize(value: KotlinType): kotlin.Int
     fun write(value: KotlinType, buf: Buffer)
 }
 

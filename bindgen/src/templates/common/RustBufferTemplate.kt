@@ -2,15 +2,15 @@
 @Suppress("NO_ACTUAL_FOR_EXPECT")
 expect class Pointer
 
-expect fun Long.toPointer(): Pointer
+expect fun kotlin.Long.toPointer(): Pointer
 
-expect fun Pointer.toLong(): Long
+expect fun Pointer.toLong(): kotlin.Long
 
 // TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("NO_ACTUAL_FOR_EXPECT")
 expect class UBytePointer
 
-expect fun UBytePointer.asSource(len: Long): NoCopySource
+expect fun UBytePointer.asSource(len: kotlin.Long): NoCopySource
 
 // TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("NO_ACTUAL_FOR_EXPECT")
@@ -22,7 +22,7 @@ expect class RustBufferPointer
 
 expect fun RustBuffer.asSource(): NoCopySource
 
-expect val RustBuffer.dataSize: Int
+expect val RustBuffer.dataSize: kotlin.Int
 
 expect fun RustBuffer.free()
 
@@ -33,13 +33,13 @@ expect fun RustBufferPointer.setValue(value: RustBuffer)
 expect fun emptyRustBuffer(): RustBuffer
 
 interface NoCopySource {
-    fun exhausted(): Boolean
-    fun readByte(): Byte
-    fun readInt(): Int
-    fun readLong(): Long
-    fun readShort(): Short
+    fun exhausted(): kotlin.Boolean
+    fun readByte(): kotlin.Byte
+    fun readInt(): kotlin.Int
+    fun readLong(): kotlin.Long
+    fun readShort(): kotlin.Short
     fun readByteArray(): ByteArray
-    fun readByteArray(len: Long): ByteArray
+    fun readByteArray(len: kotlin.Long): ByteArray
 }
 
 // This is a helper for safely passing byte references into the rust code.

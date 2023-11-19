@@ -3,9 +3,9 @@
 {%- let canonical_type_name = e|error_canonical_name %}
 
 {% if e.is_flat() %}
-sealed class {{ type_name }}(message: String): Exception(message){% if contains_object_references %}, Disposable {% endif %} {
+sealed class {{ type_name }}(message: kotlin.String): Exception(message){% if contains_object_references %}, Disposable {% endif %} {
         {% for variant in e.variants() -%}
-        class {{ variant.name()|exception_name }}(message: String) : {{ type_name }}(message)
+        class {{ variant.name()|exception_name }}(message: kotlin.String) : {{ type_name }}(message)
         {% endfor %}
 
     companion object ErrorHandler : CallStatusErrorHandler<{{ type_name }}> {
@@ -71,7 +71,7 @@ object {{ ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}> {
         {%- endif %}
     }
 
-    override fun allocationSize(value: {{ type_name }}): Int {
+    override fun allocationSize(value: {{ type_name }}): kotlin.Int {
         {%- if e.is_flat() %}
         return 4
         {%- else %}

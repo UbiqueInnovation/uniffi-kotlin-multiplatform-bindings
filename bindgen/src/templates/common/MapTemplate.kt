@@ -12,7 +12,7 @@ object {{ ffi_converter_name }}: FfiConverterRustBuffer<Map<{{ key_type_name }},
         return items
     }
 
-    override fun allocationSize(value: Map<{{ key_type_name }}, {{ value_type_name }}>): Int {
+    override fun allocationSize(value: Map<{{ key_type_name }}, {{ value_type_name }}>): kotlin.Int {
         val spaceForMapSize = 4
         val spaceForChildren = value.map { (k, v) ->
             {{ key_type|allocation_size_fn }}(k) +

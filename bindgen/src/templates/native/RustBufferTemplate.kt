@@ -2,23 +2,23 @@
 @Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_USE_SITE_VARIANCE")
 actual typealias Pointer = CPointer<out CPointed>
 
-actual fun Long.toPointer(): Pointer = requireNotNull(this.toCPointer())
+actual fun kotlin.Long.toPointer(): Pointer = requireNotNull(this.toCPointer())
 
-actual fun Pointer.toLong(): Long = this.rawValue.toLong()
+actual fun Pointer.toLong(): kotlin.Long = this.rawValue.toLong()
 
 @Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_USE_SITE_VARIANCE", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
 actual typealias UBytePointer = CPointer<UByteVar>
 
 @Suppress("NOTHING_TO_INLINE") // Syntactic sugar.
-internal inline infix fun Byte.and(other: Long): Long = toLong() and other
+internal inline infix fun kotlin.Byte.and(other: kotlin.Long): kotlin.Long = toLong() and other
 
 @Suppress("NOTHING_TO_INLINE") // Syntactic sugar.
-internal inline infix fun Byte.and(other: Int): Int = toInt() and other
+internal inline infix fun kotlin.Byte.and(other: kotlin.Int): kotlin.Int = toInt() and other
 
 // byte twiddling was basically pasted from okio
-actual fun UBytePointer.asSource(len: Long): NoCopySource = object : NoCopySource {
-    var readBytes: Int = 0
-    var remaining: Long = len
+actual fun UBytePointer.asSource(len: kotlin.Long): NoCopySource = object : NoCopySource {
+    var readBytes: kotlin.Int = 0
+    var remaining: kotlin.Long = len
 
     init {
         if (len < 0) {
@@ -26,28 +26,28 @@ actual fun UBytePointer.asSource(len: Long): NoCopySource = object : NoCopySourc
         }
     }
 
-    private fun requireLen(requiredLen: Long) {
+    private fun requireLen(requiredLen: kotlin.Long) {
         if (remaining < requiredLen) {
             throw IllegalStateException("Expected at least ${requiredLen} bytes in source but have only ${len}")
         }
         remaining -= requiredLen
     }
 
-    override fun exhausted(): Boolean = remaining == 0L
+    override fun exhausted(): kotlin.Boolean = remaining == 0L
 
-    override fun readByte(): Byte {
+    override fun readByte(): kotlin.Byte {
         requireLen(1)
         return reinterpret<ByteVar>()[readBytes++]
     }
 
-    override fun readShort(): Short {
+    override fun readShort(): kotlin.Short {
         requireLen(2)
         val data = reinterpret<ByteVar>()
         val s = data[readBytes++] and 0xff shl 8 or (data[readBytes++] and 0xff)
         return s.toShort()
     }
 
-    override fun readInt(): Int {
+    override fun readInt(): kotlin.Int {
         requireLen(4)
         val data = reinterpret<ByteVar>()
         val i = (
@@ -59,7 +59,7 @@ actual fun UBytePointer.asSource(len: Long): NoCopySource = object : NoCopySourc
         return i
     }
 
-    override fun readLong(): Long {
+    override fun readLong(): kotlin.Long {
         requireLen(8)
         val data = reinterpret<ByteVar>()
         val v = (
@@ -77,7 +77,7 @@ actual fun UBytePointer.asSource(len: Long): NoCopySource = object : NoCopySourc
 
     override fun readByteArray(): ByteArray = readByteArray(len)
 
-    override fun readByteArray(len: Long): ByteArray {
+    override fun readByteArray(len: kotlin.Long): ByteArray {
         requireLen(len)
 
         val cast = reinterpret<ByteVar>()
@@ -105,7 +105,7 @@ actual fun RustBuffer.asSource(): NoCopySource {
     return requireNotNull(data).asSource(len.toLong())
 }
 
-actual val RustBuffer.dataSize: Int
+actual val RustBuffer.dataSize: kotlin.Int
     get() = useContents { len }
 
 actual fun RustBuffer.free(): Unit =

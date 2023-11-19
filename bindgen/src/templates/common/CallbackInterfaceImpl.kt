@@ -2,7 +2,7 @@
 
 object {{ foreign_callback_name }} {
     @Suppress("TooGenericExceptionCaught")
-    fun invoke(handle: Handle, method: Int, argsData: UBytePointer, argsLen: Int, outBuf: RustBufferPointer): Int {
+    fun invoke(handle: Handle, method: kotlin.Int, argsData: UBytePointer, argsLen: kotlin.Int, outBuf: RustBufferPointer): kotlin.Int {
         val cb = {{ ffi_converter_name }}.lift(handle)
         return when (method) {
             IDX_CALLBACK_FREE -> {
@@ -51,7 +51,7 @@ object {{ foreign_callback_name }} {
 
     {% for meth in cbi.methods() -%}
     {% let method_name = format!("invoke_{}", meth.name())|fn_name %}
-    private fun {{ method_name }}(kotlinCallbackInterface: {{ type_name }}, argsData: UBytePointer, argsLen: Int): RustBuffer {
+    private fun {{ method_name }}(kotlinCallbackInterface: {{ type_name }}, argsData: UBytePointer, argsLen: kotlin.Int): RustBuffer {
         {#- Unpacking args from the RustBuffer #}
         {%- if meth.arguments().len() != 0 -%}
         {#- Calling the concrete callback object #}

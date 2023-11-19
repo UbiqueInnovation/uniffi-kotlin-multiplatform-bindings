@@ -8,7 +8,7 @@ internal val uniffiRustFutureContinuationCallback = createUniFfiRustFutureContin
 
 internal suspend fun<T, F, E: Exception> uniffiRustCallAsync(
     rustFuture: Pointer,
-    pollFunc: (Pointer, UniFfiRustFutureContinuationCallbackType, ULong) -> Unit,
+    pollFunc: (Pointer, UniFfiRustFutureContinuationCallbackType, kotlin.ULong) -> Unit,
     completeFunc: (Pointer, RustCallStatus) -> F,
     freeFunc: (Pointer) -> Unit,
     liftFunc: (F) -> T,
@@ -16,7 +16,7 @@ internal suspend fun<T, F, E: Exception> uniffiRustCallAsync(
 ): T {
     try {
         do {
-            val pollResult = suspendCancellableCoroutine<Short> { continuation ->
+            val pollResult = suspendCancellableCoroutine<kotlin.Short> { continuation ->
                 pollFunc(
                     rustFuture,
                     uniffiRustFutureContinuationCallback,
