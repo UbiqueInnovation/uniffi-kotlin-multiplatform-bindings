@@ -1,6 +1,5 @@
 namespace keywords {
-    // TODO: Consider renaming breakk back to break
-    void if(u8 breakk);
+    void if(u8 break);
 };
 
 interface break {
