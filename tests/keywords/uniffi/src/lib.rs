@@ -17,10 +17,10 @@ impl r#break {
 #[allow(non_camel_case_types)]
 trait r#continue {
     fn r#return(&self, v: r#return) -> r#return;
-    fn r#continue(&self, v: Vec<Box<dyn r#continue>>) -> Option<Box<dyn r#continue>>;
+    // fn r#continue(&self, v: Vec<Box<dyn r#continue>>) -> Option<Box<dyn r#continue>>;
     fn r#break(&self, _v: Option<Arc<r#break>>) -> HashMap<u8, Arc<r#break>>;
     fn r#while(&self, _v: Vec<r#while>) -> r#while;
-    fn class(&self, _v: HashMap<u8, Vec<class>>) -> Option<HashMap<u8, Vec<class>>>;
+    // fn class(&self, _v: HashMap<u8, Vec<class>>) -> Option<HashMap<u8, Vec<class>>>;
 }
 
 #[allow(non_camel_case_types)]
@@ -57,4 +57,5 @@ pub enum fun {
     class { object: u8 },
 }
 
-include!(concat!(env!("OUT_DIR"), "/keywords.uniffi.rs"));
+uniffi::include_scaffolding!("keywords");
+uniffi_reexport_scaffolding!();

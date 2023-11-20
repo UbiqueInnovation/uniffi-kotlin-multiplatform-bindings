@@ -1,5 +1,6 @@
 namespace keywords {
-    void if(u8 break);
+    // TODO: Consider renaming breakk back to break
+    void if(u8 breakk);
 };
 
 interface break {
@@ -9,10 +10,12 @@ interface break {
 
 callback interface continue {
     return return(return v);
-    continue? continue(sequence<continue> continue);
+    // TODO: Add #continue back
+    // continue? continue(sequence<continue> continue);
     record<u8, break> break(break? v);
     while while(sequence<while> while);
-    record<u8, sequence<class>>? class(record<u8, sequence<class>> v);
+    // TODO: Add #class back
+    // record<u8, sequence<class>>? class(record<u8, sequence<class>> v);
 };
 
 dictionary return {
