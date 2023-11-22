@@ -29,6 +29,8 @@ dictionary SimpleDict {
     double float64;
     double? maybe_float64;
     Coveralls? coveralls;
+    bytes byte_array;
+    bytes? maybe_byte_array;
 };
 
 dictionary DictWithDefaults {

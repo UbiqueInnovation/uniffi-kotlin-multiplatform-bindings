@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::SystemTime;
 
 use once_cell::sync::Lazy;
@@ -61,6 +61,8 @@ pub struct SimpleDict {
     maybe_float32: Option<f32>,
     float64: f64,
     maybe_float64: Option<f64>,
+    byte_array: Vec<u8>,
+    maybe_byte_array: Option<Vec<u8>>,
     coveralls: Option<Arc<Coveralls>>,
 }
 
@@ -97,6 +99,8 @@ fn create_some_dict() -> SimpleDict {
         maybe_float32: Some(22.0 / 7.0),
         float64: 0.0,
         maybe_float64: Some(1.0),
+        byte_array: vec![5, 4, 3, 2, 1],
+        maybe_byte_array: Some(vec![10, 8, 6, 4, 2]),
         coveralls: Some(Arc::new(Coveralls::new("some_dict".to_string()))),
     }
 }
@@ -121,6 +125,8 @@ fn create_none_dict() -> SimpleDict {
         maybe_float32: None,
         float64: 0.0,
         maybe_float64: None,
+        byte_array: vec![5, 4, 3, 2, 1],
+        maybe_byte_array: None,
         coveralls: None,
     }
 }

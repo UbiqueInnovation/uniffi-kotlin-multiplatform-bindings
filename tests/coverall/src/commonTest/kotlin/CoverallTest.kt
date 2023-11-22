@@ -39,6 +39,9 @@ class CoverallTest {
             d.float64 almostEquals 0.0
             d.maybeFloat64!! almostEquals 1.0
 
+            d.byteArray shouldBe byteArrayOf(5, 4, 3, 2, 1)
+            d.maybeByteArray shouldBe byteArrayOf(10, 8, 6, 4, 2)
+
             d.coveralls!!.getName() shouldBe "some_dict"
         }
     }
