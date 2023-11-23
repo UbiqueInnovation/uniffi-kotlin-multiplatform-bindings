@@ -43,6 +43,16 @@ class FuturesTest {
         sleep(200u) shouldBe true
     }
 
+    // This test is to ensure that coroutines still work after multiple coroutine calls.
+    // Coroutines may halt or crash after several coroutine invocations due to wrong
+    // atomic operations in the generated binding. Please see #24 for more details.
+    @Test
+    fun testSleepWithRepeat() = runTest {
+        repeat(65) {
+            sleep(20u) shouldBe true
+        }
+    }
+
     @Test
     fun testSequentialFutures() = runTest {
         sayAfter(100u, "Alice") shouldBe "Hello, Alice!"

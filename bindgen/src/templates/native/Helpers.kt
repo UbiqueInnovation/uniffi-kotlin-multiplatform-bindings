@@ -30,13 +30,13 @@ actual class UniFfiHandleMap<T : Any> {
     // values seems like enough. If somehow we generate 4 billion handles, then this will wrap
     // around back to zero and we can assume the first handle generated will have been dropped by
     // then.
-    private val counter = kotlinx.atomicfu.atomic<kotlin.Int>(0)
+    private val counter: kotlinx.atomicfu.AtomicInt = kotlinx.atomicfu.atomic(0)
 
     actual val size: kotlin.Int
         get() = map.size
 
     actual fun insert(obj: T): kotlin.ULong {
-        val handle = counter.getAndUpdate { it + 1 }.toULong()
+        val handle = counter.getAndIncrement().toULong()
         synchronizedMapAccess { map.put(handle, obj) }
         return handle
     }
