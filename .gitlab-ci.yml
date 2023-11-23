@@ -1,7 +1,6 @@
 default:
   tags:
     - saas-linux-medium-amd64
-  image: $CI_REGISTRY_IMAGE/build-image:latest
 
 meta-build-image:
   image: docker:stable
@@ -11,26 +10,23 @@ meta-build-image:
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - export DOCKER_CLI_EXPERIMENTAL=enabled
+    # Get a hash of the files that affect the build image
+    - export BUILD_IMAGE_HASH=$(echo -n "$(cat Cargo.toml .meta/build-image/Dockerfile gradle/libs.versions.toml)" | md5sum | cut -c1-8)
+    - export BUILD_IMAGE=$CI_REGISTRY_IMAGE/build-image:$BUILD_IMAGE_HASH
+    # Write BUILD_IMAGE to build.env
+    - echo "BUILD_IMAGE=$BUILD_IMAGE" > build.env
     - >
-      if ! docker manifest inspect $CI_REGISTRY_IMAGE/build-image:latest; then
-        echo "Build image does not exist, building..."
-        SHOULD_BUILD=1
+      if ! docker manifest inspect $BUILD_IMAGE; then
+        docker build -t $BUILD_IMAGE -f ./.meta/build-image/Dockerfile .
+        docker push $BUILD_IMAGE
       fi
-    - >
-      if [ "$CI_PIPELINE_SOURCE" == "web" ]; then
-        echo "Build triggered by manual build, building..."
-        SHOULD_BUILD=1
-      fi
-    - >
-      if [ "$SHOULD_BUILD" = 1 ]; then
-        docker build -t $CI_REGISTRY_IMAGE/build-image:latest -f ./.meta/build-image/Dockerfile .
-        docker push $CI_REGISTRY_IMAGE/build-image:latest
-      fi
+  artifacts:
+    reports:
+      dotenv: build.env
 
 build-all:
+  image: $BUILD_IMAGE
   stage: test
-  needs:
-    - job: meta-build-image
   script:
     - cargo build --verbose
     - cargo test --verbose
