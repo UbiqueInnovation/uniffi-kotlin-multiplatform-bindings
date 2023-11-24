@@ -1,7 +1,7 @@
 use camino::Utf8PathBuf;
 use clap::Parser;
 
-use uniffi_kotlin_multiplatform::KotlinBindingGenerator;
+use uniffi_bindgen_kotlin_multiplatform::KotlinBindingGenerator;
 
 #[derive(Parser)]
 #[clap(name = "uniffi-bindgen")]

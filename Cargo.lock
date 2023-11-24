@@ -914,22 +914,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "uniffi-kotlin-multiplatform"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "askama",
- "camino",
- "clap",
- "heck",
- "include_dir",
- "paste",
- "serde",
- "toml",
- "uniffi_bindgen",
-]
-
-[[package]]
 name = "uniffi_bindgen"
 version = "0.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -950,6 +934,22 @@ dependencies = [
  "uniffi_meta",
  "uniffi_testing",
  "uniffi_udl",
+]
+
+[[package]]
+name = "uniffi_bindgen_kotlin_multiplatform"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "askama",
+ "camino",
+ "clap",
+ "heck",
+ "include_dir",
+ "paste",
+ "serde",
+ "toml",
+ "uniffi_bindgen",
 ]
 
 [[package]]
