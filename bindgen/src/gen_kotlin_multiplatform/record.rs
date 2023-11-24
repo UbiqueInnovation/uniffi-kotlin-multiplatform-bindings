@@ -2,29 +2,27 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use uniffi_bindgen::backend::{CodeType, Literal};
+use uniffi_bindgen::ComponentInterface;
+
+use super::CodeType;
 
 #[derive(Debug)]
 pub struct RecordCodeType {
-    name: String,
+    id: String,
 }
 
 impl RecordCodeType {
-    pub fn new(name: String) -> Self {
-        Self { name }
+    pub fn new(id: String) -> Self {
+        Self { id }
     }
 }
 
 impl CodeType for RecordCodeType {
-    fn type_label(&self) -> String {
-        super::KotlinCodeOracle.class_name(&self.name)
+    fn type_label(&self, ci: &ComponentInterface) -> String {
+        super::KotlinCodeOracle.class_name(ci, &self.id)
     }
 
     fn canonical_name(&self) -> String {
-        format!("Type{}", self.name)
-    }
-
-    fn literal(&self, _literal: &Literal) -> String {
-        unreachable!();
+        format!("Type{}", self.id)
     }
 }

@@ -3,10 +3,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use paste::paste;
-use uniffi_bindgen::backend::{CodeType, Literal};
-use uniffi_bindgen::interface::{Radix, Type};
+use uniffi_bindgen::backend::Literal;
+use uniffi_bindgen::interface::{ComponentInterface, Radix, Type};
 
-fn render_literal(literal: &Literal) -> String {
+use super::CodeType;
+
+fn render_literal(literal: &Literal, _ci: &ComponentInterface) -> String {
     fn typed_number(type_: &Type, num_str: String) -> String {
         match type_ {
             // Bytes, Shorts and Ints can all be inferred from the type.
@@ -54,7 +56,7 @@ macro_rules! impl_code_type_for_primitive {
             pub struct $T;
 
             impl CodeType for $T  {
-                fn type_label(&self) -> String {
+                fn type_label(&self, _ci: &ComponentInterface) -> String {
                     $class_name.into()
                 }
 
@@ -62,8 +64,8 @@ macro_rules! impl_code_type_for_primitive {
                     $canonical_name.into()
                 }
 
-                fn literal(&self, literal: &Literal) -> String {
-                    render_literal(&literal)
+                fn literal(&self, literal: &Literal, ci: &ComponentInterface) -> String {
+                    render_literal(&literal, ci)
                 }
             }
         }
@@ -72,6 +74,7 @@ macro_rules! impl_code_type_for_primitive {
 
 impl_code_type_for_primitive!(BooleanCodeType, "kotlin.Boolean", "Boolean");
 impl_code_type_for_primitive!(StringCodeType, "kotlin.String", "String");
+impl_code_type_for_primitive!(BytesCodeType, "kotlin.ByteArray", "ByteArray");
 impl_code_type_for_primitive!(Int8CodeType, "kotlin.Byte", "Byte");
 impl_code_type_for_primitive!(Int16CodeType, "kotlin.Short", "Short");
 impl_code_type_for_primitive!(Int32CodeType, "kotlin.Int", "Int");
@@ -82,4 +85,3 @@ impl_code_type_for_primitive!(UInt32CodeType, "kotlin.UInt", "UInt");
 impl_code_type_for_primitive!(UInt64CodeType, "kotlin.ULong", "ULong");
 impl_code_type_for_primitive!(Float32CodeType, "kotlin.Float", "Float");
 impl_code_type_for_primitive!(Float64CodeType, "kotlin.Double", "Double");
-impl_code_type_for_primitive!(BytesCodeType, "kotlin.ByteArray", "ByteArray");

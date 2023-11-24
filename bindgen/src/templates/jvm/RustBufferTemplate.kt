@@ -1,12 +1,16 @@
-actual typealias Pointer = com.sun.jna.Pointer
+// Suppressing the diagnostics caused by https://youtrack.jetbrains.com/issue/KT-37316
+@Suppress("ACTUAL_WITHOUT_EXPECT")
+internal actual typealias Pointer = com.sun.jna.Pointer
 
-actual fun kotlin.Long.toPointer() = com.sun.jna.Pointer(this)
+internal actual fun kotlin.Long.toPointer() = com.sun.jna.Pointer(this)
 
-actual fun Pointer.toLong(): kotlin.Long = com.sun.jna.Pointer.nativeValue(this)
+internal actual fun Pointer.toLong(): kotlin.Long = com.sun.jna.Pointer.nativeValue(this)
 
-actual typealias UBytePointer = com.sun.jna.Pointer
+// Suppressing the diagnostics caused by https://youtrack.jetbrains.com/issue/KT-37316
+@Suppress("ACTUAL_WITHOUT_EXPECT")
+internal actual typealias UBytePointer = com.sun.jna.Pointer
 
-actual fun UBytePointer.asSource(len: kotlin.Long): NoCopySource = object : NoCopySource {
+internal actual fun UBytePointer.asSource(len: kotlin.Long): NoCopySource = object : NoCopySource {
     val buffer = getByteBuffer(0, len).also {
         it.order(java.nio.ByteOrder.BIG_ENDIAN)
     }
@@ -35,21 +39,16 @@ actual fun UBytePointer.asSource(len: kotlin.Long): NoCopySource = object : NoCo
     }
 }
 
-@Structure.FieldOrder("capacity", "len", "data")
-open class RustBufferStructure : Structure() {
-    @JvmField
-    var capacity: kotlin.Int = 0
-
-    @JvmField
-    var len: kotlin.Int = 0
-
-    @JvmField
-    var data: Pointer? = null
+@com.sun.jna.Structure.FieldOrder("capacity", "len", "data")
+internal open class RustBufferStructure : com.sun.jna.Structure() {
+    @JvmField var capacity: kotlin.Int = 0
+    @JvmField var len: kotlin.Int = 0
+    @JvmField var data: com.sun.jna.Pointer? = null
 }
 
-actual class RustBuffer : RustBufferStructure(), Structure.ByValue
+internal actual open class RustBuffer : RustBufferStructure(), com.sun.jna.Structure.ByValue
 
-actual class RustBufferPointer : ByReference(16) {
+internal actual class RustBufferByReference : com.sun.jna.ptr.ByReference(16) {
     fun setValueInternal(value: RustBuffer) {
         pointer.setInt(0, value.capacity)
         pointer.setInt(4, value.len)
@@ -57,18 +56,18 @@ actual class RustBufferPointer : ByReference(16) {
     }
 }
 
-actual fun RustBuffer.asSource(): NoCopySource = requireNotNull(data).asSource(len.toLong())
+internal actual fun RustBuffer.asSource(): NoCopySource = requireNotNull(data).asSource(len.toLong())
 
-actual val RustBuffer.dataSize: kotlin.Int
+internal actual val RustBuffer.dataSize: kotlin.Int
     get() = len
 
-actual fun RustBuffer.free() =
-    rustCall { status: RustCallStatus ->
+internal actual fun RustBuffer.free() =
+    rustCall { status: {{ config.package_name() }}.RustCallStatus ->
         UniFFILib.{{ ci.ffi_rustbuffer_free().name() }}(this, status)
     }
 
-actual fun allocRustBuffer(buffer: Buffer): RustBuffer =
-    rustCall { status: RustCallStatus ->
+internal actual fun allocRustBuffer(buffer: Buffer): RustBuffer =
+    rustCall { status: {{ config.package_name() }}.RustCallStatus ->
         val size = buffer.size
         var readPosition = 0L
         UniFFILib.{{ ci.ffi_rustbuffer_alloc().name() }}(size.toInt(), status).also { rustBuffer: RustBuffer ->
@@ -82,9 +81,9 @@ actual fun allocRustBuffer(buffer: Buffer): RustBuffer =
         }
     }
 
-actual fun RustBufferPointer.setValue(value: RustBuffer) = setValueInternal(value)
+internal actual fun RustBufferByReference.setValue(value: RustBuffer) = setValueInternal(value)
 
-actual fun emptyRustBuffer(): RustBuffer = RustBuffer()
+internal actual fun emptyRustBuffer(): RustBuffer = RustBuffer()
 
 // This is a helper for safely passing byte references into the rust code.
 // It's not actually used at the moment, because there aren't many things that you
@@ -92,11 +91,8 @@ actual fun emptyRustBuffer(): RustBuffer = RustBuffer()
 // then we might as well copy it into a `RustBuffer`. But it's here for API
 // completeness.
 
-@Structure.FieldOrder("len", "data")
-actual open class ForeignBytes : Structure() {
-    @JvmField
-    var len: kotlin.Int = 0
-
-    @JvmField
-    var data: Pointer? = null
+@com.sun.jna.Structure.FieldOrder("len", "data")
+internal actual open class ForeignBytes : com.sun.jna.Structure() {
+    @JvmField var len: kotlin.Int = 0
+    @JvmField var data: com.sun.jna.Pointer? = null
 }

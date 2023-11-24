@@ -1,35 +1,38 @@
 // A handful of classes and functions to support the generated data structures.
 // This would be a good candidate for isolating in its own ffi-support lib.
 // Error runtime.
+// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
+@Suppress("NO_ACTUAL_FOR_EXPECT")
+internal expect class RustCallStatus
+internal expect val RustCallStatus.statusCode: kotlin.Byte
+internal expect val RustCallStatus.errorBuffer: RustBuffer
+
+internal expect fun <T> withRustCallStatus(block: (RustCallStatus) -> T): T
 
 // TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("NO_ACTUAL_FOR_EXPECT")
-expect class RustCallStatus
+internal expect class RustCallStatusByValue
 
-internal const val RUST_CALL_STATUS_SUCCESS: kotlin.Byte = 0
-internal const val RUST_CALL_STATUS_ERROR: kotlin.Byte = 1
-internal const val RUST_CALL_STATUS_PANIC: kotlin.Byte = 2
+private const val RUST_CALL_STATUS_SUCCESS: kotlin.Byte = 0
+private const val RUST_CALL_STATUS_ERROR: kotlin.Byte = 1
+private const val RUST_CALL_STATUS_PANIC: kotlin.Byte = 2
 
-fun RustCallStatus.isSuccess(): kotlin.Boolean = statusCode == RUST_CALL_STATUS_SUCCESS
+internal fun RustCallStatus.isSuccess(): kotlin.Boolean {
+    return statusCode == RUST_CALL_STATUS_SUCCESS
+}
 
-fun RustCallStatus.isError(): kotlin.Boolean = statusCode == RUST_CALL_STATUS_ERROR
+internal fun RustCallStatus.isError(): kotlin.Boolean {
+    return statusCode == RUST_CALL_STATUS_ERROR
+}
 
-fun RustCallStatus.isPanic(): kotlin.Boolean = statusCode == RUST_CALL_STATUS_PANIC
-
-expect val RustCallStatus.statusCode: kotlin.Byte
-
-expect val RustCallStatus.errorBuffer: RustBuffer
-
-expect fun <T> withRustCallStatus(block: (RustCallStatus) -> T): T
-
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("NO_ACTUAL_FOR_EXPECT")
-expect class RustCallStatusByValue
+internal fun RustCallStatus.isPanic(): kotlin.Boolean {
+    return statusCode == RUST_CALL_STATUS_PANIC
+}
 
 class InternalException(message: kotlin.String) : Exception(message)
 
 // Each top-level error class has a companion object that can lift the error from the call status's rust buffer
-interface CallStatusErrorHandler<E> {
+internal interface CallStatusErrorHandler<E> {
     fun lift(errorBuffer: RustBuffer): E;
 }
 
@@ -70,7 +73,7 @@ internal fun <E : Exception> checkCallStatus(errorHandler: CallStatusErrorHandle
 }
 
 // CallStatusErrorHandler implementation for times when we don't expect a CALL_ERROR
-object NullCallStatusErrorHandler : CallStatusErrorHandler<InternalException> {
+internal object NullCallStatusErrorHandler : CallStatusErrorHandler<InternalException> {
     override fun lift(errorBuffer: RustBuffer): InternalException {
         errorBuffer.free()
         return InternalException("Unexpected CALL_ERROR")
@@ -92,23 +95,13 @@ internal inline fun <U> rustCall(crossinline callback: (RustCallStatus) -> U): U
 // Rust when it needs an opaque pointer.
 //
 // TODO: refactor callbacks to use this class
-expect class UniFfiHandleMap<T : Any>() {
+internal expect class UniFfiHandleMap<T : Any>() {
+
     val size: kotlin.Int
+
     fun insert(obj: T): kotlin.ULong
+
     fun get(handle: kotlin.ULong): T?
+
     fun remove(handle: kotlin.ULong): T?
 }
-
-// FFI type for Rust future continuations
-
-private val uniffiContinuationHandleMap = UniFfiHandleMap<CancellableContinuation<kotlin.Short>>()
-
-internal fun resumeContinutation(continuationHandle: kotlin.ULong, pollResult: kotlin.Short) {
-    uniffiContinuationHandleMap.remove(continuationHandle)?.resume(pollResult)
-}
-
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("NO_ACTUAL_FOR_EXPECT")
-internal expect class UniFfiRustFutureContinuationCallbackType
-
-internal expect fun createUniFfiRustFutureContinuationCallback(): UniFfiRustFutureContinuationCallbackType

@@ -1,10 +1,10 @@
 {%- let rec = ci|get_record_definition(name) %}
 
-data class {{ type_name }} (
+public data class {{ type_name }} (
     {%- for field in rec.fields() %}
-    var {{ field.name()|var_name }}: {{ field|type_name -}}
+    var {{ field.name()|var_name }}: {{ field|type_name(ci) -}}
     {%- match field.default_value() %}
-        {%- when Some with(literal) %} = {{ literal|render_literal(field) }}
+        {%- when Some with(literal) %} = {{ literal|render_literal(field, ci) }}
         {%- else %}
     {%- endmatch -%}
     {% if !loop.last %}, {% endif %}
@@ -16,13 +16,14 @@ data class {{ type_name }} (
         {% call kt::destroy_fields(rec) %}
     }
     {% endif %}
+    companion object
 }
 
-object {{ rec|ffi_converter_name }}: FfiConverterRustBuffer<{{ type_name }}> {
-    override fun read(source: NoCopySource): {{ type_name }} {
+internal object {{ rec|ffi_converter_name }}: FfiConverterRustBuffer<{{ type_name }}> {
+    override fun read(buf: NoCopySource): {{ type_name }} {
         return {{ type_name }}(
         {%- for field in rec.fields() %}
-            {{ field|read_fn }}(source),
+            {{ field|read_fn }}(buf),
         {%- endfor %}
         )
     }

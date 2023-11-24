@@ -1,10 +1,10 @@
-{%- let inner_type_name = inner_type|type_name %}
+{%- let inner_type_name = inner_type|type_name(ci) %}
 
-object {{ ffi_converter_name }}: FfiConverterRustBuffer<List<{{ inner_type_name }}>> {
-    override fun read(source: NoCopySource): List<{{ inner_type_name }}> {
-        val len = source.readInt()
+internal object {{ ffi_converter_name }}: FfiConverterRustBuffer<List<{{ inner_type_name }}>> {
+    override fun read(buf: NoCopySource): List<{{ inner_type_name }}> {
+        val len = buf.readInt()
         return List<{{ inner_type_name }}>(len) {
-            {{ inner_type|read_fn }}(source)
+            {{ inner_type|read_fn }}(buf)
         }
     }
 

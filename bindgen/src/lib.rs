@@ -1,68 +1,16 @@
-use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 
 use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
-use serde::{Deserialize, Serialize};
-use uniffi_bindgen::{BindingGenerator, BindingsConfig, ComponentInterface};
-use uniffi_bindgen::backend::TemplateExpression;
+use uniffi_bindgen::{BindingGenerator, ComponentInterface};
 
 pub use gen_kotlin_multiplatform::generate_bindings;
 
+use crate::gen_kotlin_multiplatform::Config;
+
 pub mod gen_kotlin_multiplatform;
-
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct Config {
-    package_name: Option<String>,
-    cdylib_name: Option<String>,
-    #[serde(default)]
-    custom_types: HashMap<String, CustomTypeConfig>,
-    #[serde(default)]
-    external_packages: HashMap<String, String>,
-}
-
-impl Config {
-    pub fn package_name(&self) -> String {
-        if let Some(package_name) = &self.package_name {
-            package_name.clone()
-        } else {
-            "uniffi".into()
-        }
-    }
-
-    pub fn cdylib_name(&self) -> String {
-        if let Some(cdylib_name) = &self.cdylib_name {
-            cdylib_name.clone()
-        } else {
-            "uniffi".into()
-        }
-    }
-}
-
-impl BindingsConfig for Config {
-    fn update_from_ci(&mut self, ci: &ComponentInterface) {
-        self.package_name.get_or_insert_with(|| ci.namespace().into());
-        self.cdylib_name.get_or_insert_with(|| format!("{}", ci.namespace()));
-    }
-
-    fn update_from_cdylib_name(&mut self, cdylib_name: &str) {
-        self.cdylib_name.get_or_insert_with(|| cdylib_name.to_string());
-    }
-
-    fn update_from_dependency_configs(&mut self, _config_map: HashMap<&str, &Self>) {
-        // unused
-    }
-}
-
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct CustomTypeConfig {
-    imports: Option<Vec<String>>,
-    type_name: Option<String>,
-    into_custom: TemplateExpression,
-    from_custom: TemplateExpression,
-}
 
 pub struct KotlinMultiplatformBindings {
     common: String,

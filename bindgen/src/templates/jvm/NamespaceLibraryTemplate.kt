@@ -8,9 +8,9 @@ private fun findLibraryName(): kotlin.String {
     return "{{ config.cdylib_name() }}"
 }
 
-actual internal object UniFFILib : Library {
+actual internal object UniFFILib : com.sun.jna.Library {
     init {
-        Native.register(UniFFILib::class.java, findLibraryName())
+        com.sun.jna.Native.register(UniFFILib::class.java, findLibraryName())
         {% let initialization_fns = self.initialization_fns() %}
         {%- if !initialization_fns.is_empty() -%}
         {% for fn in initialization_fns -%}
@@ -19,7 +19,7 @@ actual internal object UniFFILib : Library {
         {% endif %}
     }
 
-    {% for func in ci.iter_ffi_function_definitions() -%}
+    {% for func in ci|iter_ffi_function_definitions -%}
     @JvmName("{{ func.name() }}")
     actual external fun {{ func.name() }}(
     {%- call kt::arg_list_ffi_decl(func) %}

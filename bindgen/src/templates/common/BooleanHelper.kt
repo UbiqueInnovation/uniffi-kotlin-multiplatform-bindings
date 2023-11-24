@@ -1,9 +1,15 @@
 internal object FfiConverterBoolean : FfiConverter<kotlin.Boolean, kotlin.Byte> {
-    override fun lift(value: kotlin.Byte): kotlin.Boolean = value.toInt() != 0
+    override fun lift(value: kotlin.Byte): kotlin.Boolean {
+        return value.toInt() != 0
+    }
 
-    override fun read(source: NoCopySource): kotlin.Boolean = lift(source.readByte())
+    override fun read(buf: NoCopySource): kotlin.Boolean {
+        return lift(buf.readByte())
+    }
 
-    override fun lower(value: kotlin.Boolean): kotlin.Byte = if (value) 1.toByte() else 0.toByte()
+    override fun lower(value: kotlin.Boolean): kotlin.Byte {
+        return if (value) 1.toByte() else 0.toByte()
+    }
 
     override fun allocationSize(value: kotlin.Boolean) = 1
 

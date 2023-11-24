@@ -1,9 +1,15 @@
-object FfiConverterUShort : FfiConverter<kotlin.UShort, kotlin.UShort> {
-    override fun lift(value: kotlin.UShort): kotlin.UShort = value
+internal object FfiConverterUShort : FfiConverter<kotlin.UShort, kotlin.UShort> {
+    override fun lift(value: kotlin.UShort): kotlin.UShort {
+        return value
+    }
 
-    override fun read(source: NoCopySource): kotlin.UShort = lift(source.readShort().toUShort())
+    override fun read(buf: NoCopySource): kotlin.UShort {
+        return lift(buf.readShort().toUShort())
+    }
 
-    override fun lower(value: kotlin.UShort): kotlin.UShort = value
+    override fun lower(value: kotlin.UShort): kotlin.UShort {
+        return value
+    }
 
     override fun allocationSize(value: kotlin.UShort) = 2
 

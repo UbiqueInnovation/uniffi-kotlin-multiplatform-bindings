@@ -5,9 +5,7 @@
 
 package {{ config.package_name() }}
 
-import kotlinx.cinterop.CValue
 import kotlinx.cinterop.*
-import kotlinx.atomicfu.getAndUpdate
 import okio.Buffer
 
 {%- for req in self.imports() %}
@@ -23,6 +21,7 @@ import okio.Buffer
 
 // Async support
 {%- if ci.has_async_fns() %}
+{% include "Async.kt" %}
 {%- endif %}
 
 // Public interface members begin here.

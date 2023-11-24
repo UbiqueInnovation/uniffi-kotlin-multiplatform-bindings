@@ -5,14 +5,7 @@
 
 package {{ config.package_name() }}
 
-import com.sun.jna.Library
-import com.sun.jna.Native
 import com.sun.jna.Pointer
-import com.sun.jna.Callback
-import com.sun.jna.Structure
-import com.sun.jna.Structure.ByValue
-import com.sun.jna.ptr.ByReference
-import java.util.concurrent.ConcurrentHashMap
 import okio.Buffer
 
 {%- for req in self.imports() %}
@@ -28,6 +21,7 @@ import okio.Buffer
 
 // Async support
 {%- if ci.has_async_fns() %}
+{% include "Async.kt" %}
 {%- endif %}
 
 // Public interface members begin here.

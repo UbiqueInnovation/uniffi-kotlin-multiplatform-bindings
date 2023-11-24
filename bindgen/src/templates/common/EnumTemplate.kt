@@ -9,13 +9,14 @@
 
 enum class {{ type_name }} {
     {% for variant in e.variants() -%}
-    {{ variant.name()|enum_variant }}{% if loop.last %};{% else %},{% endif %}
+    {{ variant|variant_name }}{% if loop.last %};{% else %},{% endif %}
     {%- endfor %}
+    companion object
 }
 
-object {{ e|ffi_converter_name }}: FfiConverterRustBuffer<{{ type_name }}> {
-    override fun read(source: NoCopySource) = try {
-        {{ type_name }}.values()[source.readInt() - 1]
+internal object {{ e|ffi_converter_name }}: FfiConverterRustBuffer<{{ type_name }}> {
+    override fun read(buf: NoCopySource) = try {
+        {{ type_name }}.values()[buf.readInt() - 1]
     } catch (e: IndexOutOfBoundsException) {
         throw RuntimeException("invalid enum value, something is very wrong!!", e)
     }
@@ -32,13 +33,15 @@ object {{ e|ffi_converter_name }}: FfiConverterRustBuffer<{{ type_name }}> {
 sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% endif %} {
     {% for variant in e.variants() -%}
     {% if !variant.has_fields() -%}
-    object {{ variant.name()|class_name }} : {{ type_name }}()
+    object {{ variant|variant_type_name(ci) }} : {{ type_name }}()
     {% else -%}
-    data class {{ variant.name()|class_name }}(
+    data class {{ variant|variant_type_name(ci) }}(
         {% for field in variant.fields() -%}
-        val {{ field.name()|var_name }}: {{ field|type_name}}{% if loop.last %}{% else %}, {% endif %}
+        val {{ field.name()|var_name }}: {{ field|type_name(ci) }}{% if loop.last %}{% else %}, {% endif %}
         {% endfor -%}
-    ) : {{ type_name }}()
+    ) : {{ type_name }}() {
+        companion object
+    }
     {%- endif %}
     {% endfor %}
 
@@ -47,25 +50,27 @@ sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% e
     override fun destroy() {
         when(this) {
             {%- for variant in e.variants() %}
-            is {{ type_name }}.{{ variant.name()|class_name }} -> {
+            is {{ type_name }}.{{ variant|variant_type_name(ci) }} -> {
                 {%- if variant.has_fields() %}
                 {% call kt::destroy_fields(variant) %}
                 {% else -%}
+                // Nothing to destroy
                 {%- endif %}
             }
             {%- endfor %}
         }
     }
     {% endif %}
+    companion object
 }
 
-object {{ e|ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}>{
-    override fun read(source: NoCopySource): {{ type_name }} {
-        return when(source.readInt()) {
+internal object {{ e|ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}>{
+    override fun read(buf: NoCopySource): {{ type_name }} {
+        return when(buf.readInt()) {
             {%- for variant in e.variants() %}
-            {{ loop.index }} -> {{ type_name }}.{{ variant.name()|class_name }}{% if variant.has_fields() %}(
+            {{ loop.index }} -> {{ type_name }}.{{ variant|variant_type_name(ci) }}{% if variant.has_fields() %}(
                 {% for field in variant.fields() -%}
-                {{ field|read_fn }}(source),
+                {{ field|read_fn }}(buf),
                 {% endfor -%}
             ){%- endif -%}
             {%- endfor %}
@@ -75,7 +80,7 @@ object {{ e|ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}>{
 
     override fun allocationSize(value: {{ type_name }}) = when(value) {
         {%- for variant in e.variants() %}
-        is {{ type_name }}.{{ variant.name()|class_name }} -> {
+        is {{ type_name }}.{{ variant|variant_type_name(ci) }} -> {
             (
                 4
                 {%- for field in variant.fields() %}
@@ -89,7 +94,7 @@ object {{ e|ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}>{
     override fun write(value: {{ type_name }}, buf: Buffer) {
         when(value) {
             {%- for variant in e.variants() %}
-            is {{ type_name }}.{{ variant.name()|class_name }} -> {
+            is {{ type_name }}.{{ variant|variant_type_name(ci) }} -> {
                 buf.writeInt({{ loop.index }})
                 {%- for field in variant.fields() %}
                 {{ field|write_fn }}(value.{{ field.name()|var_name }}, buf)

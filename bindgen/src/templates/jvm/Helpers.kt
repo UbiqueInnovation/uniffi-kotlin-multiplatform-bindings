@@ -1,28 +1,25 @@
-@Structure.FieldOrder("code", "error_buf")
-actual open class RustCallStatus : Structure() {
-    @JvmField
-    var code: kotlin.Byte = 0
-
-    @JvmField
-    var error_buf: RustBuffer = RustBuffer()
+@com.sun.jna.Structure.FieldOrder("code", "error_buf")
+internal actual open class RustCallStatus : com.sun.jna.Structure() {
+    @JvmField var code: kotlin.Byte = 0
+    @JvmField var error_buf: RustBuffer = RustBuffer()
 }
 
-actual val RustCallStatus.statusCode: kotlin.Byte
+internal actual val RustCallStatus.statusCode: kotlin.Byte
     get() = code
-actual val RustCallStatus.errorBuffer: RustBuffer
+internal actual val RustCallStatus.errorBuffer: RustBuffer
     get() = error_buf
 
-actual fun <T> withRustCallStatus(block: (RustCallStatus) -> T): T {
+internal actual fun <T> withRustCallStatus(block: (RustCallStatus) -> T): T {
     val rustCallStatus = RustCallStatus()
     return block(rustCallStatus)
 }
 
 // TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("NO_ACTUAL_FOR_EXPECT")
-actual open class RustCallStatusByValue : RustCallStatus(), ByValue
+internal actual open class RustCallStatusByValue : RustCallStatus(), com.sun.jna.Structure.ByValue
 
-actual class UniFfiHandleMap<T : Any> {
-    private val map = ConcurrentHashMap<kotlin.ULong, T>()
+internal actual class UniFfiHandleMap<T : Any> {
+    private val map = java.util.concurrent.ConcurrentHashMap<kotlin.ULong, T>()
 
     // Use AtomicInteger for our counter, since we may be on a 32-bit system.  4 billion possible
     // values seems like enough. If somehow we generate 4 billion handles, then this will wrap
@@ -47,14 +44,3 @@ actual class UniFfiHandleMap<T : Any> {
         return map.remove(handle)
     }
 }
-
-// FFI type for Rust future continuations
-
-internal class UniFfiRustFutureContinuationCallbackImpl() : Callback {
-    fun invoke(continuationHandle: kotlin.ULong, pollResult: kotlin.Short) = resumeContinutation(continuationHandle, pollResult)
-}
-
-internal actual typealias UniFfiRustFutureContinuationCallbackType = UniFfiRustFutureContinuationCallbackImpl
-
-internal actual fun createUniFfiRustFutureContinuationCallback(): UniFfiRustFutureContinuationCallbackType =
-    UniFfiRustFutureContinuationCallbackImpl()

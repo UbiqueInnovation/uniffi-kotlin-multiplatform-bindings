@@ -1,9 +1,13 @@
 {%- match config.custom_types.get(name.as_str())  %}
 {%- when None %}
 {#- Define the type using typealiases to the builtin #}
-
-typealias {{ name }} = {{ builtin|type_name }}
-typealias {{ ffi_converter_name }} = {{ builtin|ffi_converter_name }}
+/**
+ * Typealias from the type name used in the UDL file to the builtin type.  This
+ * is needed because the UDL type name is used in function/method signatures.
+ * It's also what we have an external type that references a custom type.
+ */
+public typealias {{ name }} = {{ builtin|type_name(ci) }}
+internal typealias {{ ffi_converter_name }} = {{ builtin|ffi_converter_name }}
 
 {%- when Some with (config) %}
 
@@ -12,20 +16,24 @@ typealias {{ ffi_converter_name }} = {{ builtin|ffi_converter_name }}
 {# When the config specifies a different type name, create a typealias for it #}
 {%- match config.type_name %}
 {%- when Some(concrete_type_name) %}
-
-typealias {{ name }} = {{ concrete_type_name }}
+/**
+ * Typealias from the type name used in the UDL file to the custom type.  This
+ * is needed because the UDL type name is used in function/method signatures.
+ * It's also what we have an external type that references a custom type.
+ */
+public typealias {{ name }} = {{ concrete_type_name }}
 {%- else %}
 {%- endmatch %}
 
 {%- match config.imports %}
 {%- when Some(imports) %}
 {%- for import_name in imports %}
-import {{ import_name }}
+{{ self.add_import(import_name) }}
 {%- endfor %}
 {%- else %}
 {%- endmatch %}
 
-object {{ ffi_converter_name }}: FfiConverter<{{ name }}, {{ ffi_type_name }}> {
+internal object {{ ffi_converter_name }}: FfiConverter<{{ name }}, {{ ffi_type_name }}> {
     override fun lift(value: {{ ffi_type_name }}): {{ name }} {
         val builtinValue = {{ builtin|lift_fn }}(value)
         return {{ config.into_custom.render("builtinValue") }}
@@ -36,8 +44,8 @@ object {{ ffi_converter_name }}: FfiConverter<{{ name }}, {{ ffi_type_name }}> {
         return {{ builtin|lower_fn }}(builtinValue)
     }
 
-    override fun read(source: NoCopySource): {{ name }} {
-        val builtinValue = {{ builtin|read_fn }}(source)
+    override fun read(buf: NoCopySource): {{ name }} {
+        val builtinValue = {{ builtin|read_fn }}(buf)
         return {{ config.into_custom.render("builtinValue") }}
     }
 

@@ -24,8 +24,10 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
         block(this)
     } finally {
         try {
+            // N.B. our implementation is on the nullable type `Disposable?`.
             this?.destroy()
         } catch (_: Throwable) {
+            // swallow
         }
     }
 
@@ -110,19 +112,22 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
 //
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
-abstract class FFIObject(
-    protected val pointer: Pointer
+abstract class FFIObject internal constructor(
+    internal val pointer: Pointer
 ) : Disposable {
 
-    private val wasDestroyed = atomic(false)
-    private val callCounter = atomic(1L)
+    private val wasDestroyed: kotlinx.atomicfu.AtomicBoolean = atomic(false)
+    private val callCounter: kotlinx.atomicfu.AtomicLong = atomic(1L)
 
     open protected fun freeRustArcPtr() {
         // To be overridden in subclasses.
     }
 
     override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
         if (this.wasDestroyed.compareAndSet(expect = false, update = true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
             if (this.callCounter.decrementAndGet() == 0L) {
                 this.freeRustArcPtr()
             }
@@ -130,6 +135,8 @@ abstract class FFIObject(
     }
 
     internal inline fun <R> callWithPointer(block: (ptr: Pointer) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
         do {
             val c = this.callCounter.value
             if (c == 0L) {
@@ -139,15 +146,14 @@ abstract class FFIObject(
                 throw IllegalStateException("${this::class.simpleName} call counter would overflow")
             }
         } while (!this.callCounter.compareAndSet(expect = c, update = c + 1L))
-        try {
+        // Now we can safely do the method call without the pointer being freed concurrently.
+                try {
             return block(this.pointer)
         } finally {
+            // This decrement always matches the increment we performed above.
             if (this.callCounter.decrementAndGet() == 0L) {
                 this.freeRustArcPtr()
             }
         }
     }
 }
-
-/** Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly. */
-object NoPointer

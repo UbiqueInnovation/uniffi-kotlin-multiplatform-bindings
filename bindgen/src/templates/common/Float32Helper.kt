@@ -1,9 +1,15 @@
-object FfiConverterFloat : FfiConverter<kotlin.Float, kotlin.Float> {
-    override fun lift(value: kotlin.Float): kotlin.Float = value
+internal object FfiConverterFloat : FfiConverter<kotlin.Float, kotlin.Float> {
+    override fun lift(value: kotlin.Float): kotlin.Float {
+        return value
+    }
 
-    override fun read(source: NoCopySource): kotlin.Float = kotlin.Float.fromBits(source.readInt())
+    override fun read(buf: NoCopySource): kotlin.Float {
+        return kotlin.Float.fromBits(buf.readInt())
+    }
 
-    override fun lower(value: kotlin.Float): kotlin.Float = value
+    override fun lower(value: kotlin.Float): kotlin.Float {
+        return value
+    }
 
     override fun allocationSize(value: kotlin.Float) = 4
 

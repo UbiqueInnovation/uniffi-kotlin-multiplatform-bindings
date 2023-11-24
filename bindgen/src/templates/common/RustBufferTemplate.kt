@@ -1,38 +1,38 @@
 // TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("NO_ACTUAL_FOR_EXPECT")
-expect class Pointer
+internal expect class Pointer
 
-expect fun kotlin.Long.toPointer(): Pointer
+internal expect fun kotlin.Long.toPointer(): Pointer
 
-expect fun Pointer.toLong(): kotlin.Long
-
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("NO_ACTUAL_FOR_EXPECT")
-expect class UBytePointer
-
-expect fun UBytePointer.asSource(len: kotlin.Long): NoCopySource
+internal expect fun Pointer.toLong(): kotlin.Long
 
 // TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("NO_ACTUAL_FOR_EXPECT")
-expect class RustBuffer
+internal expect class UBytePointer
+
+internal expect fun UBytePointer.asSource(len: kotlin.Long): NoCopySource
 
 // TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("NO_ACTUAL_FOR_EXPECT")
-expect class RustBufferPointer
+internal expect class RustBuffer
 
-expect fun RustBuffer.asSource(): NoCopySource
+// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
+@Suppress("NO_ACTUAL_FOR_EXPECT")
+internal expect class RustBufferByReference
 
-expect val RustBuffer.dataSize: kotlin.Int
+internal expect fun RustBuffer.asSource(): NoCopySource
 
-expect fun RustBuffer.free()
+internal expect val RustBuffer.dataSize: kotlin.Int
 
-expect fun allocRustBuffer(buffer: Buffer): RustBuffer
+internal expect fun RustBuffer.free()
 
-expect fun RustBufferPointer.setValue(value: RustBuffer)
+internal expect fun allocRustBuffer(buffer: Buffer): RustBuffer
 
-expect fun emptyRustBuffer(): RustBuffer
+internal expect fun RustBufferByReference.setValue(value: RustBuffer)
 
-interface NoCopySource {
+internal expect fun emptyRustBuffer(): RustBuffer
+
+internal interface NoCopySource {
     fun exhausted(): kotlin.Boolean
     fun readByte(): kotlin.Byte
     fun readInt(): kotlin.Int
@@ -50,4 +50,4 @@ interface NoCopySource {
 
 // TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("NO_ACTUAL_FOR_EXPECT")
-expect class ForeignBytes
+internal expect class ForeignBytes

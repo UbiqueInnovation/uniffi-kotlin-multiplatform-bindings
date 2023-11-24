@@ -3,7 +3,7 @@
 {{- self.add_import("kotlinx.atomicfu.locks.reentrantLock") }}
 {{- self.add_import("kotlinx.atomicfu.locks.withLock") }}
 
-typealias Handle = kotlin.ULong
+internal typealias Handle = kotlin.ULong
 internal class ConcurrentHandleMap<T>(
     private val leftMap: MutableMap<Handle, T> = mutableMapOf(),
     private val rightMap: MutableMap<T, Handle> = mutableMapOf()
@@ -13,13 +13,13 @@ internal class ConcurrentHandleMap<T>(
 
     fun insert(obj: T): Handle =
         lock.withLock {
-            rightMap[obj] ?: currentHandle.getAndIncrement()
-                .let { it.toULong() }
-                .also { handle ->
-                    leftMap[handle] = obj
-                    rightMap[obj] = handle
+            rightMap[obj] ?:
+                currentHandle.getAndIncrement().toULong()
+                    .also { handle ->
+                        leftMap[handle] = obj
+                        rightMap[obj] = handle
+                    }
                 }
-        }
 
     fun get(handle: Handle) = lock.withLock {
         leftMap[handle]
@@ -40,18 +40,18 @@ internal class ConcurrentHandleMap<T>(
 
 // TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
 @Suppress("NO_ACTUAL_FOR_EXPECT")
-expect class ForeignCallback
+internal expect class ForeignCallback
 
 // Magic number for the Rust proxy to call using the same mechanism as every other method,
 // to free the callback once it's dropped by Rust.
 internal const val IDX_CALLBACK_FREE = 0
 
 // Callback return codes
-internal const val UNIFFI_CALLBACK_SUCCESS = 0
-internal const val UNIFFI_CALLBACK_ERROR = 1
-internal const val UNIFFI_CALLBACK_UNEXPECTED_ERROR = 2
+private const val UNIFFI_CALLBACK_SUCCESS = 0
+private const val UNIFFI_CALLBACK_ERROR = 1
+private const val UNIFFI_CALLBACK_UNEXPECTED_ERROR = 2
 
-abstract class FfiConverterCallbackInterface<CallbackInterface> : FfiConverter<CallbackInterface, Handle> {
+internal abstract class FfiConverterCallbackInterface<CallbackInterface> : FfiConverter<CallbackInterface, Handle> {
     private val handleMap = ConcurrentHandleMap<CallbackInterface>()
 
     // Registers the foreign callback with the Rust side.
@@ -66,7 +66,7 @@ abstract class FfiConverterCallbackInterface<CallbackInterface> : FfiConverter<C
         return handleMap.get(value) ?: throw InternalException("No callback in handlemap; this is a Uniffi bug")
     }
 
-    override fun read(source: NoCopySource) = lift(source.readLong().toULong())
+    override fun read(buf: NoCopySource) = lift(buf.readLong().toULong())
 
     override fun lower(value: CallbackInterface) =
         handleMap.insert(value).also {

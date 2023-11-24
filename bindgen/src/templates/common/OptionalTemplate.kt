@@ -1,11 +1,11 @@
-{%- let inner_type_name = inner_type|type_name %}
+{%- let inner_type_name = inner_type|type_name(ci) %}
 
-object {{ ffi_converter_name }}: FfiConverterRustBuffer<{{ inner_type_name }}?> {
-    override fun read(source: NoCopySource): {{ inner_type_name }}? {
-        if (source.readByte().toInt() == 0) {
+internal object {{ ffi_converter_name }}: FfiConverterRustBuffer<{{ inner_type_name }}?> {
+    override fun read(buf: NoCopySource): {{ inner_type_name }}? {
+        if (buf.readByte().toInt() == 0) {
             return null
         }
-        return {{ inner_type|read_fn }}(source)
+        return {{ inner_type|read_fn }}(buf)
     }
 
     override fun allocationSize(value: {{ inner_type_name }}?): kotlin.Int {

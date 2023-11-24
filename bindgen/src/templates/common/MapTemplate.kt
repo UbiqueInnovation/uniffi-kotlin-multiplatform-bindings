@@ -1,15 +1,15 @@
-{%- let key_type_name = key_type|type_name %}
-{%- let value_type_name = value_type|type_name %}
-object {{ ffi_converter_name }}: FfiConverterRustBuffer<Map<{{ key_type_name }}, {{ value_type_name }}>> {
-    override fun read(source: NoCopySource): Map<{{ key_type_name }}, {{ value_type_name }}> {
-        val items : MutableMap<{{ key_type_name }}, {{ value_type_name }}> = mutableMapOf()
-        val len = source.readInt()
-        repeat(len) {
-            val k = {{ key_type|read_fn }}(source)
-            val v = {{ value_type|read_fn }}(source)
-            items[k] = v
+{%- let key_type_name = key_type|type_name(ci) %}
+{%- let value_type_name = value_type|type_name(ci) %}
+internal object {{ ffi_converter_name }}: FfiConverterRustBuffer<Map<{{ key_type_name }}, {{ value_type_name }}>> {
+    override fun read(buf: NoCopySource): Map<{{ key_type_name }}, {{ value_type_name }}> {
+        val len = buf.readInt()
+        return buildMap<{{ key_type_name }}, {{ value_type_name }}>(len) {
+            repeat(len) {
+                val k = {{ key_type|read_fn }}(buf)
+                val v = {{ value_type|read_fn }}(buf)
+                this[k] = v
+            }
         }
-        return items
     }
 
     override fun allocationSize(value: Map<{{ key_type_name }}, {{ value_type_name }}>): kotlin.Int {

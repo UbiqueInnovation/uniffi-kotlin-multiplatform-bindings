@@ -1,12 +1,12 @@
 {%- let obj = ci|get_object_definition(name) %}
 {%- if self.include_once_check("ObjectRuntime.kt") %}{% include "ObjectRuntime.kt" %}{% endif %}
 
-interface {{ type_name }}Interface {
+public interface {{ type_name }}Interface {
     {% for meth in obj.methods() -%}
     {%- match meth.throws_type() -%}
-    {%- when Some with (throwable) %}
-    @Throws({{ throwable|error_type_name }}::class{%- if meth.is_async() -%}, CancellationException::class{%- endif -%})
-    {%- else -%}
+    {%- when Some with (throwable) -%}
+    @Throws({{ throwable|type_name(ci) }}::class{%- if meth.is_async() -%}, CancellationException::class{%- endif -%})
+    {%- when None -%}
     {%- endmatch %}
     {% if meth.is_async() -%}
     suspend fun {{ meth.name()|fn_name }}({% call kt::arg_list_decl(meth) %})
@@ -14,13 +14,15 @@ interface {{ type_name }}Interface {
     fun {{ meth.name()|fn_name }}({% call kt::arg_list_decl(meth) %})
     {%- endif %}
     {%- match meth.return_type() -%}
-    {%- when Some with (return_type) %}: {{ return_type|type_name -}}
-    {%- else -%}
+    {%- when Some with (return_type) %}: {{ return_type|type_name(ci) -}}
+    {%- when None -%}
     {%- endmatch %}
+
     {% endfor %}
+    companion object
 }
 
-class {{ type_name }}(
+class {{ type_name }} internal constructor(
     pointer: Pointer
 ) : FFIObject(pointer), {{ type_name }}Interface {
 
@@ -31,6 +33,14 @@ class {{ type_name }}(
     {%- when None %}
     {%- endmatch %}
 
+    /**
+     * Disconnect the object from the underlying Rust object.
+     *
+     * It can be called more than once, but once called, interacting with the object
+     * causes an `IllegalStateException`.
+     *
+     * Clients **must** call this method once done with the object, or cause a memory leak.
+     */
     override protected fun freeRustArcPtr() {
         rustCall { status: RustCallStatus ->
             UniFFILib.{{ obj.ffi_object_free().name() }}(this.pointer, status)
@@ -40,12 +50,12 @@ class {{ type_name }}(
     {% for meth in obj.methods() -%}
     {%- match meth.throws_type() -%}
     {%- when Some with (throwable) %}
-    @Throws({{ throwable|error_type_name }}::class{%- if meth.is_async() -%}, CancellationException::class{%- endif -%})
+    @Throws({{ throwable|type_name(ci) }}::class{%- if meth.is_async() -%}, CancellationException::class{%- endif -%})
     {%- else -%}
     {%- endmatch %}
     {%- if meth.is_async() %}
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun {{ meth.name()|fn_name }}({%- call kt::arg_list_decl(meth) -%}){% match meth.return_type() %}{% when Some with (return_type) %} : {{ return_type|type_name }}{% when None %}{%- endmatch %} {
+    override suspend fun {{ meth.name()|fn_name }}({%- call kt::arg_list_decl(meth) -%}){% match meth.return_type() %}{% when Some with (return_type) %} : {{ return_type|type_name(ci) }}{% when None %}{%- endmatch %} {
         return uniffiRustCallAsync(
             callWithPointer { thisPtr ->
                 UniFFILib.{{ meth.ffi_func().name() }}(
@@ -66,21 +76,22 @@ class {{ type_name }}(
             // Error FFI converter
             {%- match meth.throws_type() %}
             {%- when Some(e) %}
-            {{ e|error_type_name }}.ErrorHandler,
+            {{ e|type_name(ci) }}.ErrorHandler,
             {%- when None %}
-                    NullCallStatusErrorHandler,
+            NullCallStatusErrorHandler,
             {%- endmatch %}
         )
     }
     {%- else -%}
     {%- match meth.return_type() -%}
     {%- when Some with (return_type) -%}
-    override fun {{ meth.name()|fn_name }}({% call kt::arg_list_protocol(meth) %}): {{ return_type|type_name }} =
+    override fun {{ meth.name()|fn_name }}({% call kt::arg_list_protocol(meth) %}): {{ return_type|type_name(ci) }} =
         callWithPointer {
             {%- call kt::to_ffi_call_with_prefix("it", meth) %}
         }.let {
             {{ return_type|lift_fn }}(it)
         }
+
     {%- when None -%}
     override fun {{ meth.name()|fn_name }}({% call kt::arg_list_protocol(meth) %}) =
         callWithPointer {
@@ -97,23 +108,29 @@ class {{ type_name }}(
             {{ type_name }}({% call kt::to_ffi_call(cons) %})
         {% endfor %}
     }
+    {% else %}
+    companion object
     {% endif %}
 }
 
-object {{ obj|ffi_converter_name }}: FfiConverter<{{ type_name }}, Pointer> {
+internal object {{ obj|ffi_converter_name }}: FfiConverter<{{ type_name }}, Pointer> {
     override fun lower(value: {{ type_name }}): Pointer = value.callWithPointer { it }
 
     override fun lift(value: Pointer): {{ type_name }} {
         return {{ type_name }}(value)
     }
 
-    override fun read(source: NoCopySource): {{ type_name }} {
-        return lift(source.readLong().toPointer())
+    override fun read(buf: NoCopySource): {{ type_name }} {
+        // The Rust code always writes pointers as 8 bytes, and will
+        // fail to compile if they don't fit.
+        return lift(buf.readLong().toPointer())
     }
 
     override fun allocationSize(value: {{ type_name }}) = 8
 
     override fun write(value: {{ type_name }}, buf: Buffer) {
+        // The Rust code always expects pointers written as 8 bytes,
+        // and will fail to compile if they don't fit.
         buf.writeLong(lower(value).toLong())
     }
 }

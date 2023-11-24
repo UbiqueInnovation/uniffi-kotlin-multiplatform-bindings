@@ -63,7 +63,6 @@ fn generate_bindings() -> anyhow::Result<()> {
             binding_gen,
             &library_path,
             crate_name,
-            config.as_deref(),
             &out_dir,
         )?;
     } else {

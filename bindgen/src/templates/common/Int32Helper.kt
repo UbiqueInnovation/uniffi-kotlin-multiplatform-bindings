@@ -1,9 +1,15 @@
-object FfiConverterInt : FfiConverter<kotlin.Int, kotlin.Int> {
-    override fun lift(value: kotlin.Int): kotlin.Int = value
+internal object FfiConverterInt : FfiConverter<kotlin.Int, kotlin.Int> {
+    override fun lift(value: kotlin.Int): kotlin.Int {
+        return value
+    }
 
-    override fun read(source: NoCopySource): kotlin.Int = source.readInt()
+    override fun read(buf: NoCopySource): kotlin.Int {
+        return buf.readInt()
+    }
 
-    override fun lower(value: kotlin.Int): kotlin.Int = value
+    override fun lower(value: kotlin.Int): kotlin.Int {
+        return value
+    }
 
     override fun allocationSize(value: kotlin.Int) = 4
 

@@ -18,16 +18,29 @@ fun invokeUniFfiForeignExecutorCallback(
     delayMs: kotlin.Int,
     rustTask: UniFfiRustTaskCallback?,
     rustTaskData: Pointer?
-) {
+): kotlin.Byte {
     if (rustTask == null) {
         FfiConverterForeignExecutor.drop(handle)
+        return UNIFFI_FOREIGN_EXECUTOR_CALLBACK_SUCCESS
     } else {
         val coroutineScope = FfiConverterForeignExecutor.lift(handle)
-        coroutineScope.launch {
-            if (delayMs > 0) {
-                delay(delayMs.toLong())
+        if (coroutineScope.isActive) {
+            coroutineScope.launch {
+                val job = coroutineScope.launch {
+                    if (delayMs > 0) {
+                        delay(delayMs.toLong())
+                    }
+                    rustTask.callback(rustTaskData, UNIFFI_RUST_TASK_CALLBACK_SUCCESS)
+                }
+                job.invokeOnCompletion { cause ->
+                    if (cause != null) {
+                        rustTask.callback(rustTaskData, UNIFFI_RUST_TASK_CALLBACK_CANCELLED)
+                    }
+                }
+                return UNIFFI_FOREIGN_EXECUTOR_CALLBACK_SUCCESS
+            } else {
+                return UNIFFI_FOREIGN_EXECUTOR_CALLBACK_CANCELLED
             }
-            rustTask.invoke(rustTaskData)
         }
     }
 }

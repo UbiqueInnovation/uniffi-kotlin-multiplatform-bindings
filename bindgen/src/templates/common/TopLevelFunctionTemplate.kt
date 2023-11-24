@@ -1,12 +1,12 @@
 {%- if func.is_async() %}
 {%- match func.throws_type() -%}
 {%- when Some with (throwable) %}
-@Throws({{ throwable|error_type_name }}::class, CancellationException::class)
+@Throws({{ throwable|type_name(ci) }}::class, CancellationException::class)
 {%- else -%}
 {%- endmatch %}
 
 @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-suspend fun {{ func.name()|fn_name }}({%- call kt::arg_list_decl(func) -%}){% match func.return_type() %}{% when Some with (return_type) %} : {{ return_type|type_name }}{% when None %}{%- endmatch %} {
+public suspend fun {{ func.name()|fn_name }}({%- call kt::arg_list_decl(func) -%}){% match func.return_type() %}{% when Some with (return_type) %} : {{ return_type|type_name(ci) }}{% when None %}{%- endmatch %} {
     return uniffiRustCallAsync(
         UniFFILib.{{ func.ffi_func().name() }}({% call kt::arg_list_lowered(func) %}),
         {{ func|async_poll(ci) }},
@@ -22,9 +22,9 @@ suspend fun {{ func.name()|fn_name }}({%- call kt::arg_list_decl(func) -%}){% ma
         // Error FFI converter
         {%- match func.throws_type() %}
         {%- when Some(e) %}
-        {{ e|error_type_name }}.ErrorHandler,
+        {{ e|type_name(ci) }}.ErrorHandler,
         {%- when None %}
-                NullCallStatusErrorHandler,
+        NullCallStatusErrorHandler,
         {%- endmatch %}
     )
 }
@@ -33,19 +33,19 @@ suspend fun {{ func.name()|fn_name }}({%- call kt::arg_list_decl(func) -%}){% ma
 
 {%- match func.throws_type() -%}
 {%- when Some with (throwable) %}
-@Throws({{ throwable|error_type_name }}::class)
+@Throws({{ throwable|type_name(ci) }}::class)
 {%- else -%}
 {%- endmatch %}
 {%- match func.return_type() -%}
 {%- when Some with (return_type) %}
 
-fun {{ func.name()|fn_name }}({%- call kt::arg_list_decl(func) -%}): {{ return_type|type_name }} {
+public fun {{ func.name()|fn_name }}({%- call kt::arg_list_decl(func) -%}): {{ return_type|type_name(ci) }} {
     return {{ return_type|lift_fn }}({% call kt::to_ffi_call(func) %})
 }
-
 {% when None %}
 
-fun {{ func.name()|fn_name }}({% call kt::arg_list_decl(func) %}) =
+public fun {{ func.name()|fn_name }}({% call kt::arg_list_decl(func) %}) =
     {% call kt::to_ffi_call(func) %}
+
 {% endmatch %}
 {%- endif %}

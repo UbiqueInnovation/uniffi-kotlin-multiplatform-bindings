@@ -6,8 +6,6 @@
 package {{ config.package_name() }}
 
 import okio.Buffer
-import kotlinx.coroutines.CancellableContinuation
-import kotlin.coroutines.resume
 
 {%- for req in self.imports() %}
 {{ req.render() }}

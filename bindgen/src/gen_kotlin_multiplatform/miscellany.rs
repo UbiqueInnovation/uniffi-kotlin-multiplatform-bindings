@@ -3,7 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use paste::paste;
-use uniffi_bindgen::backend::{CodeType, Literal};
+use uniffi_bindgen::ComponentInterface;
+
+use super::CodeType;
 
 macro_rules! impl_code_type_for_miscellany {
     ($T:ty, $class_name:literal, $canonical_name:literal) => {
@@ -12,22 +14,18 @@ macro_rules! impl_code_type_for_miscellany {
             pub struct $T;
 
             impl CodeType for $T  {
-                fn type_label(&self) -> String {
+                fn type_label(&self, _ci: &ComponentInterface) -> String {
                     $class_name.into()
                 }
 
                 fn canonical_name(&self) -> String {
                    $canonical_name.into()
                }
-
-                fn literal(&self, _literal: &Literal) -> String {
-                    unreachable!()
-                }
             }
         }
     };
 }
 
-impl_code_type_for_miscellany!(TimestampCodeType, "kotlinx.datetime.Instant", "Instant");
+impl_code_type_for_miscellany!(TimestampCodeType, "kotlinx.datetime.Instant", "Timestamp");
 
 impl_code_type_for_miscellany!(DurationCodeType, "kotlin.time.Duration", "Duration");

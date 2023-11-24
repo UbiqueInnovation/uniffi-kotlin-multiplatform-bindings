@@ -1,4 +1,7 @@
-object FfiConverterString : FfiConverter<kotlin.String, RustBuffer> {
+internal object FfiConverterString : FfiConverter<kotlin.String, RustBuffer> {
+    // Note: we don't inherit from FfiConverterRustBuffer, because we use a
+    // special encoding when lowering/lifting.  We can use `RustBuffer.len` to
+    // store our length and avoid writing it out to the buffer.
     override fun lift(value: RustBuffer): kotlin.String {
         try {
             val byteArr = value.asSource().readByteArray(value.dataSize.toLong())
@@ -8,9 +11,9 @@ object FfiConverterString : FfiConverter<kotlin.String, RustBuffer> {
         }
     }
 
-    override fun read(source: NoCopySource): kotlin.String {
-        val len = source.readInt()
-        val byteArr = source.readByteArray(len.toLong())
+    override fun read(buf: NoCopySource): kotlin.String {
+        val len = buf.readInt()
+        val byteArr = buf.readByteArray(len.toLong())
         return byteArr.decodeToString()
     }
 
@@ -19,6 +22,9 @@ object FfiConverterString : FfiConverter<kotlin.String, RustBuffer> {
         return allocRustBuffer(buffer)
     }
 
+    // We aren't sure exactly how many bytes our string will be once it's UTF-8
+    // encoded.  Allocate 3 bytes per UTF-16 code unit which will always be
+    // enough.
     override fun allocationSize(value: kotlin.String): kotlin.Int {
         val sizeForLength = 4
         val sizeForString = value.length * 3

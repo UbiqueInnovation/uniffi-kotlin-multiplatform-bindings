@@ -1,7 +1,7 @@
 {%- import "../helpers.j2" as kt %}
 
 {%- for type_ in ci.iter_types() %}
-{%- let type_name = type_|type_name %}
+{%- let type_name = type_|type_name(ci) %}
 {%- let ffi_converter_name = type_|ffi_converter_name %}
 {%- let canonical_type_name = type_|canonical_name %}
 {%- let contains_object_references = ci.item_contains_object_references(type_) %}
@@ -103,7 +103,8 @@
 
 {%- if ci.has_async_fns() %}
 {# Import types needed for async support #}
-{{ self.add_import("kotlin.coroutines.resume") }}
 {{ self.add_import("kotlin.coroutines.cancellation.CancellationException") }}
+{{ self.add_import("kotlin.coroutines.resume") }}
 {{ self.add_import("kotlinx.coroutines.suspendCancellableCoroutine") }}
+{{ self.add_import("kotlinx.coroutines.CancellableContinuation") }}
 {%- endif %}
