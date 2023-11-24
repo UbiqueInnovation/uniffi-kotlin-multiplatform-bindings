@@ -1,4 +1,1 @@
-namespace futures {
-    [Async]
-    boolean always_ready();
-};
+namespace futures {};
