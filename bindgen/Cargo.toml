@@ -2,6 +2,14 @@
 name = "uniffi_bindgen_kotlin_multiplatform"
 version = "0.1.0"
 edition = "2021"
+authors = ["UniFFI Kotlin Multiplatform bindings team"]
+description = "a Kotlin Multiplatform bindings generator for rust (codegen and cli tooling)"
+documentation = "https://trixnity.gitlab.io/uniffi-kotlin-multiplatform-bindings"
+homepage = "https://trixnity.gitlab.io/uniffi-kotlin-multiplatform-bindings"
+repository = "https://gitlab.com/trixnity/uniffi-kotlin-multiplatform-bindings"
+readme = "../README.md"
+license = "MPL-2.0"
+keywords = ["ffi", "bindgen", "kotlin"]
 
 [dependencies]
 anyhow = "1.0.66"
