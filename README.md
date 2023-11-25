@@ -18,7 +18,7 @@ You can find examples on how to use the bindings in the [tests](./tests) directo
 ```kotlin
 plugins {
     kotlin("multiplatform")
-    id("net.folivo.uniffi.kotlin.multiplatform") version "0.1.0"
+    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform") version "0.1.0"
 }
 
 uniffi {

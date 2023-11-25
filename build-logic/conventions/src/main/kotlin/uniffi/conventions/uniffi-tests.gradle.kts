@@ -1,10 +1,10 @@
-import net.folivo.uniffi.gradle.InstallBindgenTask
+import io.gitlab.trixnity.uniffi.gradle.InstallBindgenTask
 import org.gradle.accessors.dm.LibrariesForLibs
 import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 
 plugins {
     kotlin("multiplatform")
-    id("net.folivo.uniffi.kotlin.multiplatform")
+    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform")
 }
 
 uniffi {

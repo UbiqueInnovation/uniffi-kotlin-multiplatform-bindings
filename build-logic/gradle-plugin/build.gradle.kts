@@ -9,7 +9,7 @@ val bindgenInfo = parseBindgenCargoToml(
     rootProject.layout.projectDirectory.file("../bindgen/Cargo.toml").asFile
 )
 
-group = "net.folivo.uniffi"
+group = "io.gitlab.trixnity.uniffi"
 description = "Gradle UniFFI Plugin"
 version = bindgenInfo.version
 
@@ -26,7 +26,7 @@ dependencies {
 }
 
 buildConfig {
-    packageName = "net.folivo.uniffi.gradle"
+    packageName = "io.gitlab.trixnity.uniffi.gradle"
 
     buildConfigField("String", "BINDGEN_VERSION", "\"${bindgenInfo.version}\"")
     buildConfigField("String", "BINDGEN_CRATE", "\"${bindgenInfo.name}\"")
@@ -48,9 +48,9 @@ gradlePlugin {
 
     plugins {
         create("uniffi-kotlin-multiplatform") {
-            id = "net.folivo.uniffi.kotlin.multiplatform"
+            id = "io.gitlab.trixnity.uniffi.kotlin.multiplatform"
             displayName = name
-            implementationClass = "net.folivo.uniffi.gradle.UniFfiPlugin"
+            implementationClass = "io.gitlab.trixnity.uniffi.gradle.UniFfiPlugin"
             description = "A plugin for generating UniFFI Kotlin Multiplatform bindings for Rust libraries."
             tags.addAll("uniffi", "kotlin", "kotlin-multiplatform")
         }

@@ -4,7 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package net.folivo.uniffi.gradle
+package io.gitlab.trixnity.uniffi.gradle
 
 import com.sun.jna.Platform
 import org.gradle.api.GradleException
