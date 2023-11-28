@@ -7,5 +7,6 @@ members = [
     "tests/futures/uniffi",
     "tests/keywords/uniffi",
     "tests/proc-macro/uniffi",
+    "tests/trait-methods/uniffi",
 ]
 resolver = "2"

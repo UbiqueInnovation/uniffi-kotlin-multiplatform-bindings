@@ -924,6 +924,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "uniffi-kmm-fixture-trait-methods"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "lazy_static",
+ "thiserror",
+ "uniffi",
+]
+
+[[package]]
 name = "uniffi_bindgen"
 version = "0.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
