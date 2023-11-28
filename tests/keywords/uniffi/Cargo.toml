@@ -1,11 +1,11 @@
 [package]
-name = "keywords"
+name = "uniffi-kmm-fixture-keywords"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [lib]
-name = "keywords"
+name = "uniffi_kmm_fixture_keywords"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]

@@ -1,11 +1,11 @@
 [package]
-name = "coverall"
+name = "uniffi-kmm-fixture-coverall"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [lib]
-name = "coverall"
+name = "uniffi_kmm_fixture_coverall"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]

@@ -8,8 +8,10 @@ plugins {
 }
 
 uniffi {
-    crateName = name
+    crateName = "uniffi_kmm_fixture_$name"
     crateDirectory = layout.projectDirectory.dir("uniffi")
+    udlFile = crateDirectory.get().dir("src").file("$name.udl")
+    namespace = name
     bindgenCratePath = rootProject.layout.projectDirectory.dir("bindgen")
 }
 

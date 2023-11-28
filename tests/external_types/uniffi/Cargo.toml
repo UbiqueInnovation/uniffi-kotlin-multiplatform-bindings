@@ -1,11 +1,11 @@
 [package]
-name = "external_types"
+name = "uniffi-kmm-fixture-external-types"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [lib]
-name = "external_types"
+name = "uniffi_kmm_fixture_external_types"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]

@@ -1,11 +1,11 @@
 [package]
-name = "callbacks"
+name = "uniffi-kmm-fixture-callbacks"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [lib]
-name = "callbacks"
+name = "uniffi_kmm_fixture_callbacks"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
