@@ -3,7 +3,7 @@ members = [
     "bindgen",
     "tests/callbacks/uniffi",
     "tests/coverall/uniffi",
-    "tests/external_types/uniffi",
+    "tests/external-types/uniffi",
     "tests/futures/uniffi",
     "tests/keywords/uniffi",
     "tests/proc-macro/uniffi",

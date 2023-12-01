@@ -21,5 +21,5 @@ fn get_combined_type(existing: Option<CombinedType>) -> CombinedType {
     })
 }
 
-uniffi::include_scaffolding!("external_types");
+uniffi::include_scaffolding!("external-types");
 uniffi_reexport_scaffolding!();
