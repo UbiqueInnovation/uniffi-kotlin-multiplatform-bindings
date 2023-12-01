@@ -180,18 +180,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2bd12c1caf447e69cd4528f47f94d203fd2582878ecb9e9465484c4148a8223"
 
 [[package]]
-name = "callbacks"
-version = "0.1.0"
-dependencies = [
- "camino",
- "once_cell",
- "thiserror",
- "uniffi",
- "uniffi_bindgen",
- "uniffi_macros",
-]
-
-[[package]]
 name = "camino"
 version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -285,18 +273,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
 
 [[package]]
-name = "coverall"
-version = "0.1.0"
-dependencies = [
- "camino",
- "once_cell",
- "thiserror",
- "uniffi",
- "uniffi_bindgen",
- "uniffi_macros",
-]
-
-[[package]]
 name = "crate_one"
 version = "0.1.0"
 
@@ -305,20 +281,6 @@ name = "crate_two"
 version = "0.1.0"
 dependencies = [
  "crate_one",
-]
-
-[[package]]
-name = "external_types"
-version = "0.1.0"
-dependencies = [
- "camino",
- "crate_one",
- "crate_two",
- "once_cell",
- "thiserror",
- "uniffi",
- "uniffi_bindgen",
- "uniffi_macros",
 ]
 
 [[package]]
@@ -408,18 +370,6 @@ name = "itoa"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af150ab688ff2122fcef229be89cb50dd66af9e01a4ff320cc137eecc9bacc38"
-
-[[package]]
-name = "keywords"
-version = "0.1.0"
-dependencies = [
- "camino",
- "once_cell",
- "thiserror",
- "uniffi",
- "uniffi_bindgen",
- "uniffi_macros",
-]
 
 [[package]]
 name = "lazy_static"
@@ -901,13 +851,63 @@ dependencies = [
 ]
 
 [[package]]
-name = "uniffi-fixture-futures"
+name = "uniffi-kmm-fixture-callbacks"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "once_cell",
+ "thiserror",
+ "uniffi",
+ "uniffi_bindgen",
+ "uniffi_macros",
+]
+
+[[package]]
+name = "uniffi-kmm-fixture-coverall"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "once_cell",
+ "thiserror",
+ "uniffi",
+ "uniffi_bindgen",
+ "uniffi_macros",
+]
+
+[[package]]
+name = "uniffi-kmm-fixture-external-types"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "crate_one",
+ "crate_two",
+ "once_cell",
+ "thiserror",
+ "uniffi",
+ "uniffi_bindgen",
+ "uniffi_macros",
+]
+
+[[package]]
+name = "uniffi-kmm-fixture-futures"
 version = "0.21.0"
 dependencies = [
  "camino",
  "once_cell",
  "thiserror",
  "tokio",
+ "uniffi",
+ "uniffi_bindgen",
+ "uniffi_macros",
+]
+
+[[package]]
+name = "uniffi-kmm-fixture-keywords"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "once_cell",
+ "thiserror",
  "uniffi",
  "uniffi_bindgen",
  "uniffi_macros",
