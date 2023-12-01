@@ -1,6 +1,6 @@
-import io.gitlab.trixnity.uniffi.gradle.InstallBindgenTask
-import org.gradle.accessors.dm.LibrariesForLibs
-import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
+import io.gitlab.trixnity.uniffi.gradle.tasks.*
+import org.gradle.accessors.dm.*
+import org.gradle.nativeplatform.platform.internal.*
 
 plugins {
     kotlin("multiplatform")
@@ -8,10 +8,6 @@ plugins {
 }
 
 uniffi {
-    crateName = "uniffi_kmm_fixture_$name"
-    crateDirectory = layout.projectDirectory.dir("uniffi")
-    udlFile = crateDirectory.get().dir("src").file("$name.udl")
-    namespace = name
     bindgenCratePath = rootProject.layout.projectDirectory.dir("bindgen")
 }
 

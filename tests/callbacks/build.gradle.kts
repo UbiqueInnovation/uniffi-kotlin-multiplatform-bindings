@@ -1,3 +1,3 @@
 plugins {
-    id("uniffi-tests")
+    id("uniffi-tests-from-udl")
 }

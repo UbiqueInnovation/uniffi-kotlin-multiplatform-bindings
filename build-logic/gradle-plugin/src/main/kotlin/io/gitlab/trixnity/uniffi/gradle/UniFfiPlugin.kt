@@ -6,21 +6,19 @@
 
 package io.gitlab.trixnity.uniffi.gradle
 
-import com.sun.jna.Platform
-import org.gradle.api.GradleException
-import org.gradle.api.Plugin
-import org.gradle.api.Project
-import org.gradle.api.file.Directory
-import org.gradle.api.tasks.Copy
-import org.gradle.api.tasks.Delete
-import org.gradle.api.tasks.Exec
+import com.sun.jna.*
+import io.gitlab.trixnity.uniffi.gradle.tasks.*
+import io.gitlab.trixnity.uniffi.gradle.utils.*
+import org.gradle.api.*
+import org.gradle.api.file.*
+import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
-import org.gradle.language.jvm.tasks.ProcessResources
+import org.gradle.language.jvm.tasks.*
+import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
-import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import org.jetbrains.kotlin.gradle.tasks.CInteropProcess
-import java.io.File
+import org.jetbrains.kotlin.gradle.plugin.mpp.*
+import org.jetbrains.kotlin.gradle.tasks.*
+import java.io.*
 
 private const val KOTLIN_MULTIPLATFORM_PLUGIN_ID = "org.jetbrains.kotlin.multiplatform"
 private const val TASK_GROUP = "uniffi"
@@ -29,21 +27,24 @@ class UniFfiPlugin : Plugin<Project> {
     private lateinit var uniFfiExtension: UniFfiExtension
 
     override fun apply(target: Project): Unit = with(target) {
-        uniFfiExtension = extensions.create<UniFfiExtension>(TASK_GROUP)
+        uniFfiExtension = extensions.create<UniFfiExtension>(TASK_GROUP, this)
 
         afterEvaluate {
-            val crateDirectory = uniFfiExtension.crateDirectory.get()
-            val crateName = uniFfiExtension.crateName.get()
-            val libraryName = uniFfiExtension.libraryName.getOrElse(crateName)
-            val namespace = uniFfiExtension.namespace.getOrElse(crateName)
-            val profile = uniFfiExtension.profile.getOrElse("debug")
+            val generation = uniFfiExtension.bindingsGeneration.orNull
+                ?: throw GradleException(
+                    "No bindings generation defined. " +
+                            "Please use either a `generateFromUdl` or `generateFromLibrary` block."
+                )
+
+            val crateDirectory = generation.crateDirectory.get()
+            val profile = generation.profile.get()
 
             val cargoMetadata = getCargoMetadata(crateDirectory)
             val cargoTargetDir = File(cargoMetadata.targetDirectory).resolve(profile)
 
             val generatedBindingsDir = layout.buildDirectory.dir("generated/uniffi").get()
 
-            configureTasks(crateName, libraryName, profile, cargoTargetDir, generatedBindingsDir)
+            configureTasks(generation, cargoTargetDir, generatedBindingsDir)
 
             if (!plugins.hasPlugin(KOTLIN_MULTIPLATFORM_PLUGIN_ID)) {
                 throw GradleException("You must add the Kotlin Multiplatform Gradle plugin")
@@ -53,38 +54,29 @@ class UniFfiPlugin : Plugin<Project> {
 
             plugins.withId(KOTLIN_MULTIPLATFORM_PLUGIN_ID) {
                 val kotlinMultiplatformExtension = extensions.getByType<KotlinMultiplatformExtension>()
-                kotlinMultiplatformExtension.configureKotlin(
-                    crateName = crateName,
-                    namespace = namespace,
-                    cargoTargetDir = cargoTargetDir,
-                    generatedBindingsDir = generatedBindingsDir
-                )
+                kotlinMultiplatformExtension.configureKotlin(generation, cargoTargetDir, generatedBindingsDir)
             }
         }
     }
 
     private fun Project.configureTasks(
-        theCrateName: String,
-        theLibraryName: String,
-        theProfile: String,
+        generation: BindingsGeneration,
         cargoTargetDir: File,
         generatedBindingsDir: Directory,
     ) {
-        val theCrateDirectory = uniFfiExtension.crateDirectory
-
         val buildCrate = tasks.register<BuildCrateTask>("buildCrate") {
             group = TASK_GROUP
 
-            crateDirectory.set(theCrateDirectory)
-            crateName.set(theCrateName)
-            profile.set(theProfile)
+            crateDirectory.set(generation.crateDirectory)
+            libraryName.set(generation.libraryName)
+            profile.set(generation.profile)
             targetDirectory.set(cargoTargetDir)
         }
 
         val cleanCrate = tasks.register<Exec>("cleanCrate") {
             group = TASK_GROUP
 
-            workingDir(theCrateDirectory)
+            workingDir(generation.crateDirectory)
             commandLine("cargo", "clean")
         }
 
@@ -95,22 +87,34 @@ class UniFfiPlugin : Plugin<Project> {
             installDirectory.set(layout.buildDirectory.dir("bindgen-install"))
         }
 
-        val theUdlFile = uniFfiExtension.udlFile.convention(
-            theCrateDirectory.file("src/${theCrateName}.udl")
-        )
+        val buildBindings =
+            tasks.register<BuildBindingsTask>("buildBindings") {
+                group = TASK_GROUP
 
-        val buildBindings = tasks.register<BuildBindingsTask>("buildBindings") {
-            group = TASK_GROUP
+                bindgen.set(installBindgen.get().bindgen)
+                outputDirectory.set(generatedBindingsDir)
+                libraryName.set(generation.libraryName)
 
-            bindgen.set(installBindgen.get().bindgen)
-            udlFile.set(theUdlFile)
-            libraryFile.set(buildCrate.get().libraryFile)
-            outputDirectory.set(generatedBindingsDir)
-            crateName.set(theCrateName)
-            libraryName.set(theLibraryName)
+                // TODO Understand why setting this makes the binding generation fail
+                // crateName.set(generation.crateName)
 
-            dependsOn(buildCrate, installBindgen)
-        }
+                when (generation) {
+                    is BindingsGenerationFromUdl -> {
+                        libraryMode.set(false)
+                        if (generation.config.isPresent) config.set(generation.config)
+                        libraryFile.set(buildCrate.get().libraryFile)
+                        source.set(generation.udlFile)
+                    }
+
+                    is BindingsGenerationFromLibrary -> {
+                        libraryMode.set(true)
+                        source.set(buildCrate.get().libraryFile)
+                    }
+
+                    else -> throw GradleException("Invalid bindings generation class")
+                }
+                dependsOn(buildCrate, installBindgen)
+            }
 
         val cleanBindings = tasks.register<Delete>("cleanBindings") {
             group = TASK_GROUP
@@ -144,8 +148,7 @@ class UniFfiPlugin : Plugin<Project> {
     }
 
     private fun KotlinMultiplatformExtension.configureKotlin(
-        crateName: String,
-        namespace: String,
+        generation: BindingsGeneration,
         cargoTargetDir: File,
         generatedBindingsDir: Directory,
     ) {
@@ -192,13 +195,16 @@ class UniFfiPlugin : Plugin<Project> {
             }
         }
 
+        val libraryName = generation.libraryName.get()
+        val namespace = generation.namespace.get()
+
         targets.all { target ->
             if (target is KotlinNativeTarget) {
                 target.compilations.getByName("main") { compilation ->
                     compilation.cinterops { cinterop ->
                         cinterop.register(TASK_GROUP) { settings ->
                             settings.packageName("$namespace.cinterop")
-                            settings.defFile(generatedBindingsDir.file("nativeInterop/cinterop/$crateName.def"))
+                            settings.defFile(generatedBindingsDir.file("nativeInterop/cinterop/$libraryName.def"))
                             settings.header(generatedBindingsDir.dir("nativeInterop/cinterop/headers/$namespace/$namespace.h"))
                             settings.extraOpts("-libraryPath", cargoTargetDir.absolutePath)
                         }

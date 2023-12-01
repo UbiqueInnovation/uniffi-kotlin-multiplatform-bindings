@@ -4,7 +4,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package io.gitlab.trixnity.uniffi.gradle
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+package io.gitlab.trixnity.uniffi.gradle.tasks
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -22,7 +28,7 @@ abstract class BuildCrateTask : DefaultTask() {
     abstract val crateDirectory: DirectoryProperty
 
     @get:Input
-    abstract val crateName: Property<String>
+    abstract val libraryName: Property<String>
 
     @get:Input
     abstract val profile: Property<String>
@@ -33,7 +39,7 @@ abstract class BuildCrateTask : DefaultTask() {
     @Suppress("LeakingThis")
     @get:OutputFile
     val libraryFile: RegularFileProperty = project.objects.fileProperty().convention(
-        targetDirectory.map { it.file(buildLibraryName(crateName.get())) },
+        targetDirectory.map { it.file(buildLibraryName(libraryName.get())) },
     )
 
     @TaskAction
@@ -48,12 +54,12 @@ abstract class BuildCrateTask : DefaultTask() {
     }
 }
 
-fun buildLibraryName(crateName: String): String {
+fun buildLibraryName(libraryName: String): String {
     val os = DefaultNativePlatform.getCurrentOperatingSystem()
     return when {
-        os.isLinux -> "lib$crateName.so"
-        os.isMacOsX -> "lib$crateName.dylib"
-        os.isWindows -> "$crateName.dll"
+        os.isLinux -> "lib$libraryName.so"
+        os.isMacOsX -> "lib$libraryName.dylib"
+        os.isWindows -> "$libraryName.dll"
         else -> throw GradleException("Unsupported operating system: ${os.displayName}")
     }
 }

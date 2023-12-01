@@ -4,8 +4,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package io.gitlab.trixnity.uniffi.gradle
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
+package io.gitlab.trixnity.uniffi.gradle.tasks
+
+import io.gitlab.trixnity.uniffi.gradle.BuildConfig
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
