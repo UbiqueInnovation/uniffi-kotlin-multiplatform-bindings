@@ -18,9 +18,8 @@ struct Cli {
     #[clap(long, short)]
     out_dir: Option<Utf8PathBuf>,
 
-    /// Path to optional uniffi config file. This config will be merged on top of default
-    /// `uniffi.toml` config in crate root. The merge recursively upserts TOML keys into
-    /// the default config.
+    /// Path to the optional uniffi config file.
+    /// If not provided, uniffi-bindgen will try to guess it from the UDL's file location.
     #[clap(long, short)]
     config: Option<Utf8PathBuf>,
 
@@ -28,7 +27,7 @@ struct Cli {
     #[clap(long, short)]
     lib_file: Option<Utf8PathBuf>,
 
-    /// Pass in a cdylib path rather than a UDL file
+    /// Pass in a cdylib path rather than a UDL file.
     #[clap(long = "library")]
     library_mode: bool,
 
@@ -38,7 +37,7 @@ struct Cli {
     #[clap(long = "crate")]
     crate_name: Option<String>,
 
-    /// Path to the UDL file, or cdylib if `library-mode` is specified
+    /// Path to the UDL file, or cdylib if `library-mode` is specified.
     source: Utf8PathBuf,
 }
 
@@ -62,23 +61,24 @@ fn generate_bindings() -> anyhow::Result<()> {
         if lib_file.is_some() {
             panic!("--lib-file is not compatible with --library.")
         }
+        if config.is_some() {
+            panic!("--config is not compatible with --library.  The config file(s) will be found automatically.")
+        }
         let out_dir = out_dir.expect("--out-dir is required when using --library");
-        let library_path = source;
 
         uniffi_bindgen::library_mode::generate_external_bindings(
             binding_gen,
-            &library_path,
+            &source,
             crate_name,
             &out_dir,
         )?;
     } else {
-        let udl_file = source;
         uniffi_bindgen::generate_external_bindings(
             binding_gen,
-            udl_file,
-            config,
-            out_dir,
-            lib_file,
+            &source,
+            config.as_deref(),
+            out_dir.as_deref(),
+            lib_file.as_deref(),
             crate_name.as_deref(),
         )?;
     }
