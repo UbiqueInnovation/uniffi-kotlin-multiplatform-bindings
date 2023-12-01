@@ -1,0 +1,18 @@
+[package]
+name = "uniffi-kmm-fixture-proc-macro"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_proc_macro"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+uniffi = "0.25.2"
+thiserror = "1.0"
+lazy_static = "1.4"
+
+[build-dependencies]
+uniffi = { version = "0.25.2", features = ["build"] }
+camino = "1.1.1"
