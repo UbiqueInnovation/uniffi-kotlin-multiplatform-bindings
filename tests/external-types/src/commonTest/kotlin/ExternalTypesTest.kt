@@ -19,7 +19,7 @@ class ExternalTypesTest {
                 CrateOneType("test"),
                 CrateTwoType(42),
             )
-        );
+        )
         ct.cot.sval shouldBe "test"
         ct.ctt.ival shouldBe 42
 

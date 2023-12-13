@@ -121,7 +121,7 @@ class CallbacksTest {
             val answer = 42uL
 
             val callback = object : VoidCallback {
-                public var answer: ULong? = null;
+                var answer: ULong? = null
 
                 override fun callBack(newValue: ULong) {
                     this.answer = newValue
@@ -141,7 +141,7 @@ class CallbacksTest {
             val errorMessage = "That feels off"
 
             val throwingCallback = object : VoidCallbackWithError {
-                public var answer: ULong? = null;
+                var answer: ULong? = null
 
 
                 override fun callBack(newValue: ULong) {

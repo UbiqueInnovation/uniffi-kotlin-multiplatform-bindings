@@ -111,8 +111,8 @@ class ProcMacroTest {
                 }
             }
 
-            override fun callbackHandler(o: Object): UInt {
-                val v = o.takeError(BasicException.InvalidInput());
+            override fun callbackHandler(h: Object): UInt {
+                val v = h.takeError(BasicException.InvalidInput())
                 return v
             }
         }

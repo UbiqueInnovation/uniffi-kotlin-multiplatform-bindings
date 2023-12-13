@@ -15,7 +15,6 @@ import kotlinx.datetime.Clock
 import kotlin.math.abs
 import kotlin.test.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CoverallTest {
 
     @Test
@@ -186,7 +185,7 @@ class CoverallTest {
                 val incrementing = scope.async {
                     var count = 0
                     for (n in 1..100) {
-                        // We exect most iterations of this loop to run concurrently
+                        // We expect most iterations of this loop to run concurrently
                         // with the busy-waiting thread.
                         count = counter.incrementIfBusy()
                     }
