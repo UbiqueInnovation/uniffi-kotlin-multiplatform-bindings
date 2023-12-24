@@ -27,3 +27,5 @@ include(":tests:futures")
 include(":tests:keywords")
 include(":tests:proc-macro")
 include(":tests:trait-methods")
+
+include(":tests:gradle:no-uniffi-block")

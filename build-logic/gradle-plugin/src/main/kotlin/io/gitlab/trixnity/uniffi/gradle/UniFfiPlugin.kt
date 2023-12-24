@@ -31,10 +31,14 @@ class UniFfiPlugin : Plugin<Project> {
 
         afterEvaluate {
             val generation = uniFfiExtension.bindingsGeneration.orNull
-                ?: throw GradleException(
+
+            if (generation == null) {
+                logger.warn(
                     "No bindings generation defined. " +
                             "Please use either a `generateFromUdl` or `generateFromLibrary` block."
                 )
+                return@afterEvaluate
+            }
 
             val crateDirectory = generation.crateDirectory.get()
             val profile = generation.profile.get()
