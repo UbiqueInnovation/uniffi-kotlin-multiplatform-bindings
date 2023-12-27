@@ -21,6 +21,8 @@ import org.jetbrains.kotlin.gradle.tasks.*
 import java.io.*
 
 private const val KOTLIN_MULTIPLATFORM_PLUGIN_ID = "org.jetbrains.kotlin.multiplatform"
+private const val KOTLIN_ATOMIC_FU_PLUGIN_ID = "org.jetbrains.kotlin.plugin.atomicfu"
+
 private const val TASK_GROUP = "uniffi"
 
 class UniFfiPlugin : Plugin<Project> {
@@ -40,6 +42,9 @@ class UniFfiPlugin : Plugin<Project> {
                 return@afterEvaluate
             }
 
+            ensureRequiredPlugin("Kotlin Multiplatform", KOTLIN_MULTIPLATFORM_PLUGIN_ID)
+            ensureRequiredPlugin("Kotlin AtomicFU", KOTLIN_ATOMIC_FU_PLUGIN_ID)
+
             val crateDirectory = generation.crateDirectory.get()
             val profile = generation.profile.get()
 
@@ -49,12 +54,6 @@ class UniFfiPlugin : Plugin<Project> {
             val generatedBindingsDir = layout.buildDirectory.dir("generated/uniffi").get()
 
             configureTasks(generation, cargoTargetDir, generatedBindingsDir)
-
-            if (!plugins.hasPlugin(KOTLIN_MULTIPLATFORM_PLUGIN_ID)) {
-                throw GradleException("You must add the Kotlin Multiplatform Gradle plugin")
-            }
-
-            plugins.apply("org.jetbrains.kotlin.plugin.atomicfu")
 
             plugins.withId(KOTLIN_MULTIPLATFORM_PLUGIN_ID) {
                 val kotlinMultiplatformExtension = extensions.getByType<KotlinMultiplatformExtension>()
@@ -217,4 +216,23 @@ class UniFfiPlugin : Plugin<Project> {
             }
         }
     }
+}
+
+private fun Project.ensureRequiredPlugin(name: String, id: String) {
+    if (!plugins.hasPlugin(id)) {
+        logger.error(requiredPluginMessage(name, id))
+        throw GradleException("No $name Gradle plugin found")
+    }
+}
+
+private fun requiredPluginMessage(name: String, id: String): String {
+    return """
+        Please include the $name Gradle plugin in your build configuration.
+
+        plugins {
+          // ...
+          id("$id")
+          // ...
+        }
+    """.trimIndent()
 }

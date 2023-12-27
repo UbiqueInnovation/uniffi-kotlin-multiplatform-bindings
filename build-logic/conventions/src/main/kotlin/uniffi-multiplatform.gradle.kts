@@ -3,6 +3,7 @@ import org.gradle.nativeplatform.platform.internal.*
 
 plugins {
     kotlin("multiplatform")
+    kotlin("plugin.atomicfu")
 }
 
 kotlin {
