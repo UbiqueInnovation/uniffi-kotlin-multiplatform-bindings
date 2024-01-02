@@ -2,6 +2,7 @@
 members = [
     "bindgen",
     "tests/callbacks/uniffi",
+    "tests/chronological/uniffi",
     "tests/coverall/uniffi",
     "tests/external-types/uniffi",
     "tests/futures/uniffi",

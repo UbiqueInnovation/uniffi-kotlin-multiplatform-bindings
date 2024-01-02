@@ -18,7 +18,9 @@ internal object FfiConverterDuration : FfiConverterRustBuffer<kotlin.time.Durati
         if (value < 0.nanoseconds) {
             throw IllegalArgumentException("Invalid duration, must be non-negative")
         }
-        buf.writeLong(value.inWholeSeconds)
-        buf.writeInt(value.inWholeNanoseconds.toInt())
+        value.toComponents { seconds, nanoseconds ->
+            buf.writeLong(seconds)
+            buf.writeInt(nanoseconds)
+        }
     }
 }

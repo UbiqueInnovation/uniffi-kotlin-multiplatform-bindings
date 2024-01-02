@@ -21,6 +21,7 @@ plugins {
 rootProject.name = "uniffi-kotlin-multiplatform-bindings"
 
 include(":tests:callbacks")
+include(":tests:chronological")
 include(":tests:coverall")
 include(":tests:external-types")
 include(":tests:futures")
