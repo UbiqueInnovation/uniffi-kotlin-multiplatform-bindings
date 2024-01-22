@@ -6,9 +6,11 @@
 
 package io.gitlab.trixnity.uniffi.gradle
 
+import io.gitlab.trixnity.uniffi.gradle.utils.CargoPackage
 import org.gradle.api.*
 import org.gradle.api.file.*
 import org.gradle.api.provider.*
+import org.gradle.api.provider.Provider
 import org.gradle.kotlin.dsl.*
 import javax.inject.*
 
@@ -49,22 +51,28 @@ abstract class BindingsGeneration internal constructor(internal val project: Pro
      */
     abstract val crateDirectory: DirectoryProperty
 
-    /**
-     * The crate name, as defined in Cargo.toml.
-     */
-    abstract val crateName: Property<String>
+    @Suppress("LeakingThis")
+    val cargoPackage: Provider<CargoPackage> = crateDirectory.map { CargoPackage(it) }
 
     /**
-     * The crate name, as defined in Cargo.toml. Defaults to `"${crateName}"`.
+     * The package name, as defined in Cargo.toml.
      */
-    @Suppress("LeakingThis")
-    val libraryName: Property<String> = project.objects.property<String>().convention(crateName)
+    val packageName: Provider<String> = cargoPackage.map { it.name }
 
     /**
-     * The UDL namespace. Defaults to `"${crateName}"`.
+     * The library name, as defined in Cargo.toml, or the crate name with dashes replaced with underscores.
      */
-    @Suppress("LeakingThis")
-    val namespace: Property<String> = project.objects.property<String>().convention(crateName)
+    val libraryName: Provider<String> = cargoPackage.map { it.libraryName }
+
+    /**
+     * The crate types to be generated, as defined in Cargo.toml.
+     */
+    val crateTypes: Provider<Set<String>> = cargoPackage.map { it.crateTypes }
+
+    /**
+     * The UDL namespace. Defaults to `"${libraryName}"`.
+     */
+    val namespace: Property<String> = project.objects.property<String>().convention(libraryName)
 
     /**
      * The crate build profile. Defaults to `"debug"`.
@@ -79,7 +87,7 @@ abstract class BindingsGenerationFromUdl @Inject internal constructor(project: P
      */
     @Suppress("LeakingThis")
     val udlFile: RegularFileProperty = project.objects.fileProperty().convention(
-        crateDirectory.map { it.file("src/${crateName.get()}.udl") }
+        crateDirectory.map { it.file("src/${libraryName.get()}.udl") }
     )
 
     /**

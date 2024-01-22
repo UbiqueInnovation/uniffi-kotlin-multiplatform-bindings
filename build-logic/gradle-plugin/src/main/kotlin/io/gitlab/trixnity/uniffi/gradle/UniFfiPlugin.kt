@@ -8,7 +8,6 @@ package io.gitlab.trixnity.uniffi.gradle
 
 import com.sun.jna.*
 import io.gitlab.trixnity.uniffi.gradle.tasks.*
-import io.gitlab.trixnity.uniffi.gradle.utils.*
 import org.gradle.api.*
 import org.gradle.api.file.*
 import org.gradle.api.tasks.*
@@ -45,12 +44,8 @@ class UniFfiPlugin : Plugin<Project> {
             ensureRequiredPlugin("Kotlin Multiplatform", KOTLIN_MULTIPLATFORM_PLUGIN_ID)
             ensureRequiredPlugin("Kotlin AtomicFU", KOTLIN_ATOMIC_FU_PLUGIN_ID)
 
-            val crateDirectory = generation.crateDirectory.get()
             val profile = generation.profile.get()
-
-            val cargoMetadata = getCargoMetadata(crateDirectory)
-            val cargoTargetDir = File(cargoMetadata.targetDirectory).resolve(profile)
-
+            val cargoTargetDir = generation.cargoPackage.get().outputDirectory(profile)
             val generatedBindingsDir = layout.buildDirectory.dir("generated/uniffi").get()
 
             configureTasks(generation, cargoTargetDir, generatedBindingsDir)
@@ -67,12 +62,21 @@ class UniFfiPlugin : Plugin<Project> {
         cargoTargetDir: File,
         generatedBindingsDir: Directory,
     ) {
+        val requiredCrateTypes = setOf("cdylib", "staticlib")
+        val actualCrateTypes = generation.crateTypes.get()
+        if (!actualCrateTypes.containsAll(requiredCrateTypes)) {
+            throw IllegalArgumentException(
+                "Crate does not have required crate types. Required: $requiredCrateTypes, actual: $actualCrateTypes"
+            )
+        }
+
         val buildCrate = tasks.register<BuildCrateTask>("buildCrate") {
             group = TASK_GROUP
 
             crateDirectory.set(generation.crateDirectory)
             libraryName.set(generation.libraryName)
             profile.set(generation.profile)
+            crateTypes.set(actualCrateTypes)
             targetDirectory.set(cargoTargetDir)
         }
 
@@ -90,6 +94,7 @@ class UniFfiPlugin : Plugin<Project> {
             installDirectory.set(layout.buildDirectory.dir("bindgen-install"))
         }
 
+        val dylibFile = buildCrate.get().libraryFileByCrateType.get()["cdylib"]!!
         val buildBindings =
             tasks.register<BuildBindingsTask>("buildBindings") {
                 group = TASK_GROUP
@@ -106,13 +111,13 @@ class UniFfiPlugin : Plugin<Project> {
                     is BindingsGenerationFromUdl -> {
                         libraryMode.set(false)
                         if (generation.config.isPresent) config.set(generation.config)
-                        libraryFile.set(buildCrate.get().libraryFile)
+                        libraryFile.set(dylibFile)
                         source.set(generation.udlFile)
                     }
 
                     is BindingsGenerationFromLibrary -> {
                         libraryMode.set(true)
-                        source.set(buildCrate.get().libraryFile)
+                        source.set(dylibFile)
                     }
 
                     else -> throw GradleException("Invalid bindings generation class")
@@ -129,7 +134,7 @@ class UniFfiPlugin : Plugin<Project> {
         val copyBinaries = tasks.register<Copy>("copyBinaries") {
             group = TASK_GROUP
 
-            from(buildCrate.get().libraryFile)
+            from(dylibFile)
             into(layout.buildDirectory.dir("processedResources/jvm/main/${Platform.RESOURCE_PREFIX}"))
             dependsOn(buildCrate)
         }

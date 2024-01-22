@@ -23,6 +23,7 @@ dependencies {
 
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.jna)
+    implementation(libs.tomlj)
 }
 
 buildConfig {

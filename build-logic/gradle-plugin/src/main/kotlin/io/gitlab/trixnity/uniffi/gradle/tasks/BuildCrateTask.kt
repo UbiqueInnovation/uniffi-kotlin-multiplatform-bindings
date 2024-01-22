@@ -15,8 +15,10 @@ package io.gitlab.trixnity.uniffi.gradle.tasks
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.*
 import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 
@@ -33,14 +35,21 @@ abstract class BuildCrateTask : DefaultTask() {
     @get:Input
     abstract val profile: Property<String>
 
+    @get:Input
+    abstract val crateTypes: SetProperty<String>
+
     @get:Internal
     abstract val targetDirectory: DirectoryProperty
 
     @Suppress("LeakingThis")
-    @get:OutputFile
-    val libraryFile: RegularFileProperty = project.objects.fileProperty().convention(
-        targetDirectory.map { it.file(buildLibraryName(libraryName.get())) },
-    )
+    @OutputFiles
+    val libraryFileByCrateType: Provider<Map<String, RegularFile>> =
+        targetDirectory.zip(crateTypes) { targetDirectory, crateTypes ->
+            crateTypes.mapNotNull { crateType ->
+                val libraryFileName = buildLibraryFileName(libraryName.get(), crateType) ?: return@mapNotNull null
+                crateType to targetDirectory.file(libraryFileName)
+            }.toMap()
+        }
 
     @TaskAction
     fun buildBindings(): Unit = with(project) {
@@ -54,12 +63,27 @@ abstract class BuildCrateTask : DefaultTask() {
     }
 }
 
-fun buildLibraryName(libraryName: String): String {
+fun buildLibraryFileName(libraryName: String, crateType: String): String? {
     val os = DefaultNativePlatform.getCurrentOperatingSystem()
     return when {
-        os.isLinux -> "lib$libraryName.so"
-        os.isMacOsX -> "lib$libraryName.dylib"
-        os.isWindows -> "$libraryName.dll"
+        os.isLinux -> when (crateType) {
+            "staticlib" -> "lib$libraryName.a"
+            "cdylib" -> "lib$libraryName.so"
+            else -> null
+        }
+
+        os.isMacOsX -> when (crateType) {
+            "staticlib" -> "lib$libraryName.a"
+            "cdylib" -> "lib$libraryName.dylib"
+            else -> null
+        }
+
+        os.isWindows -> when (crateType) {
+            "staticlib" -> "$libraryName.lib"
+            "cdylib" -> "$libraryName.dll"
+            else -> null
+        }
+
         else -> throw GradleException("Unsupported operating system: ${os.displayName}")
     }
 }

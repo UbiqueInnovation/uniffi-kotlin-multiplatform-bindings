@@ -12,6 +12,7 @@ kotlinx-datetime = "0.4.1"
 
 okio = "3.6.0"
 jna = "5.13.0"
+tomlj = "1.1.1"
 
 kotest = "5.8.0"
 
@@ -31,6 +32,7 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "kotlinx-atomicfu" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+tomlj = { group = "org.tomlj", name = "tomlj", version.ref = "tomlj" }
 
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
