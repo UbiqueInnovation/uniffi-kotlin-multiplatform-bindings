@@ -19,6 +19,9 @@ import org.gradle.api.tasks.*
 
 @CacheableTask
 abstract class BuildBindingsTask : DefaultTask() {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val crateDirectory: DirectoryProperty
 
     /**
      * Directory in which to write generated files. Default is same folder as .udl file.
@@ -81,6 +84,7 @@ abstract class BuildBindingsTask : DefaultTask() {
     @TaskAction
     fun buildBindings(): Unit = with(project) {
         exec { spec ->
+            spec.workingDir(crateDirectory)
             spec.commandLine(
                 bindgen.get()
             )

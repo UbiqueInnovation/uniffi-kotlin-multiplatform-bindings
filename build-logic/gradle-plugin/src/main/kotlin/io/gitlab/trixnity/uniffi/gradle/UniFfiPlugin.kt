@@ -97,6 +97,7 @@ class UniFfiPlugin : Plugin<Project> {
                 bindgen.set(installBindgen.get().bindgen)
                 outputDirectory.set(generatedBindingsDir)
                 libraryName.set(generation.libraryName)
+                crateDirectory.set(generation.crateDirectory)
 
                 // TODO Understand why setting this makes the binding generation fail
                 // crateName.set(generation.crateName)
