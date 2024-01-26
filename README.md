@@ -97,45 +97,71 @@ Here is how `uniffi_bindgen_kotlin_multiplatform` versions are tied to `uniffi-r
 
 # Build and use locally
 
-If you want to work on the bingen or the Gradle plugin locally,
+If you want to work on the bindgen or the Gradle plugin locally,
 you will have to do some additional Gradle configuration
 in order to use these local versions in your projects.
 
-## Publish Gradle plugin in a local repository
+## Option 1 - Dynamically include this plugin in your project
 
-Clone the repository and build it.
-Add a publishing repository definition at the end of `build-logic/gradle-plugin/build.gradle.kts`:
+Clone this repository and reference it from your project. Configure `dependencySubstitution` to use the local plugin version.
 
 ```kotlin
-publishing {
-    repositories {
-        maven {
-            name = "local"
-            url = uri("<path-to-local-plugin-repository>")
-        }
+// settings.gradle.kts
+pluginManagement {
+    // ..
+    includeBuild("../uniffi-kotlin-multiplatform-bindings/build-logic")
+    // ...
+    plugins {
+        // comment out id("io.gitlab.trixnity.uniffi.kotlin.multiplatform") if you have it here
+    }
+}
+// ...
+includeBuild("../uniffi-kotlin-multiplatform-bindings/build-logic") {
+    dependencySubstitution {
+        substitute(module("io.gitlab.trixnity.uniffi.kotlin.multiplatform:gradle-plugin"))
+            .using(project(":gradle-plugin"))
     }
 }
 ```
 
-Then invoke `./gradlew :build-logic:gradle-plugin:publishAllPublicationsToLocalRepository`.
+Add the Gradle plugin to the Gradle build file.
 
-## Specify the local repository
+```kotlin
+// build.gradle.kts
+plugins {
+    kotlin("multiplatform")
+    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform")
+    // ...
+}
+```
 
-Add the local repository in you `settings.gradle.kts`:
+Optionally, configure the `uniffi` extension with the exact path to the bindgen of this repository.
+
+```kotlin
+uniffi {
+    // ...
+    bindgenCratePath = "<path-to-our-bindgen>"
+}
+```
+
+## Option 2 - Publish the plugin locally
+
+Clone the repository and build it.
+
+Then invoke `./gradlew :build-logic:gradle-plugin:publishToMavenLocal`.
+
+Add the local repository in your project's `settings.gradle.kts`:
 
 ```kotlin
 pluginManagement {
     repositories {
-        maven {
-            name = "local"
-            url = uri("<path-to-local-plugin-repository>")
-        }
+        mavenLocal()
         // ...
     }
 }
 ```
 
-Finally, configure the `uniffi` extension with the exact path to the bindgen of this repository.
+Optionally, configure the `uniffi` extension with the exact path to the bindgen of this repository.
 
 ```kotlin
 uniffi {
