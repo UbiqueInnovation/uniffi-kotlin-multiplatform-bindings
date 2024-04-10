@@ -20,6 +20,6 @@ COPY --chown=uniffi-builder:uniffi-builder . /home/uniffi-builder/uniffi-kotlin-
 
 WORKDIR /home/uniffi-builder/uniffi-kotlin-multiplatform-bindings
 # Build the project to warm the cache
-RUN ./gradlew build
+RUN ./gradlew dependencies
 # Delete the project files so they don't mess with future builds
 RUN rm -rf [!.]* *
