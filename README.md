@@ -21,32 +21,124 @@ then you can use the Kotlin Multiplatform bindings as explained bellow during th
 
 ## Using the Gradle plugin
 
-Here is an example of using the Gradle plugin to build bindings for a crate in a `rust` subdirectory.
+This project contains three Gradle plugins:
+
+- The Cargo plugin (`io.gitlab.trixnity.cargo.kotlin.multiplatform`)
+- The UniFFI plugin (`io.gitlab.trixnity.uniffi.kotlin.multiplatform`)
+- The helper plugin for linking (`io.gitlab.trixnity.rustlink.kotlin.multiplatform`)
+
+### The Cargo plugin
+
+The Cargo plugin is responsible for building and linking the Rust library to your Kotlin project. You can use it even
+when you are not using UniFFI. If the `Cargo.toml` is located in the project root, you can simply apply the
+`io.gitlab.trixnity.cargo.kotlin.multiplatform` the plugin.
 
 ```kotlin
 plugins {
     kotlin("multiplatform")
-    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform") version "0.1.0"
+    id("io.gitlab.trixnity.cargo.kotlin.multiplatform") version "0.1.0"
 }
+```
 
-uniffi {
-    // The directory containing the Rust crate.
-    crateDirectory = layout.projectDirectory.dir("rust")
+If the Cargo package is located in another directory, you can configure the path in the `cargo {}` block.
 
-    // The name of the crate as in Cargo.toml's package.name.
-    crateName = "my_crate"
+```kotlin
+cargo {
+    // The Cargo package is located in a `rust` subdirectory.
+    packageDirectory = layout.projectDirectory.dir("rust")
+}
+```
 
-    // The name of the library as in Cargo.toml's library.name. Defaults to "${crateName}".
-    libraryName = "my_crate"
+Since searching `Cargo.toml` is done
+by [`cargo locate-project`](https://doc.rust-lang.org/cargo/commands/cargo-locate-project.html),
+it still works even if you set `packageDirectory` to a subdirectory, but it is not recommended.
 
-    // The UDL file. Defaults to "${crateDirectory}/src/${crateName}.udl".
-    udlFile = layout.projectDirectory.file("rust/src/my_crate.udl")
+```kotlin
+cargo {
+    // This works
+    packageDirectory = layout.projectDirectory.dir("rust/src")
+}
+```
 
-    // The UDL namespace as in the UDL file. Defaults to "${crateName}".
-    namespace = "my_crate"
+If you want to use Cargo features or
+customized [Cargo profiles](https://doc.rust-lang.org/cargo/reference/profiles.html),
+you can configure them in the `cargo {}` block as well.
 
-    // The profile to build the crate. Defaults to "debug".
-    profile = "debug"
+```kotlin
+import io.gitlab.trixnity.gradle.cargo.rust.profiles.CargoProfile
+
+cargo {
+    features.addAll("foo", "bar")
+    debug.profile = CargoProfile("my-debug")
+    release.profile = CargoProfile.Bench
+}
+```
+
+If you want to use different features for each variant (debug or release), you can configure them in the `debug {}` or
+`release {}` blocks.
+
+```kotlin
+cargo {
+    features.addAll("foo")
+    debug {
+        // Use "foo", "logging" for debug builds
+        features.addAll("logging")
+    }
+    release {
+        // Use "foo", "app-integrity-checks" for release builds
+        features.addAll("app-integrity-checks")
+    }
+}
+```
+
+`features` are inherited from the outer block to the inner block. To override this behavior in the inner block,
+use `.set()` or the `=` operator overloading.
+
+```kotlin
+cargo {
+    features.addAll("foo")
+    debug {
+        // Use "foo", "logging" for debug builds
+        features.addAll("logging")
+    }
+    release {
+        // Use "app-integrity-checks" (not "foo"!) for release builds
+        features.set(setOf("app-integrity-checks"))
+    }
+}
+```
+
+For configurations applied to all variants, you can use the `variants {}` block.
+
+```kotlin
+cargo {
+    variants {
+        features.addAll("another-feature")
+    }
+}
+```
+
+For Android and Apple platform builds invoked by Xcode, the plugin automatically decides which profile to use. For other
+targets, you can configure it with the `jvmVariant` or `nativeVariant` properties. When undecidable, these values
+default to `Variant.Debug`.
+
+```kotlin
+import io.gitlab.trixnity.gradle.Variant
+
+cargo {
+    jvmVariant = Variant.Release
+    nativeVariant = Variant.Debug
+}
+```
+
+Cargo build tasks are configured as the corresponding Kotlin target is added in the `kotlin {}` block. For example, if
+you don't invoke `androidTarget()` in `kotlin {}`, the Cargo plugin won't configure the Android build task as well.
+
+```kotlin
+cargo {
+    builds.android {
+        println("foo") // not executed
+    }
 }
 
 kotlin {
@@ -56,17 +148,176 @@ kotlin {
 }
 ```
 
+The Cargo plugin scans all the Rust dependencies
+using [`cargo metadata`](https://doc.rust-lang.org/cargo/commands/cargo-metadata.html). If you modify Rust source files
+including those in dependencies defined in the Cargo manifest, the Cargo plugin will rebuild the Cargo project.
+
+For Android builds, the Cargo plugin automatically determines the SDK and the NDK to use based on the property values of
+the `android {}` block. To use different a NDK version, set `ndkVersion` to that version.
+
+```kotlin
+android {
+    ndkVersion = "26.2.11394342"
+}
+```
+
+The Cargo plugin also automatically determines the ABI to build based on the value
+of `android.defaultConfig.ndk.abiFilters`. If you don't want to build for x86 or x86_64, set this
+to `["arm64-v8a", "armeabi-v7a"]`.
+
+```kotlin
+android {
+    defaultConfig {
+        ndk.abiFilters.addAll("arm64-v8a", "armeabi-v7a")
+    }
+}
+```
+
+The Cargo plugin automatically configures environment variables like `ANDROID_HOME` or `CC_<target>` for you, but if you
+need finer control, you can directly configure the properties of the build task. The build task is accessible in the
+`builds {}` block.
+
+```kotlin
+import io.gitlab.trixnity.gradle.cargo.dsl.*
+
+cargo {
+    builds {
+        // Configure Android builds
+        android {
+            debug.buildTaskProvider.configure {
+                additionalEnvironment.put("CLANG", "/path/to/clang")
+            }
+        }
+        // You can configure for other targets as well
+        appleMobile {}
+        desktop {}
+        jvm {}
+        mobile {}
+        native {}
+        posix {}
+        mingw {}
+        linux {}
+        macos {}
+        windows {}
+    }
+}
+```
+
+For JVM builds, the Cargo plugin tries to build all the targets, whether the required toolchains are installed on the
+current system or not. The list of such targets by the build host is as follows.
+
+| Targets      | Windows | macOS | Linux |
+|--------------|---------|-------|-------|
+| Android      | ✅       | ✅     | ✅     |
+| Apple Mobile | ❌       | ✅     | ❌     |
+| MinGW        | ✅       | ✅     | ✅     |
+| macOS        | ❌       | ✅     | ❌     |
+| Linux        | ✅       | ✅     | ✅     |
+| Visual C++   | ✅       | ❌     | ❌     |
+
+To build for specific targets only, you can configure that using the `jvm` property. For example, to build a shared
+library for the current build host only, set this property to `rustTarget == CargoHost.current.hostTarget`.
+
+```kotlin
+import io.gitlab.trixnity.gradle.CargoHost
+import io.gitlab.trixnity.gradle.cargo.dsl.*
+
+cargo {
+    builds.jvm {
+        jvm = (rustTarget == CargoHost.current.hostTarget)
+    }
+}
+```
+
+### The UniFFI plugin
+
+The UniFFI plugin is responsible for generating Kotlin bindings from your Rust package. Here is an example of using the
+UniFFI plugin to build bindings from the resulting library binary.
+
+```kotlin
+import io.gitlab.trixnity.gradle.Variant
+
+plugins {
+    kotlin("multiplatform")
+    id("io.gitlab.trixnity.cargo.kotlin.multiplatform") version "0.1.0"
+    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform") version "0.1.0"
+}
+
+uniffi {
+    // Generate the bindings using library mode.
+    generateFromLibrary {
+        // The UDL namespace as in the UDL file. Defaults to the library crate name.
+        namespace = "my_crate"
+        // The name of the build that makes the library to use to generate the bindings. The list of the names can be
+        // retrieved with `cargo.builds.names`. If not specified, the UniFFI plugin automatically selects a build.
+        build = "AndroidArm64"
+        // The variant of the build that makes the library to use. If unspecified, the UniFFI plugin automatically picks
+        // one.
+        variant = Variant.Debug
+    }
+}
+```
+
+If you want to generate bindings from a UDL file as well, you can specify the path using the `generateFromUdl {}` block.
+
+```kotlin
+uniffi {
+    generateFromUdl {
+        namespace = "..."
+        build = "..."
+        variant = Variant.Debug
+        // The UDL file. Defaults to "${crateDirectory}/src/${crateName}.udl".
+        udlFile = layout.projectDirectory.file("rust/src/my_crate.udl")
+    }
+}
+```
+
+### The helper plugin for linking
+
+The helper plugin exposes two extension functions `KotlinMultiplatformExtension.hostNativeTarget`
+and `KotlinNativeCompilation.useRustUpLinker`.
+
+`hostNativeTarget` can be invoked in `kotlin {}` and adds the Kotlin Native target for the build host; it invokes
+`mingwX64` on Windows, `macosX64` or `macosArm64` on macOS, and `linuxX64` or `linuxArm64` on Linux, though Linux Arm64
+build host is not supported yet.
+
+```kotlin
+import io.gitlab.trixnity.gradle.rustlink.hostNativeTarget
+
+kotlin {
+    hostNativeTarget()
+}
+```
+
+`useRustUpLinker` is for Kotlin Native projects referencing a Rust library but not directly using Rust. Since Kotlin
+Native is shipped with an LLVM older than the one shipped with the Rust toolchain, you may encounter a linker error
+when building that Kotlin Native project. `useRustUpLinker` automatically finds the LLVM linker distributed
+with `rustup`, so you can use this when your Rust project emits a linker flag that is not supported by the Kotlin Native
+LLVM linker.
+
+```kotlin
+import io.gitlab.trixnity.gradle.rustlink.useRustUpLinker
+
+kotlin {
+    iosArm64().compilations.getByName("main") {
+        useRustUpLinker()
+    }
+}
+```
+
 ## Directly using the bindgen CLI
 
 Minimum Rust version required to install `uniffi_bindgen_kotlin_multiplatform` is `1.72`.
 Newer Rust versions should also work fine.
 
 Install the bindgen:
+
 ```shell
 cargo install --bin uniffi-bindgen-kotlin-multiplatform uniffi_bindgen_kotlin_multiplatform@0.1.0
 ```
 
 Invoke the bindgen:
+
 ```shell
 uniffi-bindgen-kotlin-multiplatform --lib-file <path-to-library-file> --out-dir <output-directory> --crate <crate-name> <path-to-udl-file>
 ```
@@ -103,7 +354,8 @@ in order to use these local versions in your projects.
 
 ## Option 1 - Dynamically include this plugin in your project
 
-Clone this repository and reference it from your project. Configure `dependencySubstitution` to use the local plugin version.
+Clone this repository and reference it from your project. Configure `dependencySubstitution` to use the local plugin
+version.
 
 ```kotlin
 // settings.gradle.kts
