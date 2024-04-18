@@ -1,0 +1,5 @@
+APP_NAME=TokioBlake3App
+PRODUCT_BUNDLE_IDENTIFIER=io.gitlab.trixnity.uniffi.examples.tokioblake3app
+GRADLE_ROOT_PROJECT_DIR=$SRCROOT/../../..
+GRADLE_PROJECT_NAME=:examples:tokio-blake3-app
+DEVELOPMENT_TEAM=

@@ -2,15 +2,19 @@ pluginManagement {
     includeBuild("build-logic")
 
     repositories {
-        mavenCentral()
+        google()
         gradlePluginPortal()
+        mavenCentral()
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     }
 }
 
 dependencyResolutionManagement {
     @Suppress("UnstableApiUsage")
     repositories {
+        google()
         mavenCentral()
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     }
 }
 
@@ -29,4 +33,12 @@ include(":tests:keywords")
 include(":tests:proc-macro")
 include(":tests:trait-methods")
 
+include(":tests:gradle:android-linking")
+include(":tests:gradle:cargo-only")
 include(":tests:gradle:no-uniffi-block")
+
+include(":examples:app")
+include(":examples:arithmetic-procmacro")
+include(":examples:audio-cpp-app")
+include(":examples:todolist")
+include(":examples:tokio-blake3-app")

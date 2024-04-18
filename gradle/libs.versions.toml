@@ -1,23 +1,32 @@
 [versions]
 
 kotlin = "1.9.21"
+agp = "8.2.2"
 
 gradle-publish = "1.2.1"
 buildconfig = "4.1.2"
 
 kotlinx-serialization = "1.6.1"
 kotlinx-coroutines = "1.7.3"
-kotlinx-atomicfu = "0.22.0"
+kotlinx-atomicfu = "0.23.2"
 kotlinx-datetime = "0.4.1"
+
+androidx-activity-compose = "1.8.2"
 
 okio = "3.6.0"
 jna = "5.13.0"
-tomlj = "1.1.1"
+compose = "1.6.1"
+compose-multiplatform = "1.5.12"
+compose-compiler = "1.5.7"
+compose-material3 = "1.1.2"
 
 kotest = "5.8.0"
 
 [plugins]
 
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-atomicfu = { id = "org.jetbrains.kotlin.plugin.atomicfu", version.ref = "kotlin" }
@@ -32,9 +41,15 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "kotlinx-atomicfu" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
-tomlj = { group = "org.tomlj", name = "tomlj", version.ref = "tomlj" }
+
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
 
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "compose" }
+compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }
+compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "compose-material3" }
 
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }

@@ -3,6 +3,7 @@ default:
     - saas-linux-medium-amd64
 
 meta-build-image:
+  timeout: 2h
   image: docker:stable
   services:
     - docker:dind
@@ -25,11 +26,13 @@ meta-build-image:
       dotenv: build.env
 
 build-all:
+  timeout: 2h
   image: $BUILD_IMAGE
   stage: test
   script:
     - cargo build --verbose
     - cargo test --verbose
+    - ./gradlew :build-logic:gradle-plugin:test
     - ./gradlew build
   artifacts:
     when: always

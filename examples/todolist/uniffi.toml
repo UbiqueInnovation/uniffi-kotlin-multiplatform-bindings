@@ -1,0 +1,2 @@
+package_name = "io.gitlab.trixnity.uniffi.examples.todolist"
+cdylib_name = "uniffi_kmm_example_todolist"

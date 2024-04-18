@@ -4,8 +4,7 @@ plugins {
 
 uniffi {
     generateFromUdl {
-        crateDirectory = layout.projectDirectory.dir("uniffi")
         namespace = name.replace('-', '_')
-        udlFile = crateDirectory.get().dir("src").file("$name.udl")
+        udlFile = layout.projectDirectory.file("src/$name.udl")
     }
 }

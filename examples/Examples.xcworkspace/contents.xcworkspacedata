@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:tokio-blake3-app/ios/TokioBlake3App.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:audio-cpp-app/ios/AudioCppApp.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:app/swiftui/ExamplesApp.xcodeproj">
+   </FileRef>
+</Workspace>

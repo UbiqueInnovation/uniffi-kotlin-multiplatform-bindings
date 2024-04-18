@@ -9,5 +9,18 @@ members = [
     "tests/keywords/uniffi",
     "tests/proc-macro/uniffi",
     "tests/trait-methods/uniffi",
+
+    "tests/gradle/android-linking",
+    "tests/gradle/cargo-only",
+
+    "examples/arithmetic-procmacro",
+    "examples/audio-cpp-app",
+    "examples/todolist",
+    "examples/tokio-blake3-app",
 ]
 resolver = "2"
+
+# Used in tests/gradle/cargo-only
+[profile.my-opt-level-2-profile]
+inherits = "dev"
+opt-level = 2

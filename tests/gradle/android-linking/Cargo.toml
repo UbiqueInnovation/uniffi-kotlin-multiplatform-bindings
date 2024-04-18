@@ -1,0 +1,19 @@
+[package]
+name = "uniffi-kmm-fixture-gradle-android-linking"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_gradle_android_linking"
+crate-type = ["cdylib"]
+path = "src/androidMain/rust/lib.rs"
+
+[dependencies]
+android_logger = "0.13"
+jni = "0.21"
+libc = "0.2"
+log = "0.4"
+
+[build-dependencies]
+cbindgen = "0.26.0"

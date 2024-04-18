@@ -1,5 +1,8 @@
 target
 build
+.cxx
 .gradle
 .idea
 .DS_Store
+local.properties
+xcuserdata
