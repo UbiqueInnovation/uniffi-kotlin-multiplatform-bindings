@@ -168,7 +168,7 @@ to `["arm64-v8a", "armeabi-v7a"]`.
 ```kotlin
 android {
     defaultConfig {
-        ndk.abiFilters.addAll("arm64-v8a", "armeabi-v7a")
+        ndk.abiFilters += setOf("arm64-v8a", "armeabi-v7a")
     }
 }
 ```
