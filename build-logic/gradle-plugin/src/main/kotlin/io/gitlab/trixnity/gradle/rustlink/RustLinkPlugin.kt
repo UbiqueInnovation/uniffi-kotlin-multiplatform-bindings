@@ -62,7 +62,7 @@ fun KotlinMultiplatformExtension.hostNativeTarget(
 fun KotlinNativeCompilation.useRustUpLinker() {
     compilerOptions.configure {
         freeCompilerArgs.add(
-            "-Xoverride-konan-properties=linker.${CargoHost.current.konanName}-${target.konanTarget.name}=${project.rustUpLinker().canonicalPath}"
+            "-Xoverride-konan-properties=linker.${CargoHost.current.konanName}-${target.konanTarget.name}=${project.rustUpLinker().absolutePath}"
         )
     }
 }
@@ -71,12 +71,16 @@ private fun Project.rustUpLinker(): File {
     val rustUpHome = command("rustup").apply {
         arguments("show", "home")
         additionalEnvironmentPath(CargoHost.Platform.current.defaultCargoInstallationDir)
-    }.run(captureStandardOutput = true).standardOutput!!.trim()
+    }.run(captureStandardOutput = true).apply {
+        assertNormalExitValue()
+    }.standardOutput!!.trim()
 
     val activeToolchains = command("rustup").apply {
         arguments("show", "active-toolchain")
         additionalEnvironmentPath(CargoHost.Platform.current.defaultCargoInstallationDir)
-    }.run(captureStandardOutput = true).standardOutput!!.trim().split('\n')
+    }.run(captureStandardOutput = true).apply {
+        assertNormalExitValue()
+    }.standardOutput!!.trim().split('\n')
 
     val toolchain = activeToolchains.firstNotNullOf {
         it.trim().split(' ').getOrNull(0)?.takeUnless(String::isEmpty)

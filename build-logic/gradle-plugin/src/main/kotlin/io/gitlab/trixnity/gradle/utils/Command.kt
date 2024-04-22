@@ -116,7 +116,7 @@ internal class Command(
             }
         }
 
-        val command = command.resolveCanonicalPath(environment["PATH"] as PathList).get()
+        val command = command.resolveAbsolutePath(environment["PATH"] as PathList).get()
         val arguments = arguments.get().map { it.toString() }
         val workingDirectory = workingDirectory.get()
 
@@ -153,15 +153,15 @@ internal class Command(
     /**
      * Try to resolve the canonical path of the given command, using the given list of paths.
      */
-    private fun Provider<String>.resolveCanonicalPath(
+    private fun Provider<String>.resolveAbsolutePath(
         additionalPaths: PathList
     ): Provider<String> = zip((additionalPaths + project.environmentPath).paths) { command, paths ->
         for (path in paths) {
             path.resolve(command).run {
-                if (exists()) return@zip canonicalPath
+                if (exists()) return@zip absolutePath
             }
             path.resolve(CargoHost.Platform.current.convertExeName(command)).run {
-                if (exists()) return@zip canonicalPath
+                if (exists()) return@zip absolutePath
             }
         }
         return@zip command
@@ -242,7 +242,7 @@ private class PathList(
     /**
      * Joins the arguments into one string.
      */
-    fun joinToString(): Provider<String> = paths.map { it.joinToString(separator) { file -> file.canonicalPath } }
+    fun joinToString(): Provider<String> = paths.map { it.joinToString(separator) { file -> file.absolutePath } }
 
     override fun toString(): String = joinToString().get()
 

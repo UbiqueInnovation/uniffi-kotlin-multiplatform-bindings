@@ -60,7 +60,7 @@ abstract class FindDynamicLibrariesTask : DefaultTask() {
 
         libraryPathsCacheFile.get().asFile.run {
             parentFile.mkdirs()
-            writeText(libraryPaths.joinToString(" ") { it.canonicalPath })
+            writeText(libraryPaths.joinToString(" ") { it.absolutePath })
         }
     }
 }
