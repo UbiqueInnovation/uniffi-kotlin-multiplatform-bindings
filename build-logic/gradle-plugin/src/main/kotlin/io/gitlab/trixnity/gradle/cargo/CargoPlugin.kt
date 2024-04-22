@@ -7,6 +7,7 @@
 package io.gitlab.trixnity.gradle.cargo
 
 import com.android.build.gradle.BaseExtension
+import com.android.build.gradle.internal.tasks.ProcessJavaResTask
 import com.android.build.gradle.tasks.MergeSourceSetFolders
 import io.gitlab.trixnity.gradle.*
 import io.gitlab.trixnity.gradle.cargo.dsl.*
@@ -179,6 +180,8 @@ class CargoPlugin : Plugin<Project> {
     }
 
     private fun Project.configureBuildTasks() {
+        val hasAndroidTargets =
+            cargoExtension.builds.any { build -> build.kotlinTargets.any { it is KotlinAndroidTarget } }
         for (cargoBuild in cargoExtension.builds) {
             val rustUpTargetAddTask = tasks.register<RustUpTargetAddTask>({ +cargoBuild.rustTarget }) {
                 group = TASK_GROUP
@@ -203,10 +206,15 @@ class CargoPlugin : Plugin<Project> {
                 when (kotlinTarget) {
                     is KotlinJvmTarget -> {
                         cargoBuild as CargoJvmBuild<*>
-                        configureJvmPostBuildTasks(
-                            kotlinTarget,
-                            cargoBuild.variant(cargoBuild.jvmVariant.get())
-                        )
+                        cargoBuild.variants {
+                            configureJvmPostBuildTasks(
+                                kotlinTarget,
+                                // cargoBuild.jvmVariant is checked inside
+                                this,
+                                // required for Android local unit tests
+                                hasAndroidTargets,
+                            )
+                        }
                     }
 
                     is KotlinAndroidTarget -> {
@@ -231,30 +239,62 @@ class CargoPlugin : Plugin<Project> {
     private fun Project.configureJvmPostBuildTasks(
         kotlinTarget: KotlinJvmTarget,
         cargoBuildVariant: CargoJvmBuildVariant<*>,
+        hasAndroidTargets: Boolean,
     ) {
-        if (!cargoBuildVariant.build.jvm.get()) {
-            return
-        }
-        if (cargoBuildVariant.variant != cargoBuildVariant.build.jvmVariant.get()) {
-            return
+        val buildTask = cargoBuildVariant.buildTaskProvider
+        val resourcePrefix = cargoBuildVariant.build.resourcePrefix.orNull?.takeIf(String::isNotEmpty)
+        val resourceDirectory = layout.buildDirectory
+            .dir("intermediates/rust/${cargoBuildVariant.rustTarget.rustTriple}/${cargoBuildVariant.variant}")
+        val copyDestination =
+            if (resourcePrefix == null) resourceDirectory else resourceDirectory.map { it.dir(resourcePrefix) }
+        val sourceLibraryFile = buildTask.flatMap { task ->
+            task.libraryFileByCrateType.map { it[CrateType.SystemDynamicLibrary]!! }
         }
 
-        val buildTask = cargoBuildVariant.buildTaskProvider
         val copyTask = tasks.register<Copy>({
             +"jvm"
             +cargoBuildVariant
         }) {
             group = TASK_GROUP
-            from(buildTask.flatMap { task -> task.libraryFileByCrateType.map { it[CrateType.SystemDynamicLibrary]!! } })
-
-            val resourcePrefix = cargoBuildVariant.build.resourcePrefix.orNull?.takeIf(String::isNotEmpty)
-            val resourceDirectory = layout.buildDirectory.dir("processedResources/${kotlinTarget.name}/main")
-            into(if (resourcePrefix == null) resourceDirectory else resourceDirectory.map { it.dir(resourcePrefix) })
+            from(sourceLibraryFile)
+            into(copyDestination)
             dependsOn(buildTask)
         }
 
-        tasks.withType<ProcessResources> {
-            dependsOn(copyTask)
+        if (cargoBuildVariant.build.jvm.get() && cargoBuildVariant.variant == cargoBuildVariant.build.jvmVariant.get()) {
+            kotlinTarget.compilations.getByName("main").defaultSourceSet {
+                resources.srcDir(resourceDirectory)
+            }
+            tasks.withType<ProcessResources> {
+                if (name.contains(kotlinTarget.name)) {
+                    dependsOn(copyTask)
+                }
+            }
+        }
+
+        if (hasAndroidTargets && cargoBuildVariant.build.androidUnitTest.get()) {
+            androidExtension.sourceSets { sourceSets ->
+                val testSourceSet = sourceSets.getByVariant("test", cargoBuildVariant.variant)
+                testSourceSet.resources.srcDir(resourceDirectory)
+            }
+            tasks.withType<ProcessJavaResTask> {
+                if (name.contains("UnitTest") && cargoBuildVariant.variant == variant!!) {
+                    dependsOn(copyTask)
+                    // Override the default behavior of AGP excluding .so files, which causes UnsatisfiedLinkError on
+                    // Linux.
+                    from(
+                        // Append a fileTree which only includes the Rust shared library.
+                        fileTree(resourceDirectory).matching {
+                            val fileName = sourceLibraryFile.get().asFile.name
+                            it.includes += if (resourcePrefix == null) {
+                                setOf("/$fileName")
+                            } else {
+                                setOf("/$resourcePrefix/$fileName")
+                            }
+                        }
+                    )
+                }
+            }
         }
     }
 
@@ -314,10 +354,9 @@ class CargoPlugin : Plugin<Project> {
             }
         }
 
-        androidExtension.sourceSets {
-            it.getByVariant(cargoBuildVariant.variant).jniLibs {
-                srcDir(copyDestination)
-            }
+        androidExtension.sourceSets { sourceSets ->
+            val mainSourceSet = sourceSets.getByVariant(cargoBuildVariant.variant)
+            mainSourceSet.jniLibs.srcDir(copyDestination)
         }
     }
 

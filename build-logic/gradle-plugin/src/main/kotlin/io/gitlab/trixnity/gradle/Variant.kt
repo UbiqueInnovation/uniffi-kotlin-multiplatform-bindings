@@ -11,6 +11,7 @@ import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Task
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
+import org.gradle.kotlin.dsl.support.uppercaseFirstChar
 
 enum class Variant {
     Debug, Release;
@@ -205,4 +206,10 @@ val Task.variant: Variant?
         }
     }
 
-fun <T> NamedDomainObjectContainer<T>.getByVariant(variant: Variant): T = getByName(variant.name.lowercase())
+fun <T> NamedDomainObjectContainer<T>.getByVariant(variant: Variant, postfix: String = ""): T {
+    return getByName(variant.name.lowercase() + postfix.uppercaseFirstChar())
+}
+
+fun <T> NamedDomainObjectContainer<T>.getByVariant(prefix: String, variant: Variant, postfix: String = ""): T {
+    return getByName(prefix + variant.name.lowercase().uppercaseFirstChar() + postfix.uppercaseFirstChar())
+}

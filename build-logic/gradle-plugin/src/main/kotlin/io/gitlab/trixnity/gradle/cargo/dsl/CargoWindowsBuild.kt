@@ -6,6 +6,7 @@
 
 package io.gitlab.trixnity.gradle.cargo.dsl
 
+import io.gitlab.trixnity.gradle.CargoHost
 import io.gitlab.trixnity.gradle.cargo.rust.targets.RustWindowsTarget
 import org.gradle.api.Project
 import javax.inject.Inject
@@ -27,5 +28,6 @@ abstract class CargoWindowsBuild @Inject constructor(
     init {
         resourcePrefix.convention(rustTarget.jnaResourcePrefix)
         jvm.convention(true)
+        androidUnitTest.convention(rustTarget == CargoHost.current.hostTarget)
     }
 }

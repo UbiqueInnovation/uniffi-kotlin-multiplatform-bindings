@@ -229,6 +229,30 @@ cargo {
 }
 ```
 
+Android local unit tests requires JVM targets to be built, as they run in the host machine's JVM. The Cargo plugin
+automatically copies the Rust shared library targeting the host machine into Android local unit tests. If you want to
+include shared library built for a different platform, you can control that using the `androidUnitTest` property.
+
+```kotlin
+import io.gitlab.trixnity.gradle.cargo.dsl.*
+import io.gitlab.trixnity.gradle.cargo.rust.targets.RustWindowsTarget
+
+cargo {
+    builds.jvm {
+        // Use Visual C++ X64 for Android local unit tests 
+        androidUnitTest = (rustTarget == RustWindowsTarget.X64)
+    }
+}
+
+kotlin {
+    jvm()
+    androidTarget()
+}
+```
+
+Local unit tests are successfully built even if there are no builds with `androidUnitTest` enabled, but you will
+encounter a runtime error when you invoke a Rust function from Kotlin.
+
 ### The UniFFI plugin
 
 The UniFFI plugin is responsible for generating Kotlin bindings from your Rust package. Here is an example of using the

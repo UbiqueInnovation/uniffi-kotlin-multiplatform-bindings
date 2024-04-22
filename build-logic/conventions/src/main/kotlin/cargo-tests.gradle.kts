@@ -1,5 +1,6 @@
 import io.gitlab.trixnity.gradle.CargoHost
 import io.gitlab.trixnity.gradle.cargo.dsl.jvm
+import io.gitlab.trixnity.gradle.cargo.dsl.native
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
@@ -16,9 +17,17 @@ cargo {
 }
 
 kotlin.targets.withType(KotlinNativeTarget::class) {
+    val kotlinTarget = this
     compilations.getByName("main") {
         cinterops.register("rustBindings") {
             includeDirs(layout.buildDirectory.dir("generated"))
+            tasks.named(interopProcessingTaskName) {
+                cargo.builds.native.configureEach {
+                    if (kotlinTargets.contains(kotlinTarget)) {
+                        dependsOn(variant(nativeVariant.get()).buildTaskProvider)
+                    }
+                }
+            }
         }
     }
 }

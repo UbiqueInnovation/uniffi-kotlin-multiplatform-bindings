@@ -12,8 +12,8 @@ interface HasJvmProperties : HasJvmVariant {
     /**
      * The resource prefix to use. In the `.jar` file, the Rust dynamic library will be located in
      * `<resource prefix>/<dynamic library>`. This defaults to `RustJvmTarget.jnaResourcePrefix`. The library then can
-     * be loaded using `com.sun.jna.Native.register`. Users not using JNA can customize this property and implement
-     * their own loading logic using `java.lang.ClassLoader`. If this property is empty, then the dynamic library
+     * be loaded using [com.sun.jna.Native.register]. Users not using JNA can customize this property and implement
+     * their own loading logic using [java.lang.ClassLoader]. If this property is empty, then the dynamic library
      * will be copied to the root of the `.jar` file.
      */
     val resourcePrefix: Property<String>
@@ -23,4 +23,12 @@ interface HasJvmProperties : HasJvmVariant {
      * the host does not support building for this target, this property is ignored and considered `false`.
      */
     val jvm: Property<Boolean>
+
+    /**
+     * Determines whether to use the Rust dynamic library in Android local unit tests. Android local unit tests runs on
+     * the build host's JVM, so it is required to include the Desktop Rust library in your Android `.jar` library. This
+     * property defaults to `true` when this build targets your machine and `false` otherwise. For builds for Android
+     * local unit tests, [jvmVariant] will be ignored and the plugin will select the variant automatically.
+     */
+    val androidUnitTest: Property<Boolean>
 }

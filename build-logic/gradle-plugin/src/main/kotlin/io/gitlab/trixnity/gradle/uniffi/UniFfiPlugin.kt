@@ -235,11 +235,19 @@ class UniFfiPlugin : Plugin<Project> {
     }
 
     private fun Project.configureKotlinAndroidTarget(kotlinAndroidTarget: KotlinAndroidTarget) {
-        kotlinMultiplatformExtension.sourceSets.getByName("${kotlinAndroidTarget.name}Main") {
-            with(it) {
+        kotlinMultiplatformExtension.sourceSets { sourceSets ->
+            val mainSourceSet = sourceSets.getByName("${kotlinAndroidTarget.name}Main")
+            with(mainSourceSet) {
                 kotlin.srcDir(jvmBindingsDirectory)
                 dependencies {
                     implementation("net.java.dev.jna:jna:${DependencyVersions.JNA}@aar")
+                }
+            }
+            val testSourceSet = sourceSets.findByName("${kotlinAndroidTarget.name}UnitTest")
+                ?: sourceSets.getByName("${kotlinAndroidTarget.name}Test")
+            with(testSourceSet) {
+                dependencies {
+                    implementation("net.java.dev.jna:jna:${DependencyVersions.JNA}")
                 }
             }
         }
