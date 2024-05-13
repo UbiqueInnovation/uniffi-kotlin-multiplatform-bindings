@@ -82,6 +82,7 @@ enum class RustAndroidTarget(
                 rustTriple.replace('-', '_').uppercase()
             }_LINKER" to toolchainBinaryDir.resolve("${ndkLlvmTriple}$apiLevel-clang"),
             "CC_$rustTriple" to toolchainBinaryDir.resolve("${ndkLlvmTriple}$apiLevel-clang"),
+            "CLANG_PATH" to toolchainBinaryDir.resolve("${ndkLlvmTriple}$apiLevel-clang"),
             "CXX_$rustTriple" to toolchainBinaryDir.resolve("${ndkLlvmTriple}$apiLevel-clang++"),
             "AR_$rustTriple" to toolchainBinaryDir.resolve("llvm-ar"),
             "RANLIB_$rustTriple" to toolchainBinaryDir.resolve("llvm-ranlib"),
