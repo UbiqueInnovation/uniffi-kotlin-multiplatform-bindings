@@ -6,23 +6,22 @@
 
 package io.gitlab.trixnity.gradle.uniffi
 
-import com.android.build.gradle.BaseExtension
 import io.gitlab.trixnity.gradle.Variant
-import io.gitlab.trixnity.gradle.cargo.CargoPlugin
 import io.gitlab.trixnity.gradle.cargo.dsl.CargoAndroidBuild
 import io.gitlab.trixnity.gradle.cargo.dsl.CargoExtension
 import io.gitlab.trixnity.gradle.cargo.dsl.CargoJvmBuild
 import io.gitlab.trixnity.gradle.cargo.dsl.CargoNativeBuild
-import io.gitlab.trixnity.gradle.cargo.rust.targets.RustAndroidTarget
 import io.gitlab.trixnity.gradle.uniffi.dsl.BindingsGeneration
 import io.gitlab.trixnity.gradle.uniffi.dsl.BindingsGenerationFromLibrary
 import io.gitlab.trixnity.gradle.uniffi.dsl.BindingsGenerationFromUdl
 import io.gitlab.trixnity.gradle.uniffi.dsl.UniFfiExtension
 import io.gitlab.trixnity.gradle.uniffi.tasks.BuildBindingsTask
 import io.gitlab.trixnity.gradle.uniffi.tasks.InstallBindgenTask
+import io.gitlab.trixnity.gradle.utils.DependencyUtils
 import io.gitlab.trixnity.gradle.utils.PluginUtils
 import io.gitlab.trixnity.uniffi.gradle.DependencyVersions
 import io.gitlab.trixnity.uniffi.gradle.PluginIds
+import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -243,14 +242,23 @@ class UniFfiPlugin : Plugin<Project> {
                     implementation("net.java.dev.jna:jna:${DependencyVersions.JNA}@aar")
                 }
             }
-            val testSourceSet = sourceSets.findByName("${kotlinAndroidTarget.name}UnitTest")
-                ?: sourceSets.getByName("${kotlinAndroidTarget.name}Test")
-            with(testSourceSet) {
-                dependencies {
-                    implementation("net.java.dev.jna:jna:${DependencyVersions.JNA}")
-                }
+        }
+        // Use the desktop version of JNA in android local unit tests.
+        configureKotlinAndroidUnitTestJna()
+        // Make android unit tests in dependent projects also use the desktop version of JNA.
+        DependencyUtils.configureEachDependentProjects(project) { dependentProject ->
+            dependentProject.configureKotlinAndroidUnitTestJna()
+        }
+    }
+
+    private fun Project.configureKotlinAndroidUnitTestJna() {
+        val androidPluginAction = Action<Plugin<*>> {
+            dependencies {
+                add("testImplementation", "net.java.dev.jna:jna:${DependencyVersions.JNA}")
             }
         }
+        plugins.withId(PluginIds.ANDROID_APPLICATION, androidPluginAction)
+        plugins.withId(PluginIds.ANDROID_LIBRARY, androidPluginAction)
     }
 
     private fun Project.configureKotlinNativeTarget(

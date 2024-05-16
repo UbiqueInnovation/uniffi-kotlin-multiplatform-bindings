@@ -16,8 +16,8 @@ kotlin {
         it.binaries.executable {
             entryPoint = "io.gitlab.trixnity.uniffi.examples.app.main"
         }
-        it.compilations.getByName("main") {
-            useRustUpLinker()
+        for (compilation in it.compilations) {
+            compilation.useRustUpLinker()
         }
     }
 
@@ -77,6 +77,16 @@ kotlin {
         commonMain.dependencies {
             api(project(":examples:arithmetic-procmacro"))
             api(project(":examples:todolist"))
+        }
+
+        commonTest {
+            // TODO: Test the following in a dedicated test, not in an example. See #52 for more details.
+            kotlin.srcDir(project.layout.projectDirectory.dir("../arithmetic-procmacro/src/commonTest/kotlin"))
+            kotlin.srcDir(project.layout.projectDirectory.dir("../todolist/src/commonTest/kotlin"))
+            dependencies {
+                implementation(kotlin("test"))
+                implementation(libs.kotest.assertions.core)
+            }
         }
 
         androidMain.dependencies {

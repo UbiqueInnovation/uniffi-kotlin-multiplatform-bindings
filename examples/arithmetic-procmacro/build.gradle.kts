@@ -25,7 +25,6 @@ kotlin {
         }
     }
 
-    mingwX64()
     linuxX64()
     linuxArm64()
     if (CargoHost.Platform.MacOS.isCurrent) {

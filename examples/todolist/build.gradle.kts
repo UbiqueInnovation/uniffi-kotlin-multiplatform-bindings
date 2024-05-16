@@ -1,4 +1,5 @@
 import io.gitlab.trixnity.gradle.CargoHost
+import io.gitlab.trixnity.gradle.rustlink.useRustUpLinker
 
 plugins {
     kotlin("multiplatform")
@@ -19,7 +20,14 @@ uniffi {
 kotlin {
     androidTarget()
     jvm("desktop")
-    mingwX64()
+    arrayOf(
+        mingwX64(),
+    ).forEach { nativeTarget ->
+        nativeTarget.compilations.getByName("test") {
+            useRustUpLinker()
+        }
+    }
+
     linuxX64()
     linuxArm64()
     if (CargoHost.Platform.MacOS.isCurrent) {
@@ -28,6 +36,15 @@ kotlin {
         iosX64()
         macosArm64()
         macosX64()
+    }
+
+    sourceSets {
+        commonTest {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation(libs.kotest.assertions.core)
+            }
+        }
     }
 }
 

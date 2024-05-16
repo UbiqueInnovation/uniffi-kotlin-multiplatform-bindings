@@ -230,8 +230,10 @@ cargo {
 ```
 
 Android local unit tests requires JVM targets to be built, as they run in the host machine's JVM. The Cargo plugin
-automatically copies the Rust shared library targeting the host machine into Android local unit tests. If you want to
-include shared library built for a different platform, you can control that using the `androidUnitTest` property.
+automatically copies the Rust shared library targeting the host machine into Android local unit tests. It also finds
+projects that depend on the project using the Cargo plugin, and the Rust library will be copied to all projects that
+directly or indirectly use the Cargo project. If you want to include shared library built for a different platform, you
+can control that using the `androidUnitTest` property.
 
 ```kotlin
 import io.gitlab.trixnity.gradle.cargo.dsl.*
@@ -252,6 +254,76 @@ kotlin {
 
 Local unit tests are successfully built even if there are no builds with `androidUnitTest` enabled, but you will
 encounter a runtime error when you invoke a Rust function from Kotlin.
+
+When you build or publish your Rust Android library separately and run Android local unit tests in another build, you
+also have to reference the JVM version of your library from the Android unit tests.
+
+To build the JVM version, run the `<JVM target name>Jar` task. The name of the JVM target can be configured with the
+`jvm()` function, which defaults to `"jvm"`. For example, when the name of the JVM target is `"desktop"`:
+
+```kotlin
+kotlin {
+    jvm("desktop")
+}
+```
+
+the name of the task will be `desktopJar`.
+
+```shell
+# ./gradlew :your:library:<JVM target name>Jar
+./gradlew :your:library:desktopJar
+```
+
+The build output will be located in `build/libs/<project name>-<JVM target name>.jar`. In the above case, the name of
+the JAR file will be `<project name>-desktop.jar`. The JAR file then can be referenced using the `files` or the
+`fileTree` functions.
+
+```kotlin
+kotlin {
+    sourceSets {
+        getByName("androidUnitTest") {
+            dependencies {
+                // implementation(files("<project name>-<JVM target name>.jar"))
+                implementation(files("library-desktop.jar"))
+                implementation("net.java.dev.jna:jna:5.13.0") // required to run
+            }
+        }
+    }
+}
+```
+
+The above process can be automated using the `maven-publish` Gradle plugin. It publishes the JVM version of your library
+separately. For more details about using `maven-publish` with Kotlin Multiplatform, please refer
+[here](https://kotlinlang.org/docs/multiplatform-publish-lib.html).
+
+To publish your library to the local Maven repository on your system, run the `publishToMavenLocal` task.
+
+```shell
+./gradlew :your:project:publishToMavenLocal
+```
+
+In the local repository which is located in `~/.m2`, you will see that multiple artifacts including `<project name>` and
+`<project name>-<JVM target name>` are generated. To reference it, register the `mavenLocal()` repository and put the
+artifact name to `implementation()`.
+
+```kotlin
+repositories {
+    mavenLocal()
+    // ...
+}
+
+kotlin {
+    sourceSets {
+        getByName("androidUnitTest") {
+            dependencies {
+                // implementation("<group name>:<project name>-<JVM target name>:<version>")
+                implementation("your.library:library-desktop:0.1.0")
+                implementation("net.java.dev.jna:jna:5.13.0") // required to run
+            }
+        }
+    }
+}
+```
 
 ### The UniFFI plugin
 

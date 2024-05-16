@@ -17,14 +17,17 @@ import io.gitlab.trixnity.gradle.cargo.rust.targets.RustJvmTarget
 import io.gitlab.trixnity.gradle.cargo.rust.targets.RustTarget
 import io.gitlab.trixnity.gradle.cargo.tasks.CargoCleanTask
 import io.gitlab.trixnity.gradle.cargo.tasks.RustUpTargetAddTask
+import io.gitlab.trixnity.gradle.utils.DependencyUtils
 import io.gitlab.trixnity.gradle.utils.PluginUtils
 import io.gitlab.trixnity.gradle.utils.register
 import io.gitlab.trixnity.uniffi.gradle.PluginIds
 import org.gradle.api.*
+import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.*
 import org.gradle.language.jvm.tasks.ProcessResources
@@ -180,8 +183,9 @@ class CargoPlugin : Plugin<Project> {
     }
 
     private fun Project.configureBuildTasks() {
-        val hasAndroidTargets =
-            cargoExtension.builds.any { build -> build.kotlinTargets.any { it is KotlinAndroidTarget } }
+        val androidTarget = cargoExtension.builds.firstNotNullOfOrNull { build ->
+            build.kotlinTargets.firstNotNullOfOrNull { it as? KotlinAndroidTarget }
+        }
         for (cargoBuild in cargoExtension.builds) {
             val rustUpTargetAddTask = tasks.register<RustUpTargetAddTask>({ +cargoBuild.rustTarget }) {
                 group = TASK_GROUP
@@ -212,7 +216,7 @@ class CargoPlugin : Plugin<Project> {
                                 // cargoBuild.jvmVariant is checked inside
                                 this,
                                 // required for Android local unit tests
-                                hasAndroidTargets,
+                                androidTarget,
                             )
                         }
                     }
@@ -239,7 +243,7 @@ class CargoPlugin : Plugin<Project> {
     private fun Project.configureJvmPostBuildTasks(
         kotlinTarget: KotlinJvmTarget,
         cargoBuildVariant: CargoJvmBuildVariant<*>,
-        hasAndroidTargets: Boolean,
+        androidTarget: KotlinAndroidTarget?,
     ) {
         val buildTask = cargoBuildVariant.buildTaskProvider
         val resourcePrefix = cargoBuildVariant.build.resourcePrefix.orNull?.takeIf(String::isNotEmpty)
@@ -272,28 +276,57 @@ class CargoPlugin : Plugin<Project> {
             }
         }
 
-        if (hasAndroidTargets && cargoBuildVariant.build.androidUnitTest.get()) {
+        if (androidTarget != null && cargoBuildVariant.build.androidUnitTest.get()) {
             androidExtension.sourceSets { sourceSets ->
                 val testSourceSet = sourceSets.getByVariant("test", cargoBuildVariant.variant)
                 testSourceSet.resources.srcDir(resourceDirectory)
             }
-            tasks.withType<ProcessJavaResTask> {
-                if (name.contains("UnitTest") && cargoBuildVariant.variant == variant!!) {
-                    dependsOn(copyTask)
-                    // Override the default behavior of AGP excluding .so files, which causes UnsatisfiedLinkError on
-                    // Linux.
-                    from(
-                        // Append a fileTree which only includes the Rust shared library.
-                        fileTree(resourceDirectory).matching {
-                            val fileName = sourceLibraryFile.get().asFile.name
-                            it.includes += if (resourcePrefix == null) {
-                                setOf("/$fileName")
-                            } else {
-                                setOf("/$resourcePrefix/$fileName")
-                            }
+
+            // Copy the dynamic library to the current project's android unit tests.
+            copyJvmBuildResultsToAndroidUnitTest(
+                copyTask,
+                cargoBuildVariant,
+                resourceDirectory,
+                sourceLibraryFile,
+                resourcePrefix,
+            )
+
+            // Copy the dynamic library to all android unit tests of the same variant in projects dependent on this project.
+            DependencyUtils.configureEachDependentProjects(project) { dependent ->
+                dependent.copyJvmBuildResultsToAndroidUnitTest(
+                    copyTask,
+                    cargoBuildVariant,
+                    resourceDirectory,
+                    sourceLibraryFile,
+                    resourcePrefix,
+                )
+            }
+        }
+    }
+
+    private fun Project.copyJvmBuildResultsToAndroidUnitTest(
+        copyTask: TaskProvider<Copy>,
+        cargoBuildVariant: CargoJvmBuildVariant<*>,
+        resourceDirectory: Provider<Directory>,
+        sourceLibraryFile: Provider<RegularFile>,
+        resourcePrefix: String?,
+    ) {
+        tasks.withType<ProcessJavaResTask> {
+            if (name.contains("UnitTest") && cargoBuildVariant.variant == variant!!) {
+                dependsOn(copyTask)
+                // Override the default behavior of AGP excluding .so files, which causes UnsatisfiedLinkError
+                // on Linux.
+                from(
+                    // Append a fileTree which only includes the Rust shared library.
+                    fileTree(resourceDirectory).matching {
+                        val fileName = sourceLibraryFile.get().asFile.name
+                        it.includes += if (resourcePrefix == null) {
+                            setOf("/$fileName")
+                        } else {
+                            setOf("/$resourcePrefix/$fileName")
                         }
-                    )
-                }
+                    }
+                )
             }
         }
     }
