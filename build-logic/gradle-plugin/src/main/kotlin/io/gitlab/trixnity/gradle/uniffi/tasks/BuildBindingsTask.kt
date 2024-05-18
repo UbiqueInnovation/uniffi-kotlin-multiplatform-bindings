@@ -76,7 +76,7 @@ abstract class BuildBindingsTask : CargoPackageTask() {
 
     @TaskAction
     fun buildBindings() {
-        command(bindgen).apply {
+        command(bindgen) {
             workingDirectory(root)
             if (outputDirectory.isPresent) {
                 arguments("--out-dir", outputDirectory.get())
@@ -95,7 +95,7 @@ abstract class BuildBindingsTask : CargoPackageTask() {
             }
             arguments(source.get())
             suppressXcodeIosToolchains()
-        }.run().assertNormalExitValue()
+        }.get().assertNormalExitValue()
 
         val defFilePath = outputDirectory.get().file("nativeInterop/cinterop/${libraryCrateName.get()}.def")
         val defFileFile = defFilePath.asFile

@@ -47,7 +47,11 @@ enum class CargoTargetKind(
 }
 
 private object TargetTypeSerializer : KSerializer<CargoTargetKind> {
-    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("TargetType", PrimitiveKind.STRING)
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor(
+            "io.gitlab.trixnity.gradle.cargo.TargetTypeSerializer",
+            PrimitiveKind.STRING,
+        )
 
     override fun serialize(encoder: Encoder, value: CargoTargetKind) {
         encoder.encodeString(value.toString())

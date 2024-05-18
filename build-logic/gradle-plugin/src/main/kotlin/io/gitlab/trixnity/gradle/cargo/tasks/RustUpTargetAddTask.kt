@@ -11,6 +11,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
+import java.util.concurrent.locks.ReentrantLock
 
 @CacheableTask
 abstract class RustUpTargetAddTask : RustUpTask() {
@@ -25,23 +26,36 @@ abstract class RustUpTargetAddTask : RustUpTask() {
     }
 
     private fun isToolchainInstalled(): Boolean {
-        val installedTargets = rustUp("target", "list")
-            .run(captureStandardOutput = true)
-            .standardOutput!!
-            .split('\n')
-            .filter { it.endsWith(" (installed)") }
-            .map { it.substringBefore(" (installed)") }
-            .toSet()
+        val installedTargets = rustUp("target", "list") {
+            captureStandardOutput()
+        }.get().run {
+            standardOutput!!
+                .split('\n')
+                .filter { it.endsWith(" (installed)") }
+                .map { it.substringBefore(" (installed)") }
+                .toSet()
+        }
 
         return installedTargets.contains(rustTarget.get().rustTriple)
     }
 
     @TaskAction
     fun installToolchain() {
-        if (!isToolchainInstalled()) {
-            rustUp("target", "add", rustTarget.get().rustTriple)
-                .run()
-                .assertNormalExitValue()
+        // TODO: Rewrite the following using a proper Gradle API, as well as CargoBuildTask which uses a file lock
+        targetAddLock.lock()
+        try {
+            if (!isToolchainInstalled()) {
+                rustUp("target", "add", rustTarget.get().rustTriple)
+                    .get().apply {
+                        assertNormalExitValue()
+                    }
+            }
+        } finally {
+            targetAddLock.unlock()
         }
+    }
+
+    companion object {
+        private val targetAddLock = ReentrantLock()
     }
 }

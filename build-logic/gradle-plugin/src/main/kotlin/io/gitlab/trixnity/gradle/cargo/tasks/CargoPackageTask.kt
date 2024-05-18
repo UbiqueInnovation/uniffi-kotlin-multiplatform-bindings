@@ -7,13 +7,16 @@
 package io.gitlab.trixnity.gradle.cargo.tasks
 
 import io.gitlab.trixnity.gradle.cargo.CargoPackage
-import io.gitlab.trixnity.gradle.utils.Command
+import io.gitlab.trixnity.gradle.utils.CommandSpec
 import org.gradle.api.file.Directory
+import org.gradle.api.file.FileTree
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.*
 import java.io.File
+import javax.inject.Inject
 
 abstract class CargoPackageTask : CargoTask() {
     @get:Internal
@@ -43,17 +46,14 @@ abstract class CargoPackageTask : CargoTask() {
     @get:PathSensitive(PathSensitivity.ABSOLUTE)
     val dependencySourceFiles: Provider<List<File>> = cargoPackage.map { cargoPackage ->
         cargoPackage.dependencyTargetRoots.flatMap { targetRoot ->
-            project.fileTree(targetRoot.parentFile).matching { filter ->
-                filter.include(
-                    "**/*.rs"
-                )
-                filter.exclude("target", "build", ".gradle", ".idea")
-            }
+            targetRoot.parentFile.walk()
+                .onEnter { it.name !in arrayOf("target", "build", ".gradle", ".idea") }
+                .filter { it.extension == "rs" }
         }
     }
 
-    override fun configureFromProperties(command: Command) = with(command) {
-        super.configureFromProperties(command)
-        workingDirectory(cargoPackage.map { it.root })
+    override fun configureFromProperties(spec: CommandSpec) {
+        super.configureFromProperties(spec)
+        spec.workingDirectory(cargoPackage.map { it.root })
     }
 }

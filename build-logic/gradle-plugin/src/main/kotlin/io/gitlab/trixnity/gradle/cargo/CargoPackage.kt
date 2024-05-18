@@ -21,22 +21,18 @@ import java.io.File
 /**
  * Represents a Cargo package.
  */
-class CargoPackage(
-    val project: Project,
-    searchPath: Directory,
-) {
+class CargoPackage(project: Project, searchPath: Directory) {
     /**
      * The manifest file of the package.
      */
     val manifestFile: RegularFile = project.layout.projectDirectory.file(
-        project.command("cargo").apply {
+        project.command("cargo") {
             additionalEnvironmentPath(CargoHost.Platform.current.defaultCargoInstallationDir)
             arguments("locate-project", "--message-format", "plain")
             workingDirectory(searchPath)
-        }.run(
-            captureStandardOutput = true,
-            captureStandardError = true,
-        ).apply {
+            captureStandardOutput()
+            captureStandardError()
+        }.get().apply {
             assertNormalExitValue()
         }.standardOutput!!.trim()
     )
@@ -50,15 +46,14 @@ class CargoPackage(
      * The metadata of the workspace containing the package.
      */
     private val metadata: CargoMetadata = run {
-        val result = project.command("cargo").apply {
+        val result = project.command("cargo") {
             additionalEnvironmentPath(CargoHost.Platform.current.defaultCargoInstallationDir)
             // TODO: support fine-grained feature selection
             arguments("metadata", "--format-version", "1", "--all-features")
             workingDirectory(root)
-        }.run(
-            captureStandardOutput = true,
-            captureStandardError = true,
-        ).apply {
+            captureStandardOutput()
+            captureStandardError()
+        }.get().apply {
             assertNormalExitValue()
         }
         CargoMetadata.fromJsonString(result.standardOutput!!)
@@ -77,14 +72,13 @@ class CargoPackage(
     private val packageId = CargoPackageId(
         // This must be called after `cargo metadata is invoked, since cargo pkgid does not work without Cargo.toml, and
         // cargo metadata generates it when it is not present.
-        project.command("cargo").apply {
+        project.command("cargo") {
             additionalEnvironmentPath(CargoHost.Platform.current.defaultCargoInstallationDir)
             arguments("pkgid")
             workingDirectory(root)
-        }.run(
-            captureStandardOutput = true,
-            captureStandardError = true,
-        ).apply {
+            captureStandardOutput()
+            captureStandardError()
+        }.get().apply {
             assertNormalExitValue()
         }.standardOutput!!.trim()
     )

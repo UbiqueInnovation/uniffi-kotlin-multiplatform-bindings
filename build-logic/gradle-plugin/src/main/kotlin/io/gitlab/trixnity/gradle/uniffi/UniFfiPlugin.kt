@@ -19,6 +19,7 @@ import io.gitlab.trixnity.gradle.uniffi.tasks.BuildBindingsTask
 import io.gitlab.trixnity.gradle.uniffi.tasks.InstallBindgenTask
 import io.gitlab.trixnity.gradle.utils.DependencyUtils
 import io.gitlab.trixnity.gradle.utils.PluginUtils
+import io.gitlab.trixnity.gradle.utils.named
 import io.gitlab.trixnity.uniffi.gradle.DependencyVersions
 import io.gitlab.trixnity.uniffi.gradle.PluginIds
 import org.gradle.api.Action
@@ -196,6 +197,7 @@ class UniFfiPlugin : Plugin<Project> {
                     writeBytes(byteArrayOf())
                 }
             }
+            it.mustRunAfter(tasks.named("buildBindings"))
         }
 
         kotlinMultiplatformExtension.targets.configureEach { kotlinTarget ->
@@ -273,8 +275,9 @@ class UniFfiPlugin : Plugin<Project> {
                 cinterop.header(project.nativeBindingsCInteropHeader(namespace))
                 // Since linking is handled by CargoPlugin and header is fed above, we don't need the defFile.
                 cinterop.defFile(dummyDefFile)
-                tasks.named(cinterop.interopProcessingTaskName) {
-                    it.dependsOn(generateDummyDefFileTask)
+                tasks.named(cinterop.interopProcessingTaskName) { task ->
+                    task.inputs.file(dummyDefFile)
+                    task.dependsOn(generateDummyDefFileTask)
                 }
             }
             compilation.defaultSourceSet {

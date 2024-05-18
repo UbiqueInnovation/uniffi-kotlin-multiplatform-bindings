@@ -129,7 +129,7 @@ data class CargoHost(val platform: Platform, val arch: Arch) : Serializable {
     /**
      * Returns the default install locations of famous package managers in the platform.
      */
-    val packageManagerInstallDirectory: List<String>
+    val packageManagerInstallDirectories: List<String>
         get() = when (platform) {
             Platform.Windows -> listOf(
                 // TODO: check if the followings are correct

@@ -8,6 +8,7 @@ package io.gitlab.trixnity.gradle.cargo.tasks
 
 import io.gitlab.trixnity.gradle.CargoHost
 import io.gitlab.trixnity.gradle.tasks.CommandTask
+import io.gitlab.trixnity.gradle.utils.CommandSpec
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
@@ -29,7 +30,11 @@ abstract class CargoTask : CommandTask() {
         additionalEnvironmentPath.add(CargoHost.Platform.current.defaultCargoInstallationDir)
     }
 
-    internal fun cargo(vararg argument: String) = command("cargo").apply {
+    internal fun cargo(
+        vararg argument: String,
+        action: CommandSpec.() -> Unit = {},
+    ) = command("cargo") {
         arguments(*argument)
+        action()
     }
 }

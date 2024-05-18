@@ -68,17 +68,19 @@ fun KotlinNativeCompilation.useRustUpLinker() {
 }
 
 private fun Project.rustUpLinker(): File {
-    val rustUpHome = command("rustup").apply {
+    val rustUpHome = command("rustup") {
         arguments("show", "home")
         additionalEnvironmentPath(CargoHost.Platform.current.defaultCargoInstallationDir)
-    }.run(captureStandardOutput = true).apply {
+        captureStandardOutput()
+    }.get().apply {
         assertNormalExitValue()
     }.standardOutput!!.trim()
 
-    val activeToolchains = command("rustup").apply {
+    val activeToolchains = command("rustup") {
         arguments("show", "active-toolchain")
         additionalEnvironmentPath(CargoHost.Platform.current.defaultCargoInstallationDir)
-    }.run(captureStandardOutput = true).apply {
+        captureStandardOutput()
+    }.get().apply {
         assertNormalExitValue()
     }.standardOutput!!.trim().split('\n')
 

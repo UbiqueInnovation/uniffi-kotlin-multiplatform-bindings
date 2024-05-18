@@ -9,6 +9,7 @@ package io.gitlab.trixnity.gradle.cargo.tasks
 import io.gitlab.trixnity.gradle.cargo.rust.CrateType
 import io.gitlab.trixnity.gradle.cargo.rust.targets.RustTarget
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -16,6 +17,7 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.*
 import java.io.File
+import javax.inject.Inject
 
 @CacheableTask
 abstract class FindDynamicLibrariesTask : DefaultTask() {
@@ -37,10 +39,13 @@ abstract class FindDynamicLibrariesTask : DefaultTask() {
         it.asFile.readText().split(' ').filter(String::isNotEmpty).map(::File).toSet()
     }
 
+    @get:Inject
+    abstract val projectLayout: ProjectLayout
+
     @TaskAction
     fun copyDynamicLibraries() {
         val rustTarget = rustTarget.get()
-        val searchPaths = searchPaths.get() + project.layout.projectDirectory.asFile
+        val searchPaths = searchPaths.get() + projectLayout.projectDirectory.asFile
 
         val libraryPaths = libraryNames.get().mapNotNull { libraryName ->
             val libraryPath = File(libraryName)

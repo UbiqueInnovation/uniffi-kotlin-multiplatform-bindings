@@ -34,7 +34,7 @@ abstract class InstallBindgenTask : CargoTask() {
 
     @TaskAction
     fun buildBindings() {
-        cargo("install").apply {
+        cargo("install") {
             arguments("--root", installDirectory)
             arguments("--bin", BuildConfig.BINDGEN_BIN)
             if (quiet.get()) {
@@ -46,6 +46,6 @@ abstract class InstallBindgenTask : CargoTask() {
                 arguments("${BuildConfig.BINDGEN_CRATE}@${BuildConfig.BINDGEN_VERSION}")
             }
             suppressXcodeIosToolchains()
-        }.run().assertNormalExitValue()
+        }.get().assertNormalExitValue()
     }
 }

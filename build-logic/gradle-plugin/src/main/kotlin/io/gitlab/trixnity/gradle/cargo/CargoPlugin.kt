@@ -363,8 +363,6 @@ class CargoPlugin : Plugin<Project> {
                 buildTask.flatMap { task -> task.libraryFileByCrateType.map { it[CrateType.SystemDynamicLibrary]!! } },
                 findDynamicLibrariesTask.flatMap { it.libraryPaths },
             )
-            inputs.file(buildTask.flatMap { task -> task.libraryFileByCrateType.map { it[CrateType.SystemDynamicLibrary]!! } })
-            inputs.files(findDynamicLibrariesTask.flatMap { it.libraryPaths })
             into(copyDestination.map { it.dir(cargoBuildVariant.rustTarget.androidAbiName) })
             dependsOn(buildTask, findDynamicLibrariesTask)
         }

@@ -47,7 +47,7 @@ abstract class CargoBuildTask : CargoPackageTask() {
     fun buildBindings() {
         val profile = profile.get()
         val target = target.get()
-        val result = cargo("rustc").apply {
+        val result = cargo("rustc") {
             arguments("--profile", profile.profileName)
             arguments("--target", target.rustTriple)
             if (features.isPresent) {
@@ -61,9 +61,10 @@ abstract class CargoBuildTask : CargoPackageTask() {
                 arguments("--print", "native-static-libs")
             }
             suppressXcodeIosToolchains()
-        }.run(
-            captureStandardError = nativeStaticLibsDefFile.isPresent
-        ).apply {
+            if (nativeStaticLibsDefFile.isPresent) {
+                captureStandardError()
+            }
+        }.get().apply {
             assertNormalExitValue()
         }
 

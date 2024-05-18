@@ -13,6 +13,6 @@ import org.gradle.work.DisableCachingByDefault
 abstract class CargoCleanTask : CargoPackageTask() {
     @TaskAction
     fun cleanPackage() {
-        cargo("clean").run().assertNormalExitValue()
+        cargo("clean").get().assertNormalExitValue()
     }
 }

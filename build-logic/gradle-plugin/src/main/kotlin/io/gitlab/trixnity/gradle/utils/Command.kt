@@ -7,56 +7,74 @@
 package io.gitlab.trixnity.gradle.utils
 
 import io.gitlab.trixnity.gradle.CargoHost
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
-import org.gradle.api.file.RegularFile
-import org.gradle.api.provider.Provider
-import org.gradle.kotlin.dsl.listProperty
-import org.gradle.kotlin.dsl.mapProperty
-import org.gradle.process.ExecSpec
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.logging.Logging
+import org.gradle.api.provider.*
+import org.gradle.process.ExecOperations
 import org.gradle.process.internal.ExecException
 import java.io.ByteArrayOutputStream
 import java.io.File
+import javax.inject.Inject
 
-internal fun Project.command(command: Provider<String>) = Command(project, command)
-
-internal fun Project.command(command: String) = project.command(project.providers.provider { command })
-
-@JvmName("commandFromFileProvider")
-internal fun Project.command(command: Provider<File>) = project.command(command.map { it.name }).apply {
-    additionalEnvironmentPath(command.map { it.parentFile })
+internal fun Project.command(
+    command: Provider<String>,
+    action: CommandSpec.() -> Unit = {},
+) = providers.of(Command::class.java) {
+    it.parameters.command.set(command)
+    CommandSpec(project.layout, project.providers, it.parameters).action()
 }
 
-@JvmName("commandFromRegularFileProvider")
-internal fun Project.command(command: Provider<RegularFile>) = project.command(command.map { it.asFile })
+internal fun Project.command(
+    command: String,
+    action: CommandSpec.() -> Unit = {},
+) = project.command(project.providers.provider { command }, action)
 
-/**
- * Utility class for running a command
- */
-internal class Command(
-    private val project: Project,
-    private val command: Provider<String>,
+internal interface CommandParameters : ValueSourceParameters {
+    val command: Property<String>
+    val arguments: ListProperty<Any>
+    val workingDirectory: DirectoryProperty
+    val additionalEnvironment: MapProperty<String, Any>
+    val suppressXcodeIosToolchains: Property<Boolean>
+    val captureStandardOutput: Property<Boolean>
+    val captureStandardError: Property<Boolean>
+}
+
+internal class CommandSpec(
+    projectLayout: ProjectLayout,
+    private val providerFactory: ProviderFactory,
+    private val parameters: CommandParameters,
 ) {
-    private val arguments = project.objects.listProperty<Any>()
-    private var workingDirectory = project.objects.directoryProperty().convention(project.layout.projectDirectory)
-    private val additionalEnvironment = project.objects.mapProperty<String, Any>().apply {
-        put("PATH", PathList(project))
+    // Workaround to prevent StackOverflow in additionalEnvironment
+    private val lastAdditionalEnvironment = mutableMapOf<String, Provider<out Any>>().apply {
+        this["PATH"] = providerFactory.provider { PathList() }
     }
 
-    private var suppressXcodeIosToolchains: Boolean = false
+    init {
+        parameters.workingDirectory.convention(projectLayout.projectDirectory)
+        updateAdditionalEnvironment("PATH")
+        parameters.suppressXcodeIosToolchains.convention(false)
+        parameters.captureStandardOutput.convention(false)
+        parameters.captureStandardError.convention(false)
+    }
+
+    private fun updateAdditionalEnvironment(key: String) {
+        parameters.additionalEnvironment.put(key, lastAdditionalEnvironment[key]!!)
+    }
 
     fun arguments(vararg argument: Any) = argument.forEach {
         if (it is Provider<*>) {
-            arguments.add(it)
+            parameters.arguments.add(it)
         } else {
-            arguments.add(it)
+            parameters.arguments.add(it)
         }
     }
 
-    fun workingDirectory(dir: Provider<Directory>) = workingDirectory.set(dir)
+    fun workingDirectory(dir: Provider<Directory>) = parameters.workingDirectory.set(dir)
 
-    fun workingDirectory(dir: Directory) = workingDirectory.set(dir)
+    fun workingDirectory(dir: Directory) = parameters.workingDirectory.set(dir)
 
     fun additionalEnvironmentPath(vararg paths: Any) {
         for (path in paths) {
@@ -72,20 +90,28 @@ internal class Command(
 
     fun additionalEnvironment(key: String, value: Any) {
         if (value is Provider<*>) additionalEnvironment(key, value)
-        else additionalEnvironment(key, project.providers.provider { value })
+        else additionalEnvironment(key, providerFactory.provider { value })
     }
 
-    fun <T : Any> additionalEnvironment(key: String, value: Provider<T>) {
-        val oldEnvironment = additionalEnvironment.getting(key)
-        if (oldEnvironment.isPresent) {
-            val oldEnvironmentValue = oldEnvironment.get()
-            if (oldEnvironmentValue is PathList) {
-                additionalEnvironment.put(key, oldEnvironmentValue + value)
-                return
+    fun <T : Any> additionalEnvironment(key: String, provider: Provider<T>) {
+        val lastProvider = lastAdditionalEnvironment[key]
+        if (lastProvider == null) {
+            lastAdditionalEnvironment[key] = provider
+        } else {
+            lastAdditionalEnvironment[key] = lastProvider.zip(provider) { oldValue, value ->
+                if (oldValue is PathList) {
+                    val newPathList: PathList = when (value) {
+                        is Iterable<*> -> oldValue + value.map { File(it.toString()) }
+                        is File -> oldValue + value
+                        else -> oldValue + value.toString()
+                    }
+                    newPathList
+                } else {
+                    value
+                }
             }
         }
-
-        additionalEnvironment.put(key, value)
+        updateAdditionalEnvironment(key)
     }
 
     /**
@@ -98,46 +124,57 @@ internal class Command(
      * during running tasks like binding generation.
      */
     fun suppressXcodeIosToolchains() {
-        suppressXcodeIosToolchains = true
+        parameters.suppressXcodeIosToolchains.set(true)
     }
 
-    fun run(
-        captureStandardOutput: Boolean = false,
-        captureStandardError: Boolean = false,
-        action: ExecSpec.() -> Unit = {},
-    ): CommandResult {
-        val environment = additionalEnvironment.get().toMutableMap().apply {
+    fun captureStandardOutput() {
+        parameters.captureStandardOutput.set(true)
+    }
+
+    fun captureStandardError() {
+        parameters.captureStandardError.set(true)
+    }
+}
+
+/**
+ * Utility class for running a command
+ */
+internal abstract class Command @Inject internal constructor(
+    private val execOperations: ExecOperations,
+) : ValueSource<CommandResult, CommandParameters> {
+    override fun obtain(): CommandResult {
+        val environment = parameters.additionalEnvironment.get().toMutableMap().apply {
+            val oldPath = this["PATH"] as PathList
             // Append the PATH of the current Java process
-            val newPath = this["PATH"] as PathList + project.environmentPath + project.packageManagerInstallDirectories
-            if (suppressXcodeIosToolchains && CargoHost.Platform.MacOS.isCurrent) {
+            val newPath = oldPath + environmentPath + packageManagerInstallDirectories
+            if (parameters.suppressXcodeIosToolchains.get() && CargoHost.Platform.MacOS.isCurrent) {
                 this["PATH"] = newPath.suppressPathsUnder(File("/Applications/Xcode.app"))
             } else {
                 this["PATH"] = newPath
             }
         }
 
-        val command = command.resolveAbsolutePath(environment["PATH"] as PathList).get()
-        val arguments = arguments.get().map { it.toString() }
-        val workingDirectory = workingDirectory.get()
+        val command = parameters.command.resolveAbsolutePath(environment["PATH"] as PathList).get()
+        val arguments = parameters.arguments.get().map { it.toString() }
+        val workingDirectory = parameters.workingDirectory.get()
 
-        val standardOutputStream = if (captureStandardOutput) ByteArrayOutputStream() else null
-        val standardErrorStream = if (captureStandardError) ByteArrayOutputStream() else null
+        val standardOutputStream = if (parameters.captureStandardOutput.get()) ByteArrayOutputStream() else null
+        val standardErrorStream = if (parameters.captureStandardError.get()) ByteArrayOutputStream() else null
 
-        project.logger.info("command ${listOf(command) + arguments} is running...")
-        project.logger.info("cwd: $workingDirectory")
-        project.logger.info("environment: $environment")
+        Logging.getLogger("Command").apply {
+            info("command ${listOf(command) + arguments} is running...")
+            info("cwd: $workingDirectory")
+            info("environment: $environment")
+        }
 
-        val result = project.exec { exec ->
+        val result = execOperations.exec { exec ->
             exec.setIgnoreExitValue(true)
             exec.commandLine(command)
             exec.args(arguments)
             exec.workingDir(workingDirectory)
-            if (additionalEnvironment.isPresent) {
-                exec.environment.putAll(environment)
-            }
+            exec.environment.putAll(environment)
             standardOutputStream?.let { exec.standardOutput = it }
             standardErrorStream?.let { exec.errorOutput = it }
-            exec.action()
         }
 
         return CommandResult(
@@ -155,16 +192,16 @@ internal class Command(
      */
     private fun Provider<String>.resolveAbsolutePath(
         additionalPaths: PathList
-    ): Provider<String> = zip((additionalPaths + project.environmentPath).paths) { command, paths ->
-        for (path in paths) {
+    ): Provider<String> = map { command ->
+        for (path in (additionalPaths + environmentPath).paths) {
             path.resolve(command).run {
-                if (exists()) return@zip absolutePath
+                if (exists()) return@map absolutePath
             }
             path.resolve(CargoHost.Platform.current.convertExeName(command)).run {
-                if (exists()) return@zip absolutePath
+                if (exists()) return@map absolutePath
             }
         }
-        return@zip command
+        command
     }
 }
 
@@ -201,62 +238,6 @@ internal data class CommandResult(
     }
 }
 
-/**
- * Utility class for storing a list of paths to be joined to a string with separators.
- */
-private class PathList(
-    private val project: Project,
-    val paths: Provider<List<File>>,
-) {
-    constructor(
-        project: Project,
-        paths: List<File> = emptyList(),
-    ) : this(project, project.providers.provider { paths })
+private val environmentPath = PathList(System.getenv("PATH")!!)
 
-    constructor(
-        project: Project,
-        arguments: String,
-    ) : this(project, arguments.split(CargoHost.Platform.current.pathSeparator).filter(String::isNotEmpty).map(::File))
-
-    operator fun plus(other: PathList): PathList {
-        if (project != other.project) throw GradleException("project of two PathLists must be the same")
-        return PathList(project, paths.zip(other.paths) { l, r -> l + r })
-    }
-
-    operator fun <T : Any> plus(arg: Provider<T>) = PathList(project, paths.zip(arg) { l, r ->
-        when (r) {
-            is File -> l + r
-            is Iterable<*> -> l + r.map { if (it is File) it else File(it.toString()) }
-            else -> l + File(r.toString())
-        }
-    })
-
-    operator fun plus(arg: File) = this + project.providers.provider { arg }
-
-    fun suppressPathsUnder(root: File): PathList = PathList(project, paths.map { paths ->
-        val pathsToSuppress = paths.filter { it.startsWith(root) }
-        val otherPaths = paths.filterNot { it.startsWith(root) }
-        otherPaths + pathsToSuppress
-    })
-
-    /**
-     * Joins the arguments into one string.
-     */
-    fun joinToString(): Provider<String> = paths.map { it.joinToString(separator) { file -> file.absolutePath } }
-
-    override fun toString(): String = joinToString().get()
-
-    companion object {
-        val separator: String = CargoHost.Platform.current.pathSeparator
-    }
-}
-
-private val Project.environmentPath
-    get() = PathList(
-        this, System.getenv("PATH")!!
-    )
-
-private val Project.packageManagerInstallDirectories
-    get() = PathList(
-        this, CargoHost.current.packageManagerInstallDirectory.map(::File)
-    )
+private val packageManagerInstallDirectories = PathList(CargoHost.current.packageManagerInstallDirectories.map(::File))
