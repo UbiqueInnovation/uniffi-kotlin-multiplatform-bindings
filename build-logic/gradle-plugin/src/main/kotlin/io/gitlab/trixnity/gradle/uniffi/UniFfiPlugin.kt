@@ -11,15 +11,11 @@ import io.gitlab.trixnity.gradle.cargo.dsl.CargoAndroidBuild
 import io.gitlab.trixnity.gradle.cargo.dsl.CargoExtension
 import io.gitlab.trixnity.gradle.cargo.dsl.CargoJvmBuild
 import io.gitlab.trixnity.gradle.cargo.dsl.CargoNativeBuild
-import io.gitlab.trixnity.gradle.uniffi.dsl.BindingsGeneration
-import io.gitlab.trixnity.gradle.uniffi.dsl.BindingsGenerationFromLibrary
-import io.gitlab.trixnity.gradle.uniffi.dsl.BindingsGenerationFromUdl
-import io.gitlab.trixnity.gradle.uniffi.dsl.UniFfiExtension
+import io.gitlab.trixnity.gradle.uniffi.dsl.*
 import io.gitlab.trixnity.gradle.uniffi.tasks.BuildBindingsTask
 import io.gitlab.trixnity.gradle.uniffi.tasks.InstallBindgenTask
 import io.gitlab.trixnity.gradle.utils.DependencyUtils
 import io.gitlab.trixnity.gradle.utils.PluginUtils
-import io.gitlab.trixnity.gradle.utils.named
 import io.gitlab.trixnity.uniffi.gradle.DependencyVersions
 import io.gitlab.trixnity.uniffi.gradle.PluginIds
 import org.gradle.api.Action
@@ -129,8 +125,7 @@ class UniFfiPlugin : Plugin<Project> {
 
         val installBindgen = tasks.register<InstallBindgenTask>("installBindgen") {
             group = TASK_GROUP
-
-            bindgenCratePath.set(uniFfiExtension.bindgenCratePath)
+            bindgenSource.set(uniFfiExtension.bindgenSource)
             installDirectory.set(layout.buildDirectory.dir("bindgen-install"))
         }
 

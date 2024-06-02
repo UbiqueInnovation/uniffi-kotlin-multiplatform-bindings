@@ -488,7 +488,7 @@ Optionally, configure the `uniffi` extension with the exact path to the bindgen 
 ```kotlin
 uniffi {
     // ...
-    bindgenCratePath = "<path-to-our-bindgen>"
+    bindgenFromPath("<path-to-our-bindgen>")
 }
 ```
 
@@ -514,6 +514,15 @@ Optionally, configure the `uniffi` extension with the exact path to the bindgen 
 ```kotlin
 uniffi {
     // ...
-    bindgenCratePath = "<path-to-our-bindgen>"
+    bindgenFromPath("<path-to-our-bindgen>")
+}
+```
+
+You can also install the bindgen from a git remote as well. Use this method if you don't want to keep the source code of
+this repository on your computer.
+
+```kotlin
+uniffi {
+    bindgenFromGitTag("https://gitlab.com/trixnity/uniffi-kotlin-multiplatform-bindings", "v0.1.0")
 }
 ```

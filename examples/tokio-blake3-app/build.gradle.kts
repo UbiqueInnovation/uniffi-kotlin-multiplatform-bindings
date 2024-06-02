@@ -1,4 +1,5 @@
 import io.gitlab.trixnity.gradle.CargoHost
+import java.net.URL
 
 plugins {
     kotlin("multiplatform")
@@ -10,7 +11,7 @@ plugins {
 }
 
 uniffi {
-    bindgenCratePath = rootProject.layout.projectDirectory.dir("bindgen")
+    bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen"))
     generateFromLibrary()
 }
 

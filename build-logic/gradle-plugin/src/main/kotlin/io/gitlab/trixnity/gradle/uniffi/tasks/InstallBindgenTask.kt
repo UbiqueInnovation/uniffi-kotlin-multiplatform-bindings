@@ -7,6 +7,7 @@
 package io.gitlab.trixnity.gradle.uniffi.tasks
 
 import io.gitlab.trixnity.gradle.cargo.tasks.CargoTask
+import io.gitlab.trixnity.gradle.uniffi.dsl.BindgenSource
 import io.gitlab.trixnity.uniffi.gradle.BuildConfig
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -19,10 +20,8 @@ abstract class InstallBindgenTask : CargoTask() {
     @get:Input
     val quiet: Property<Boolean> = project.objects.property<Boolean>().convention(true)
 
-    @get:InputDirectory
-    @get:Optional
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val bindgenCratePath: DirectoryProperty
+    @get:Input
+    abstract val bindgenSource: Property<BindgenSource>
 
     @get:OutputDirectory
     abstract val installDirectory: DirectoryProperty
@@ -40,10 +39,24 @@ abstract class InstallBindgenTask : CargoTask() {
             if (quiet.get()) {
                 arguments("--quiet")
             }
-            if (bindgenCratePath.isPresent) {
-                arguments("--path", bindgenCratePath.get())
-            } else {
-                arguments("${BuildConfig.BINDGEN_CRATE}@${BuildConfig.BINDGEN_VERSION}")
+            when (val source = bindgenSource.get()) {
+                is BindgenSource.Registry -> {
+                    arguments("${source.packageName}@${source.version}")
+                    if (source.registry != null) {
+                        arguments("--registry", source.registry)
+                    }
+                }
+
+                is BindgenSource.Path -> arguments("--path", source.path)
+                is BindgenSource.Git -> {
+                    arguments("--git", source.repository)
+                    when (source.commit) {
+                        is BindgenSource.Git.Commit.Branch -> arguments("--branch", source.commit.branch)
+                        is BindgenSource.Git.Commit.Tag -> arguments("--tag", source.commit.tag)
+                        is BindgenSource.Git.Commit.Revision -> arguments("--rev", source.commit.revision)
+                        else -> {}
+                    }
+                }
             }
             suppressXcodeIosToolchains()
         }.get().assertNormalExitValue()

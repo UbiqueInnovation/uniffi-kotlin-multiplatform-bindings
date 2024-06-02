@@ -16,7 +16,7 @@ cargo {
 }
 
 uniffi {
-    bindgenCratePath = rootProject.layout.projectDirectory.dir("bindgen")
+    bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen"))
 }
 
 tasks.withType<InstallBindgenTask> {
