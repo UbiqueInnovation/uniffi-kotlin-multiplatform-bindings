@@ -7,14 +7,15 @@
 package io.gitlab.trixnity.gradle.cargo.tasks
 
 import io.gitlab.trixnity.gradle.cargo.rust.targets.RustTarget
+import io.gitlab.trixnity.gradle.tasks.GloballyLockedTask
+import io.gitlab.trixnity.gradle.tasks.globalLock
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
-import java.util.concurrent.locks.ReentrantLock
 
 @CacheableTask
-abstract class RustUpTargetAddTask : RustUpTask() {
+abstract class RustUpTargetAddTask : RustUpTask(), GloballyLockedTask {
     @get:Input
     abstract val rustTarget: Property<RustTarget>
 
@@ -41,21 +42,13 @@ abstract class RustUpTargetAddTask : RustUpTask() {
 
     @TaskAction
     fun installToolchain() {
-        // TODO: Rewrite the following using a proper Gradle API, as well as CargoBuildTask which uses a file lock
-        targetAddLock.lock()
-        try {
+        globalLock("rustUpTargetAdd") {
             if (!isToolchainInstalled()) {
                 rustUp("target", "add", rustTarget.get().rustTriple)
                     .get().apply {
                         assertNormalExitValue()
                     }
             }
-        } finally {
-            targetAddLock.unlock()
         }
-    }
-
-    companion object {
-        private val targetAddLock = ReentrantLock()
     }
 }

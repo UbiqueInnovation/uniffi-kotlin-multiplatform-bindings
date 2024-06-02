@@ -91,9 +91,14 @@ class CargoPackage(project: Project, searchPath: Directory) {
     } ?: throw GradleException("Package ${packageId.name} does not have a library target")
 
     /**
+     * The directory of the workspace that contains this package.
+     */
+    val workspaceRoot: Directory = root.dir(metadata.workspaceRoot)
+
+    /**
      * The lock file of the workspace.
      */
-    val lockFile: RegularFile = root.dir(metadata.workspaceRoot).file("Cargo.lock")
+    val lockFile: RegularFile = workspaceRoot.file("Cargo.lock")
 
     /**
      * The name of the package, as defined in Cargo.toml.

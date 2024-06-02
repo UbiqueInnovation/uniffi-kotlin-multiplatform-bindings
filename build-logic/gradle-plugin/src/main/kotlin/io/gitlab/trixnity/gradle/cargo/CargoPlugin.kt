@@ -17,6 +17,7 @@ import io.gitlab.trixnity.gradle.cargo.rust.targets.RustJvmTarget
 import io.gitlab.trixnity.gradle.cargo.rust.targets.RustTarget
 import io.gitlab.trixnity.gradle.cargo.tasks.CargoCleanTask
 import io.gitlab.trixnity.gradle.cargo.tasks.RustUpTargetAddTask
+import io.gitlab.trixnity.gradle.tasks.useGlobalLock
 import io.gitlab.trixnity.gradle.utils.DependencyUtils
 import io.gitlab.trixnity.gradle.utils.PluginUtils
 import io.gitlab.trixnity.gradle.utils.register
@@ -64,6 +65,7 @@ class CargoPlugin : Plugin<Project> {
         cargoExtension.builds.jvm {
             jvmVariant.convention(cargoExtension.jvmVariant)
         }
+        target.useGlobalLock()
         target.watchPluginChanges()
         target.afterEvaluate {
             target.checkRequiredPlugins()

@@ -32,10 +32,10 @@ abstract class CommandTask : DefaultTask() {
     abstract val additionalEnvironmentPath: ListProperty<File>
 
     @get:Inject
-    abstract val projectLayout: ProjectLayout
+    internal abstract val projectLayout: ProjectLayout
 
     @get:Inject
-    abstract val providerFactory: ProviderFactory
+    internal abstract val providerFactory: ProviderFactory
 
     internal open fun configureFromProperties(spec: CommandSpec) = with(spec) {
         for ((key, value) in additionalEnvironment.get()) {
