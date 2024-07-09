@@ -1,0 +1,18 @@
+
+publishing {
+	repositories {
+		maven {
+			name = "Ubique"
+			url = project.property('ubiqueMavenUrl')
+			credentials {
+				username project.property('ubiqueMavenUser')
+				password project.property('ubiqueMavenPass')
+			}
+		}
+	}
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+	setPreserveFileTimestamps false
+	setReproducibleFileOrder true
+}
