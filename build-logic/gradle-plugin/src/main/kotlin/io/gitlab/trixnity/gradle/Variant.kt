@@ -19,10 +19,10 @@ enum class Variant {
     override fun toString(): String = name.lowercase()
 }
 
-fun Variant(s: String): Variant = when (s.lowercase()) {
-    "debug" -> Variant.Debug
-    "release" -> Variant.Release
-    else -> throw IllegalArgumentException("Invalid variant name: $s")
+fun Variant(s: String): Variant = if (s.lowercase().contains("release")) {
+    Variant.Release
+} else {
+    Variant.Debug
 }
 
 /**
