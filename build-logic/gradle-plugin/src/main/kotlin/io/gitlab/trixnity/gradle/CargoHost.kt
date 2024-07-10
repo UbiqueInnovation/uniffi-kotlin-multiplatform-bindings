@@ -75,7 +75,7 @@ data class CargoHost(val platform: Platform, val arch: Arch) : Serializable {
             private val macOsSupportedTargets: Array<RustTarget> = arrayOf(
                 RustAndroidTarget.entries,
                 RustAppleMobileTarget.entries,
-                RustPosixTarget.entries,
+                RustPosixTarget.macOSTargets.asList(),
             ).flatMap { it }.toTypedArray()
 
             private val linuxSupportedTargets: Array<RustTarget> = arrayOf(
