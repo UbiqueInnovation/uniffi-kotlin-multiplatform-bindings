@@ -1,76 +1,120 @@
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
-
-use std::fs;
-use std::fs::File;
-use std::io::Write;
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
-use uniffi_bindgen::{BindingGenerator, ComponentInterface};
+use fs_err as fs;
+use std::{collections::HashMap, fs::File, io::Write};
+use uniffi_bindgen::{BindingGenerator, Component, ComponentInterface, GenerationSettings};
 
-pub use gen_kotlin_multiplatform::generate_bindings;
+mod gen_kotlin_multiplatform;
+use gen_kotlin_multiplatform::{generate_bindings, Config};
 
-use crate::gen_kotlin_multiplatform::Config;
-
-pub mod gen_kotlin_multiplatform;
-
-pub struct KotlinMultiplatformBindings {
-    common: String,
-    jvm: String,
-    native: String,
-    header: String,
-}
-
-pub struct KotlinBindingGenerator {}
-
+pub struct KotlinBindingGenerator;
 impl BindingGenerator for KotlinBindingGenerator {
     type Config = Config;
 
-    fn write_bindings(
+    fn new_config(&self, root_toml: &toml::value::Value) -> Result<Self::Config> {
+        Ok(
+            match root_toml
+                .get("bindings")
+                .and_then(|b| b.get("kotlin-multiplatform"))
+            {
+                Some(v) => v.clone().try_into()?,
+                None => Default::default(),
+            },
+        )
+    }
+
+    fn update_component_configs(
         &self,
-        ci: &ComponentInterface,
-        config: &Self::Config,
-        out_dir: &Utf8Path,
+        settings: &GenerationSettings,
+        components: &mut Vec<Component<Self::Config>>,
     ) -> Result<()> {
-        let bindings = generate_bindings(config, ci)?;
-
-        create_target(ci, config, out_dir, "common", bindings.common);
-        create_target(ci, config, out_dir, "jvm", bindings.jvm);
-        create_target(ci, config, out_dir, "native", bindings.native);
-
-        create_cinterop(ci, out_dir, bindings.header);
-
+        for c in &mut *components {
+            c.config
+                .package_name
+                .get_or_insert_with(|| format!("uniffi.{}", c.ci.namespace()));
+            c.config.cdylib_name.get_or_insert_with(|| {
+                settings
+                    .cdylib
+                    .clone()
+                    .unwrap_or_else(|| format!("uniffi_{}", c.ci.namespace()))
+            });
+        }
+        // We need to update package names
+        let packages = HashMap::<String, String>::from_iter(
+            components
+                .iter()
+                .map(|c| (c.ci.crate_name().to_string(), c.config.package_name())),
+        );
+        for c in components {
+            for (ext_crate, ext_package) in &packages {
+                if ext_crate != c.ci.crate_name()
+                    && !c.config.external_packages.contains_key(ext_crate)
+                {
+                    c.config
+                        .external_packages
+                        .insert(ext_crate.to_string(), ext_package.clone());
+                }
+            }
+        }
         Ok(())
     }
 
-    fn check_library_path(&self, _library_path: &Utf8Path, _cdylib_name: Option<&str>) -> Result<()> {
-        // FIXME should we do something meaningful here?
-        // TODO debug when this method is called and what arguments are passed here
+    fn write_bindings(
+        &self,
+        settings: &GenerationSettings,
+        components: &[Component<Self::Config>],
+    ) -> Result<()> {
+        for Component { ci, config, .. } in components {
+            let bindings = generate_bindings(config, ci)?;
+
+            write_bindings_target(ci, config, &settings.out_dir, "common", bindings.common);
+            write_bindings_target(ci, config, &settings.out_dir, "jvm", bindings.jvm);
+            write_bindings_target(ci, config, &settings.out_dir, "android", bindings.android);
+            write_bindings_target(ci, config, &settings.out_dir, "ios", bindings.native);
+
+            // TODO: For later think about having to generate .def file!
+            write_cinterop(ci, &settings.out_dir, bindings.header);
+
+            if settings.try_format_code {
+                todo!()
+            }
+        }
         Ok(())
     }
 }
 
-fn create_target(ci: &ComponentInterface, config: &Config, out_dir: &Utf8Path, name: &str, content: String) {
-    let source_set_name = format!("{}Main", name);
-    let package_path: Utf8PathBuf = config.package_name().split(".").collect();
-    let file_name = format!("{}.{}.kt", ci.namespace(), name);
+fn write_bindings_target(
+    ci: &ComponentInterface,
+    config: &Config,
+    out_dir: &Utf8Path,
+    target: &str,
+    content: String,
+) {
+    let source_set_name = format!("{}Main", target);
+    let package_path: Utf8PathBuf = config.package_name().split('.').collect();
+    let file_name = format!("{}.{}.kt", ci.namespace(), target);
 
-    let dst_dir = Utf8PathBuf::from(out_dir)
-        .join(&source_set_name).join("kotlin").join(package_path);
-    let file_path = Utf8PathBuf::from(&dst_dir).join(file_name);
+    let dest_dir = Utf8PathBuf::from(out_dir)
+        .join(&source_set_name)
+        .join("kotlin")
+        .join(package_path);
+    let file_path = Utf8PathBuf::from(&dest_dir).join(file_name);
 
-    fs::create_dir_all(&dst_dir).unwrap();
+    fs::create_dir_all(dest_dir).unwrap();
     let mut f = File::create(&file_path).unwrap();
     write!(f, "{}", content).unwrap();
 }
 
-fn create_cinterop(ci: &ComponentInterface, out_dir: &Utf8Path, content: String) {
+fn write_cinterop(ci: &ComponentInterface, out_dir: &Utf8Path, content: String) {
     let dst_dir = Utf8PathBuf::from(out_dir)
-        .join("nativeInterop").join("cinterop").join("headers").join(ci.namespace());
+        .join("nativeInterop")
+        .join("cinterop")
+        .join("headers")
+        .join(ci.namespace());
     fs::create_dir_all(&dst_dir).unwrap();
     let file_path = Utf8PathBuf::from(dst_dir).join(format!("{}.h", ci.namespace()));
     let mut f = File::create(&file_path).unwrap();

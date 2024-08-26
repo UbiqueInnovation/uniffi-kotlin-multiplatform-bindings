@@ -1,13 +1,14 @@
-internal object FfiConverterByteArray: FfiConverterRustBuffer<kotlin.ByteArray> {
-    override fun read(buf: NoCopySource): kotlin.ByteArray {
-        val len = buf.readInt()
-        return buf.readByteArray(len.toLong())
+public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
+    override fun read(buf: ByteBuffer): ByteArray {
+        val len = buf.getInt()
+        val byteArr = buf.get(len.toLong())
+        return byteArr
     }
-    override fun allocationSize(value: kotlin.ByteArray): Int {
-        return 4 + value.size
+    override fun allocationSize(value: ByteArray): ULong {
+        return 4UL + value.size.toULong()
     }
-    override fun write(value: kotlin.ByteArray, buf: Buffer) {
-        buf.writeInt(value.size)
-        buf.write(value)
+    override fun write(value: ByteArray, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        buf.put(value)
     }
 }

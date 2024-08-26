@@ -1,18 +1,19 @@
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use super::CodeType;
 use paste::paste;
 use uniffi_bindgen::backend::Literal;
 use uniffi_bindgen::interface::{ComponentInterface, Radix, Type};
 
-use super::CodeType;
-
 fn render_literal(literal: &Literal, _ci: &ComponentInterface) -> String {
     fn typed_number(type_: &Type, num_str: String) -> String {
-        match type_ {
+        let unwrapped_type = match type_ {
+            Type::Optional { inner_type } => inner_type,
+            t => t,
+        };
+        match unwrapped_type {
             // Bytes, Shorts and Ints can all be inferred from the type.
             Type::Int8 | Type::Int16 | Type::Int32 => num_str,
             Type::Int64 => format!("{num_str}L"),
@@ -22,7 +23,7 @@ fn render_literal(literal: &Literal, _ci: &ComponentInterface) -> String {
 
             Type::Float32 => format!("{num_str}f"),
             Type::Float64 => num_str,
-            _ => panic!("Unexpected literal: {num_str} is not a number"),
+            _ => panic!("Unexpected literal: {num_str} for type: {type_:?}"),
         }
     }
 
@@ -52,18 +53,18 @@ fn render_literal(literal: &Literal, _ci: &ComponentInterface) -> String {
 }
 
 macro_rules! impl_code_type_for_primitive {
-    ($T:ty, $class_name:literal, $canonical_name:literal) => {
+    ($T:ty, $class_name:literal) => {
         paste! {
             #[derive(Debug)]
             pub struct $T;
 
             impl CodeType for $T  {
                 fn type_label(&self, _ci: &ComponentInterface) -> String {
-                    $class_name.into()
+                    format!("kotlin.{}", $class_name)
                 }
 
                 fn canonical_name(&self) -> String {
-                    $canonical_name.into()
+                    $class_name.into()
                 }
 
                 fn literal(&self, literal: &Literal, ci: &ComponentInterface) -> String {
@@ -74,16 +75,16 @@ macro_rules! impl_code_type_for_primitive {
     };
 }
 
-impl_code_type_for_primitive!(BooleanCodeType, "kotlin.Boolean", "Boolean");
-impl_code_type_for_primitive!(StringCodeType, "kotlin.String", "String");
-impl_code_type_for_primitive!(BytesCodeType, "kotlin.ByteArray", "ByteArray");
-impl_code_type_for_primitive!(Int8CodeType, "kotlin.Byte", "Byte");
-impl_code_type_for_primitive!(Int16CodeType, "kotlin.Short", "Short");
-impl_code_type_for_primitive!(Int32CodeType, "kotlin.Int", "Int");
-impl_code_type_for_primitive!(Int64CodeType, "kotlin.Long", "Long");
-impl_code_type_for_primitive!(UInt8CodeType, "kotlin.UByte", "UByte");
-impl_code_type_for_primitive!(UInt16CodeType, "kotlin.UShort", "UShort");
-impl_code_type_for_primitive!(UInt32CodeType, "kotlin.UInt", "UInt");
-impl_code_type_for_primitive!(UInt64CodeType, "kotlin.ULong", "ULong");
-impl_code_type_for_primitive!(Float32CodeType, "kotlin.Float", "Float");
-impl_code_type_for_primitive!(Float64CodeType, "kotlin.Double", "Double");
+impl_code_type_for_primitive!(BooleanCodeType, "Boolean");
+impl_code_type_for_primitive!(StringCodeType, "String");
+impl_code_type_for_primitive!(BytesCodeType, "ByteArray");
+impl_code_type_for_primitive!(Int8CodeType, "Byte");
+impl_code_type_for_primitive!(Int16CodeType, "Short");
+impl_code_type_for_primitive!(Int32CodeType, "Int");
+impl_code_type_for_primitive!(Int64CodeType, "Long");
+impl_code_type_for_primitive!(UInt8CodeType, "UByte");
+impl_code_type_for_primitive!(UInt16CodeType, "UShort");
+impl_code_type_for_primitive!(UInt32CodeType, "UInt");
+impl_code_type_for_primitive!(UInt64CodeType, "ULong");
+impl_code_type_for_primitive!(Float32CodeType, "Float");
+impl_code_type_for_primitive!(Float64CodeType, "Double");

@@ -1,12 +1,9 @@
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
-
-use uniffi_bindgen::interface::{ComponentInterface, Variant};
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use super::{CodeType, KotlinCodeOracle};
+use uniffi_bindgen::interface::{ComponentInterface, Variant};
 
 #[derive(Debug)]
 pub(super) struct VariantCodeType {
@@ -23,8 +20,19 @@ impl CodeType for VariantCodeType {
     }
 }
 
-// impl AsCodeType for Variant
-// impl AsCodeType for &Variant
+/*
 // conflicts with the generic impl of AsCodeType in mod.rs
 // because Variant is not a local type (comes from uniffi_bindgen).
 // So we inline the implementation in filters::variant_type_name, as a workaround.
+impl AsCodeType for Variant {
+    fn as_codetype(&self) -> Box<dyn CodeType> {
+        Box::new(VariantCodeType { v: self.clone() })
+    }
+}
+
+impl AsCodeType for &Variant {
+    fn as_codetype(&self) -> Box<dyn CodeType> {
+        Box::new(VariantCodeType { v: (*self).clone() })
+    }
+}
+*/

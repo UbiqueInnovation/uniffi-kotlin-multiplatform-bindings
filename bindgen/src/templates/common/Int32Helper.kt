@@ -1,19 +1,19 @@
-internal object FfiConverterInt : FfiConverter<kotlin.Int, kotlin.Int> {
-    override fun lift(value: kotlin.Int): kotlin.Int {
+public object FfiConverterInt: FfiConverter<Int, Int> {
+    override fun lift(value: Int): Int {
         return value
     }
 
-    override fun read(buf: NoCopySource): kotlin.Int {
-        return buf.readInt()
+    override fun read(buf: ByteBuffer): Int {
+        return buf.getInt()
     }
 
-    override fun lower(value: kotlin.Int): kotlin.Int {
+    override fun lower(value: Int): Int {
         return value
     }
 
-    override fun allocationSize(value: kotlin.Int) = 4
+    override fun allocationSize(value: Int) = 4UL
 
-    override fun write(value: kotlin.Int, buf: Buffer) {
-        buf.writeInt(value)
+    override fun write(value: Int, buf: ByteBuffer) {
+        buf.putInt(value)
     }
 }

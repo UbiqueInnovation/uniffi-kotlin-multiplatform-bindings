@@ -1,39 +1,48 @@
 // A handful of classes and functions to support the generated data structures.
 // This would be a good candidate for isolating in its own ffi-support lib.
-// Error runtime.
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("NO_ACTUAL_FOR_EXPECT")
-internal expect class RustCallStatus
-internal expect val RustCallStatus.statusCode: kotlin.Byte
-internal expect val RustCallStatus.errorBuffer: RustBuffer
 
-internal expect fun <T> withRustCallStatus(block: (RustCallStatus) -> T): T
+internal const val UNIFFI_CALL_SUCCESS = 0.toByte()
+internal const val UNIFFI_CALL_ERROR = 1.toByte()
+internal const val UNIFFI_CALL_UNEXPECTED_ERROR = 2.toByte()
 
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("NO_ACTUAL_FOR_EXPECT")
-internal expect class RustCallStatusByValue
+internal expect class UniffiRustCallStatus
+internal expect var UniffiRustCallStatus.code: Byte
+internal expect var UniffiRustCallStatus.error_buf: RustBufferByValue
 
-private const val RUST_CALL_STATUS_SUCCESS: kotlin.Byte = 0
-private const val RUST_CALL_STATUS_ERROR: kotlin.Byte = 1
-private const val RUST_CALL_STATUS_PANIC: kotlin.Byte = 2
+internal expect class UniffiRustCallStatusByValue
+internal expect var UniffiRustCallStatusByValue.code: Byte
+internal expect var UniffiRustCallStatusByValue.error_buf: RustBufferByValue
 
-internal fun RustCallStatus.isSuccess(): kotlin.Boolean {
-    return statusCode == RUST_CALL_STATUS_SUCCESS
-}
+internal expect object UniffiRustCallStatusHelper
+internal expect fun UniffiRustCallStatusHelper.allocValue(): UniffiRustCallStatusByValue
+internal expect fun <U> UniffiRustCallStatusHelper.withReference(
+    block: (UniffiRustCallStatus) -> U
+): U
 
-internal fun RustCallStatus.isError(): kotlin.Boolean {
-    return statusCode == RUST_CALL_STATUS_ERROR
-}
+// Default Implementations
+internal fun UniffiRustCallStatus.isSuccess(): Boolean
+    = code == UNIFFI_CALL_SUCCESS
 
-internal fun RustCallStatus.isPanic(): kotlin.Boolean {
-    return statusCode == RUST_CALL_STATUS_PANIC
-}
+internal fun UniffiRustCallStatus.isError(): Boolean
+    = code == UNIFFI_CALL_ERROR
 
-class InternalException(message: kotlin.String) : Exception(message)
+internal fun UniffiRustCallStatus.isPanic(): Boolean
+    = code == UNIFFI_CALL_UNEXPECTED_ERROR
+
+internal fun UniffiRustCallStatusByValue.isSuccess(): Boolean
+    = code == UNIFFI_CALL_SUCCESS
+
+internal fun UniffiRustCallStatusByValue.isError(): Boolean
+    = code == UNIFFI_CALL_ERROR
+
+internal fun UniffiRustCallStatusByValue.isPanic(): Boolean
+    = code == UNIFFI_CALL_UNEXPECTED_ERROR
+
+class InternalException(message: String) : kotlin.Exception(message)
 
 // Each top-level error class has a companion object that can lift the error from the call status's rust buffer
-internal interface CallStatusErrorHandler<E> {
-    fun lift(errorBuffer: RustBuffer): E;
+interface UniffiRustCallStatusErrorHandler<E> {
+    fun lift(error_buf: RustBufferByValue): E;
 }
 
 // Helpers for calling Rust
@@ -41,29 +50,26 @@ internal interface CallStatusErrorHandler<E> {
 // synchronize itself
 
 // Call a rust function that returns a Result<>.  Pass in the Error class companion that corresponds to the Err
-internal inline fun <U, E : Exception> rustCallWithError(
-    errorHandler: CallStatusErrorHandler<E>,
-    crossinline callback: (RustCallStatus) -> U,
-): U =
-    withRustCallStatus { status: RustCallStatus ->
-        val return_value = callback(status)
-        checkCallStatus(errorHandler, status)
-        return_value
+internal inline fun <U, E: kotlin.Exception> uniffiRustCallWithError(errorHandler: UniffiRustCallStatusErrorHandler<E>, crossinline callback: (UniffiRustCallStatus) -> U): U {
+    return UniffiRustCallStatusHelper.withReference() { status ->
+        val returnValue = callback(status)
+        uniffiCheckCallStatus(errorHandler, status)
+        returnValue
     }
+}
 
-// Check RustCallStatus and throw an error if the call wasn't successful
-internal fun <E : Exception> checkCallStatus(errorHandler: CallStatusErrorHandler<E>, status: RustCallStatus) {
+// Check `status` and throw an error if the call wasn't successful
+internal fun<E: kotlin.Exception> uniffiCheckCallStatus(errorHandler: UniffiRustCallStatusErrorHandler<E>, status: UniffiRustCallStatus) {
     if (status.isSuccess()) {
         return
     } else if (status.isError()) {
-        throw errorHandler.lift(status.errorBuffer)
+        throw errorHandler.lift(status.error_buf)
     } else if (status.isPanic()) {
         // when the rust code sees a panic, it tries to construct a rustbuffer
         // with the message.  but if that code panics, then it just sends back
         // an empty buffer.
-        if (status.errorBuffer.dataSize > 0) {
-            // TODO avoid additional copy
-            throw InternalException(FfiConverterString.lift(status.errorBuffer))
+        if (status.error_buf.len > 0) {
+            throw InternalException({{ Type::String.borrow()|lift_fn }}(status.error_buf))
         } else {
             throw InternalException("Rust panic")
         }
@@ -72,36 +78,47 @@ internal fun <E : Exception> checkCallStatus(errorHandler: CallStatusErrorHandle
     }
 }
 
-// CallStatusErrorHandler implementation for times when we don't expect a CALL_ERROR
-internal object NullCallStatusErrorHandler : CallStatusErrorHandler<InternalException> {
-    override fun lift(errorBuffer: RustBuffer): InternalException {
-        errorBuffer.free()
+// UniffiRustCallStatusErrorHandler implementation for times when we don't expect a CALL_ERROR
+object UniffiNullRustCallStatusErrorHandler: UniffiRustCallStatusErrorHandler<InternalException> {
+    override fun lift(error_buf: RustBufferByValue): InternalException {
+        RustBufferHelper.free(error_buf)
         return InternalException("Unexpected CALL_ERROR")
     }
 }
 
 // Call a rust function that returns a plain value
-internal inline fun <U> rustCall(crossinline callback: (RustCallStatus) -> U): U {
-    return rustCallWithError(NullCallStatusErrorHandler, callback);
+internal inline fun <U> uniffiRustCall(crossinline callback: (UniffiRustCallStatus) -> U): U {
+    return uniffiRustCallWithError(UniffiNullRustCallStatusErrorHandler, callback)
 }
 
-// Map handles to objects
-//
-// This is used when the Rust code expects an opaque pointer to represent some foreign object.
-// Normally we would pass a pointer to the object, but JNA doesn't support getting a pointer from an
-// object reference , nor does it support leaking a reference to Rust.
-//
-// Instead, this class maps ULong values to objects so that we can pass a pointer-sized type to
-// Rust when it needs an opaque pointer.
-//
-// TODO: refactor callbacks to use this class
-internal expect class UniFfiHandleMap<T : Any>() {
+internal inline fun<T> uniffiTraitInterfaceCall(
+    callStatus: UniffiRustCallStatus,
+    makeCall: () -> T,
+    writeReturn: (T) -> Unit,
+) {
+    try {
+        writeReturn(makeCall())
+    } catch(e: kotlin.Exception) {
+        callStatus.code = UNIFFI_CALL_UNEXPECTED_ERROR
+        callStatus.error_buf = {{ Type::String.borrow()|lower_fn }}(e.toString())
+    }
+}
 
-    val size: kotlin.Int
-
-    fun insert(obj: T): kotlin.ULong
-
-    fun get(handle: kotlin.ULong): T?
-
-    fun remove(handle: kotlin.ULong): T?
+internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallWithError(
+    callStatus: UniffiRustCallStatus,
+    makeCall: () -> T,
+    writeReturn: (T) -> Unit,
+    lowerError: (E) -> RustBufferByValue
+) {
+    try {
+        writeReturn(makeCall())
+    } catch(e: kotlin.Exception) {
+        if (e is E) {
+            callStatus.code = UNIFFI_CALL_ERROR
+            callStatus.error_buf = lowerError(e)
+        } else {
+            callStatus.code = UNIFFI_CALL_UNEXPECTED_ERROR
+            callStatus.error_buf = {{ Type::String.borrow()|lower_fn }}(e.toString())
+        }
+    }
 }

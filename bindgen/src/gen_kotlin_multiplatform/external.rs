@@ -1,12 +1,9 @@
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
-
-use uniffi_bindgen::ComponentInterface;
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use super::CodeType;
+use uniffi_bindgen::ComponentInterface;
 
 #[derive(Debug)]
 pub struct ExternalCodeType {
@@ -20,8 +17,8 @@ impl ExternalCodeType {
 }
 
 impl CodeType for ExternalCodeType {
-    fn type_label(&self, _ci: &ComponentInterface) -> String {
-        self.name.clone()
+    fn type_label(&self, ci: &ComponentInterface) -> String {
+        super::KotlinCodeOracle.class_name(ci, &self.name)
     }
 
     fn canonical_name(&self) -> String {

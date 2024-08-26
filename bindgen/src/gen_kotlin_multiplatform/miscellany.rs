@@ -1,13 +1,10 @@
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
-
-use paste::paste;
-use uniffi_bindgen::ComponentInterface;
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use super::CodeType;
+use paste::paste;
+use uniffi_bindgen::ComponentInterface;
 
 macro_rules! impl_code_type_for_miscellany {
     ($T:ty, $class_name:literal, $canonical_name:literal) => {

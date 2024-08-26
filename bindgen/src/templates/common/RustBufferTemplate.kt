@@ -1,53 +1,65 @@
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("NO_ACTUAL_FOR_EXPECT")
-internal expect class Pointer
+// This is a helper for safely working with byte buffers returned from the Rust code.
+// A rust-owned buffer is represented by its capacity, its current length, and a
+// pointer to the underlying data.
 
-internal expect fun kotlin.Long.toPointer(): Pointer
+expect class RustBuffer
+internal expect var RustBuffer.capacity: Long
+internal expect var RustBuffer.len: Long
+internal expect var RustBuffer.data: Pointer?
+internal expect fun RustBuffer.asByteBuffer(): ByteBuffer?
 
-internal expect fun Pointer.toLong(): kotlin.Long
-
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("NO_ACTUAL_FOR_EXPECT")
-internal expect class UBytePointer
-
-internal expect fun UBytePointer.asSource(len: kotlin.Long): NoCopySource
-
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("NO_ACTUAL_FOR_EXPECT")
-internal expect class RustBuffer
-
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("NO_ACTUAL_FOR_EXPECT")
-internal expect class RustBufferByReference
-
-internal expect fun RustBuffer.asSource(): NoCopySource
-
-internal expect val RustBuffer.dataSize: kotlin.Int
-
-internal expect fun RustBuffer.free()
-
-internal expect fun allocRustBuffer(buffer: Buffer): RustBuffer
-
-internal expect fun RustBufferByReference.setValue(value: RustBuffer)
-
-internal expect fun emptyRustBuffer(): RustBuffer
-
-internal interface NoCopySource {
-    fun exhausted(): kotlin.Boolean
-    fun readByte(): kotlin.Byte
-    fun readInt(): kotlin.Int
-    fun readLong(): kotlin.Long
-    fun readShort(): kotlin.Short
-    fun readByteArray(): ByteArray
-    fun readByteArray(len: kotlin.Long): ByteArray
+fun RustBuffer.setValue(array: RustBufferByValue) {
+    this.data = array.data
+    this.len = array.len
+    this.capacity = array.capacity
 }
+
+expect class RustBufferByValue
+internal expect var RustBufferByValue.capacity: Long
+internal expect var RustBufferByValue.len: Long
+internal expect var RustBufferByValue.data: Pointer?
+internal expect fun RustBufferByValue.asByteBuffer(): ByteBuffer?
+
+internal expect object RustBufferHelper
+internal expect fun RustBufferHelper.allocFromByteBuffer(buffer: ByteBuffer): RustBufferByValue
+internal fun RustBufferHelper.allocValue(size: ULong = 0UL): RustBufferByValue = uniffiRustCall() { status ->
+    // Note: need to convert the size to a `Long` value to make this work with JVM.
+    UniffiLib.INSTANCE.{{ ci.ffi_rustbuffer_alloc().name() }}(size.toLong(), status)
+}.also {
+    if(it.data == null) {
+        throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=${size})")
+    }
+}
+internal fun RustBufferHelper.free(buf: RustBufferByValue) = uniffiRustCall() { status ->
+    UniffiLib.INSTANCE.{{ ci.ffi_rustbuffer_free().name() }}(buf, status)!!
+}
+
+/**
+ * The equivalent of the `*mut RustBuffer` type.
+ * Required for callbacks taking in an out pointer.
+ *
+ * Size is the sum of all values in the struct.
+ */
+internal expect class RustBufferByReference
+/**
+ * Set the pointed-to `RustBuffer` to the given value.
+ */
+internal expect fun RustBufferByReference.setValue(value: RustBufferByValue)
+/**
+ * Get a `RustBufferByValue` from this reference.
+ */ 
+internal expect fun RustBufferByReference.getValue(): RustBufferByValue
+
 
 // This is a helper for safely passing byte references into the rust code.
 // It's not actually used at the moment, because there aren't many things that you
 // can take a direct pointer to in the JVM, and if we're going to copy something
 // then we might as well copy it into a `RustBuffer`. But it's here for API
 // completeness.
-
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("NO_ACTUAL_FOR_EXPECT")
 internal expect class ForeignBytes
+internal expect var ForeignBytes.len: Int
+internal expect var ForeignBytes.data: Pointer?
+
+internal expect class ForeignBytesByValue
+internal expect var ForeignBytesByValue.len: Int
+internal expect var ForeignBytesByValue.data: Pointer?

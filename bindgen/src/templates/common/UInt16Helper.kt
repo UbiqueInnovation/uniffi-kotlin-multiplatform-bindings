@@ -1,19 +1,19 @@
-internal object FfiConverterUShort : FfiConverter<kotlin.UShort, kotlin.UShort> {
-    override fun lift(value: kotlin.UShort): kotlin.UShort {
-        return value
+public object FfiConverterUShort: FfiConverter<UShort, Short> {
+    override fun lift(value: Short): UShort {
+        return value.toUShort()
     }
 
-    override fun read(buf: NoCopySource): kotlin.UShort {
-        return lift(buf.readShort().toUShort())
+    override fun read(buf: ByteBuffer): UShort {
+        return lift(buf.getShort())
     }
 
-    override fun lower(value: kotlin.UShort): kotlin.UShort {
-        return value
+    override fun lower(value: UShort): Short {
+        return value.toShort()
     }
 
-    override fun allocationSize(value: kotlin.UShort) = 2
+    override fun allocationSize(value: UShort) = 2UL
 
-    override fun write(value: kotlin.UShort, buf: Buffer) {
-        buf.writeShort(value.toInt())
+    override fun write(value: UShort, buf: ByteBuffer) {
+        buf.putShort(value.toShort())
     }
 }

@@ -1,12 +1,9 @@
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
-
-use uniffi_bindgen::ComponentInterface;
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use super::CodeType;
+use uniffi_bindgen::ComponentInterface;
 
 #[derive(Debug)]
 pub struct CallbackInterfaceCodeType {
@@ -29,6 +26,6 @@ impl CodeType for CallbackInterfaceCodeType {
     }
 
     fn initialization_fn(&self) -> Option<String> {
-        Some(format!("{}.register", self.ffi_converter_name()))
+        Some(format!("uniffiCallbackInterface{}.register", self.id))
     }
 }
