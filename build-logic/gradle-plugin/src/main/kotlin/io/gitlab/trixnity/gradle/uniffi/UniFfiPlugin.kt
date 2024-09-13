@@ -234,9 +234,10 @@ class UniFfiPlugin : Plugin<Project> {
         kotlinMultiplatformExtension.sourceSets { sourceSets ->
             val mainSourceSet = sourceSets.getByName("${kotlinAndroidTarget.name}Main")
             with(mainSourceSet) {
-                kotlin.srcDir(jvmBindingsDirectory)
+                kotlin.srcDir(androidBindingsDirectory)
                 dependencies {
                     implementation("net.java.dev.jna:jna:${DependencyVersions.JNA}@aar")
+                    implementation("androidx.annotation:annotation:${DependencyVersions.ANDROIDX_ANNOTATION}")
                 }
             }
         }
@@ -293,6 +294,9 @@ private val Project.commonBindingsDirectory: Provider<Directory>
 
 private val Project.jvmBindingsDirectory: Provider<Directory>
     get() = bindingsDirectory.map { it.dir("jvmMain/kotlin") }
+
+private val Project.androidBindingsDirectory: Provider<Directory>
+    get() = bindingsDirectory.map { it.dir("androidMain/kotlin") }
 
 private val Project.nativeBindingsDirectory: Provider<Directory>
     get() = bindingsDirectory.map { it.dir("nativeMain/kotlin") }

@@ -131,6 +131,7 @@ impl Config {
 pub struct MultiplatformBindings {
     pub common: String,
     pub jvm: String,
+    pub android: String,
     pub native: String,
     pub header: String,
 }
@@ -148,6 +149,10 @@ pub fn generate_bindings(
         .render()
         .context("failed to render kotlin/jvm bindings")?;
 
+    let android = AndroidKotlinWrapper::new(config.clone(), ci)
+        .render()
+        .context("failed to render kotlin/android bindings")?;
+
     let native = NativeKotlinWrapper::new(config.clone(), ci)
         .render()
         .context("failed to render kotlin/native bindings")?;
@@ -159,6 +164,7 @@ pub fn generate_bindings(
     Ok(MultiplatformBindings {
         common,
         jvm,
+        android,
         native,
         header,
     })
@@ -310,6 +316,13 @@ kotlin_wrapper!(CommonKotlinWrapper, CommonTypeRenderer, "common/wrapper.kt");
 
 kotlin_type_renderer!(JvmTypeRenderer, "jvm/Types.kt");
 kotlin_wrapper!(JvmKotlinWrapper, JvmTypeRenderer, "jvm/wrapper.kt");
+
+kotlin_type_renderer!(AndroidTypeRenderer, "android/Types.kt");
+kotlin_wrapper!(
+    AndroidKotlinWrapper,
+    AndroidTypeRenderer,
+    "android/wrapper.kt"
+);
 
 kotlin_type_renderer!(NativeTypeRenderer, "native/Types.kt");
 kotlin_wrapper!(NativeKotlinWrapper, NativeTypeRenderer, "native/wrapper.kt");

@@ -121,7 +121,6 @@ sealed class BindingsGeneration(internal val project: Project) {
 
     /**
      * Path to the optional uniffi config file.
-     * If not provided, uniffi-bindgen will try to guess it.
      */
     abstract val config: RegularFileProperty
 }

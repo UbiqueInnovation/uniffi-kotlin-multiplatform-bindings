@@ -12,6 +12,7 @@ kotlinx-atomicfu = "0.24.0"
 kotlinx-datetime = "0.4.1"
 
 androidx-activity-compose = "1.8.2"
+androidx-annotation = "1.8.2"
 
 okio = "3.6.0"
 jna = "5.13.0"
