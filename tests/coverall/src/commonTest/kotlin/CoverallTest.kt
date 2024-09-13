@@ -13,9 +13,21 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
 import kotlin.math.abs
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 
 class CoverallTest {
+    private val GC_DELAY: Long = 10L
+
+    private fun runGCWithDelay() {
+        runGC()
+        runBlocking { delay(GC_DELAY) }
+    }
+
+    @BeforeTest
+    fun gcBetweenTests() {
+        runGCWithDelay()
+    }
 
     @Test
     fun dict() {
@@ -78,8 +90,14 @@ class CoverallTest {
                 coveralls.falliblePanic("Expected panic in a fallible function!")
             }
             coveralls.takeOther(null)
+
+            runGCWithDelay()
+
             coveralls.strongCount() shouldBe 2UL
         }
+
+        runGCWithDelay()
+
         getNumAlive() shouldBe 0UL
     }
 
@@ -103,6 +121,9 @@ class CoverallTest {
             // be dropped as coveralls hold an `Arc<>` to it.
             getNumAlive() shouldBe 2UL
         }
+
+        runGCWithDelay()
+
         // Destroying `coveralls` will kill both.
         getNumAlive() shouldBe 0UL
 
