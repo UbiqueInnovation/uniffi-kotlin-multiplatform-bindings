@@ -10,5 +10,5 @@ crate-type = ["cdylib", "staticlib"]
 path = "src/commonMain/rust/lib.rs"
 
 [dependencies]
-uniffi = "0.25.2"
+uniffi = "0.28.0"
 thiserror = "1.0"
