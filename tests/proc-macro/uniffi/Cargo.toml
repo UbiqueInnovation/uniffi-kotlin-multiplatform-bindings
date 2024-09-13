@@ -9,10 +9,10 @@ name = "uniffi_kmm_fixture_proc_macro"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-uniffi = "0.25.2"
+uniffi = "0.28.0"
 thiserror = "1.0"
 lazy_static = "1.4"
 
 [build-dependencies]
-uniffi = { version = "0.25.2", features = ["build"] }
+uniffi = { version = "0.28.0", features = ["build"] }
 camino = "1.1.1"
