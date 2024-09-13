@@ -1,89 +1,97 @@
-// Suppressing the diagnostics caused by https://youtrack.jetbrains.com/issue/KT-37316
-@Suppress("ACTUAL_WITHOUT_EXPECT")
-internal actual typealias Pointer = com.sun.jna.Pointer
 
-internal actual fun kotlin.Long.toPointer() = com.sun.jna.Pointer(this)
+@Structure.FieldOrder("capacity", "len", "data")
+open class RustBufferStruct : Structure() {
+    // Note: `capacity` and `len` are actually `ULong` values, but JVM only supports signed values.
+    // When dealing with these fields, make sure to call `toULong()`.
+    @JvmField internal var capacity: Long = 0
+    @JvmField internal var len: Long = 0
+    @JvmField internal var data: Pointer? = null
 
-internal actual fun Pointer.toLong(): kotlin.Long = com.sun.jna.Pointer.nativeValue(this)
-
-// Suppressing the diagnostics caused by https://youtrack.jetbrains.com/issue/KT-37316
-@Suppress("ACTUAL_WITHOUT_EXPECT")
-internal actual typealias UBytePointer = com.sun.jna.Pointer
-
-internal actual fun UBytePointer.asSource(len: kotlin.Long): NoCopySource = object : NoCopySource {
-    val buffer = getByteBuffer(0, len).also {
-        it.order(java.nio.ByteOrder.BIG_ENDIAN)
-    }
-
-    override fun exhausted(): kotlin.Boolean = !buffer.hasRemaining()
-
-    override fun readByte(): kotlin.Byte = buffer.get()
-
-    override fun readInt(): kotlin.Int = buffer.getInt()
-
-    override fun readLong(): kotlin.Long = buffer.getLong()
-
-    override fun readShort(): kotlin.Short = buffer.getShort()
-
-    override fun readByteArray(): ByteArray {
-        val remaining = buffer.remaining()
-        return readByteArray(remaining.toLong())
-    }
-
-    override fun readByteArray(len: kotlin.Long): ByteArray {
-        val startIndex = buffer.position().toLong()
-        val indexAfterLast = (startIndex + len).toInt()
-        val byteArray = getByteArray(startIndex, len.toInt())
-        buffer.position(indexAfterLast)
-        return byteArray
-    }
+    class ByValue: RustBuffer(), Structure.ByValue
+    class ByReference: RustBuffer(), Structure.ByReference
 }
 
-@com.sun.jna.Structure.FieldOrder("capacity", "len", "data")
-internal open class RustBufferStructure : com.sun.jna.Structure() {
-    @JvmField var capacity: kotlin.Int = 0
-    @JvmField var len: kotlin.Int = 0
-    @JvmField var data: com.sun.jna.Pointer? = null
+actual typealias RustBuffer = RustBufferStruct
+internal actual var RustBuffer.capacity: Long
+    get() = this.capacity
+    set(value) { this.capacity = value }
+internal actual var RustBuffer.len: Long
+    get() = this.len
+    set(value) { this.len = value }
+internal actual var RustBuffer.data: Pointer?
+    get() = this.data
+    set(value) { this.data = value }
+internal actual fun RustBuffer.asByteBuffer(): ByteBuffer? {
+    val ibuf = data?.getByteBuffer(0L, this.len.toLong()) ?: return null
+    // Read java.nio.ByteBuffer into ByteArray
+    val arr = ByteArray(ibuf.remaining())
+    ibuf.get(arr)
+    // Put ByteArray into common ByteBuffer
+    val buffer = ByteBuffer()
+    buffer.put(arr)
+    return buffer
 }
 
-internal actual open class RustBuffer : RustBufferStructure(), com.sun.jna.Structure.ByValue
-
-internal actual class RustBufferByReference : com.sun.jna.ptr.ByReference(16) {
-    fun setValueInternal(value: RustBuffer) {
-        pointer.setInt(0, value.capacity)
-        pointer.setInt(4, value.len)
-        pointer.setPointer(8, value.data)
-    }
+actual typealias RustBufferByValue = RustBufferStruct.ByValue
+internal actual var RustBufferByValue.capacity: Long
+    get() = this.capacity
+    set(value) { this.capacity = value }
+internal actual var RustBufferByValue.len: Long
+    get() = this.len
+    set(value) { this.len = value }
+internal actual var RustBufferByValue.data: Pointer?
+    get() = this.data
+    set(value) { this.data = value }
+internal actual fun RustBufferByValue.asByteBuffer(): ByteBuffer? {
+    val ibuf = data?.getByteBuffer(0L, this.len.toLong()) ?: return null
+    // Read java.nio.ByteBuffer into ByteArray
+    val arr = ByteArray(ibuf.remaining())
+    ibuf.get(arr)
+    // Put ByteArray into common ByteBuffer
+    val buffer = ByteBuffer()
+    buffer.put(arr)
+    return buffer
 }
 
-internal actual fun RustBuffer.asSource(): NoCopySource = requireNotNull(data).asSource(len.toLong())
 
-internal actual val RustBuffer.dataSize: kotlin.Int
-    get() = len
+internal actual object RustBufferHelper
+internal actual fun RustBufferHelper.allocFromByteBuffer(buffer: ByteBuffer): RustBufferByValue
+     = uniffiRustCall() { status ->
+        // Note: need to convert the size to a `Long` value to make this work with JVM.
+        UniffiLib.INSTANCE.{{ ci.ffi_rustbuffer_alloc().name() }}(buffer.internal().size.toLong(), status)!!
+    }.also {
+        val size = buffer.internal().size
 
-internal actual fun RustBuffer.free() =
-    rustCall { status: {{ config.package_name() }}.RustCallStatus ->
-        UniFFILib.{{ ci.ffi_rustbuffer_free().name() }}(this, status)
-    }
+        if(it.data == null) {
+            throw RuntimeException("{{ ci.ffi_rustbuffer_alloc().name() }}() returned null data pointer (size=${size})")
+        }
 
-internal actual fun allocRustBuffer(buffer: Buffer): RustBuffer =
-    rustCall { status: {{ config.package_name() }}.RustCallStatus ->
-        val size = buffer.size
-        var readPosition = 0L
-        UniFFILib.{{ ci.ffi_rustbuffer_alloc().name() }}(size.toInt(), status).also { rustBuffer: RustBuffer ->
-            val data = rustBuffer.data
-                ?: throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=${size})")
-            rustBuffer.writeField("len", size.toInt())
-            // Loop until the buffer is completed read, okio reads max 8192 bytes
-            while (readPosition < size) {
-                readPosition += buffer.read(data.getByteBuffer(readPosition, size - readPosition))
-            }
+        var readPos = 0L
+        it.writeField("len", size.toLong())
+        // Loop until the buffer is completed read, okio reads max 8192 bytes
+        while (readPos < size) {
+            readPos += buffer.internal().read(it.data!!.getByteBuffer(readPos, size - readPos))
         }
     }
 
-internal actual fun RustBufferByReference.setValue(value: RustBuffer) = setValueInternal(value)
+internal actual class RustBufferByReference : com.sun.jna.ptr.ByReference(16)
+internal actual fun RustBufferByReference.setValue(value: RustBufferByValue) {
+    // NOTE: The offsets are as they are in the C-like struct.
+    val pointer = getPointer()
+    pointer.setLong(0, value.capacity)
+    pointer.setLong(8, value.len)
+    pointer.setPointer(16, value.data)
+}
+internal actual fun RustBufferByReference.getValue(): RustBufferByValue {
+    val pointer = getPointer()
+    val value = RustBufferByValue()
+    value.writeField("capacity", pointer.getLong(0))
+    value.writeField("len", pointer.getLong(8))
+    value.writeField("data", pointer.getLong(16))
+    return value
+}
 
-internal actual fun emptyRustBuffer(): RustBuffer = RustBuffer()
+
 
 // This is a helper for safely passing byte references into the rust code.
 // It's not actually used at the moment, because there aren't many things that you
@@ -91,8 +99,26 @@ internal actual fun emptyRustBuffer(): RustBuffer = RustBuffer()
 // then we might as well copy it into a `RustBuffer`. But it's here for API
 // completeness.
 
-@com.sun.jna.Structure.FieldOrder("len", "data")
-internal actual open class ForeignBytes : com.sun.jna.Structure() {
-    @JvmField var len: kotlin.Int = 0
-    @JvmField var data: com.sun.jna.Pointer? = null
+@Structure.FieldOrder("len", "data")
+internal open class ForeignBytesStruct : Structure() {
+    @JvmField internal var len: Int = 0
+    @JvmField internal var data: Pointer? = null
+
+    internal class ByValue : ForeignBytes(), Structure.ByValue
 }
+
+internal actual typealias ForeignBytes = ForeignBytesStruct
+internal actual var ForeignBytes.len: Int
+    get() = this.len
+    set(value) { this.len = value }
+internal actual var ForeignBytes.data: Pointer?
+    get() = this.data
+    set(value) { this.data = value }
+
+internal actual typealias ForeignBytesByValue = ForeignBytesStruct.ByValue
+internal actual var ForeignBytesByValue.len: Int
+    get() = this.len
+    set(value) { this.len = value }
+internal actual var ForeignBytesByValue.data: Pointer?
+    get() = this.data
+    set(value) { this.data = value }

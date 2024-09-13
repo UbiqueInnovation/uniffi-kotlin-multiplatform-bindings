@@ -1,148 +1,101 @@
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_USE_SITE_VARIANCE")
-internal actual typealias Pointer = kotlinx.cinterop.CPointer<out kotlinx.cinterop.CPointed>
 
-internal actual fun kotlin.Long.toPointer(): Pointer = requireNotNull(this.toCPointer())
+internal actual typealias RustBuffer = CPointer<{{ ci.namespace() }}.cinterop.RustBuffer>
 
-internal actual fun Pointer.toLong(): kotlin.Long = this.rawValue.toLong()
+internal actual var RustBuffer.capacity: Long
+    get() = pointed.capacity
+    set(value) { pointed.capacity = value }
+internal actual var RustBuffer.len: Long
+    get() = pointed.len
+    set(value) { pointed.len = value }
+internal actual var RustBuffer.data: Pointer?
+    get() = pointed.data
+    set(value) { pointed.data = value?.reinterpret() }
+internal actual fun RustBuffer.asByteBuffer(): ByteBuffer? {
+    val buffer = ByteBuffer()
+    val data = pointed.data?.reinterpret<kotlinx.cinterop.ByteVar>() ?: return null
 
-@Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_USE_SITE_VARIANCE", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
-internal actual typealias UBytePointer = kotlinx.cinterop.CPointer<kotlinx.cinterop.UByteVar>
+    if (pointed.len < 0L)
+        throw IllegalStateException("Trying to call asByteBuffer with negative length")
 
-@Suppress("NOTHING_TO_INLINE") // Syntactic sugar.
-internal inline infix fun kotlin.Byte.and(other: kotlin.Long): kotlin.Long = toLong() and other
+    if (pointed.len == 0L)
+        return buffer
 
-@Suppress("NOTHING_TO_INLINE") // Syntactic sugar.
-internal inline infix fun kotlin.Byte.and(other: kotlin.Int): kotlin.Int = toInt() and other
-
-// byte twiddling was basically pasted from okio
-internal actual fun UBytePointer.asSource(len: kotlin.Long): NoCopySource = object : NoCopySource {
-    var readBytes: kotlin.Int = 0
-    var remaining: kotlin.Long = len
-
-    init {
-        if (len < 0) {
-            throw IllegalStateException("Trying to create NoCopySource with negative length")
-        }
+    // Copy over bytes 1 by 1
+    for (i in 0..len - 1) {
+        buffer.put(data[i])
     }
-
-    private fun requireLen(requiredLen: kotlin.Long) {
-        if (remaining < requiredLen) {
-            throw IllegalStateException("Expected at least ${requiredLen} bytes in source but have only ${len}")
-        }
-        remaining -= requiredLen
-    }
-
-    override fun exhausted(): kotlin.Boolean = remaining == 0L
-
-    override fun readByte(): kotlin.Byte {
-        requireLen(1)
-        return reinterpret<kotlinx.cinterop.ByteVar>()[readBytes++]
-    }
-
-    override fun readShort(): kotlin.Short {
-        requireLen(2)
-        val data = reinterpret<kotlinx.cinterop.ByteVar>()
-        val s = data[readBytes++] and 0xff shl 8 or (data[readBytes++] and 0xff)
-        return s.toShort()
-    }
-
-    override fun readInt(): kotlin.Int {
-        requireLen(4)
-        val data = reinterpret<kotlinx.cinterop.ByteVar>()
-        val i = (
-                data[readBytes++] and 0xff shl 24
-                        or (data[readBytes++] and 0xff shl 16)
-                        or (data[readBytes++] and 0xff shl 8)
-                        or (data[readBytes++] and 0xff)
-                )
-        return i
-    }
-
-    override fun readLong(): kotlin.Long {
-        requireLen(8)
-        val data = reinterpret<kotlinx.cinterop.ByteVar>()
-        val v = (
-                data[readBytes++] and 0xffL shl 56
-                        or (data[readBytes++] and 0xffL shl 48)
-                        or (data[readBytes++] and 0xffL shl 40)
-                        or (data[readBytes++] and 0xffL shl 32)
-                        or (data[readBytes++] and 0xffL shl 24)
-                        or (data[readBytes++] and 0xffL shl 16)
-                        or (data[readBytes++] and 0xffL shl 8) // ktlint-disable no-multi-spaces
-                        or (data[readBytes++] and 0xffL)
-                )
-        return v
-    }
-
-    override fun readByteArray(): ByteArray = readByteArray(len)
-
-    override fun readByteArray(len: kotlin.Long): ByteArray {
-        requireLen(len)
-
-        val cast = reinterpret<kotlinx.cinterop.ByteVar>()
-        val intLen = len.toInt()
-        val byteArray = ByteArray(intLen)
-
-        for (writeIdx in 0 until intLen) {
-            byteArray[writeIdx] = cast[readBytes++]
-        }
-
-        return byteArray
-    }
+    
+    return buffer
 }
 
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
-internal actual typealias RustBuffer = kotlinx.cinterop.CValue<{{ ci.namespace() }}.cinterop.RustBuffer>
-
-@Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
-internal actual typealias RustBufferByReference = kotlinx.cinterop.CPointer<{{ ci.namespace() }}.cinterop.RustBuffer>
-
-internal actual fun RustBuffer.asSource(): NoCopySource {
-    val data = useContents { data }
-    val len = useContents { len }
-    return requireNotNull(data).asSource(len.toLong())
-}
-
-internal actual val RustBuffer.dataSize: kotlin.Int
+internal actual typealias RustBufferByValue = CValue<{{ ci.namespace() }}.cinterop.RustBuffer>
+internal actual var RustBufferByValue.capacity: Long
+    get() = useContents { capacity }
+    set(value) { println("tried writing value") }
+internal actual var RustBufferByValue.len: Long
     get() = useContents { len }
+    set(value) {println("tried writing value") }
+internal actual var RustBufferByValue.data: Pointer?
+    get() = useContents { data }
+    set(value) { println("tried writing value") }
+internal actual fun RustBufferByValue.asByteBuffer(): ByteBuffer? {
+    val buffer = ByteBuffer()
+    val data = useContents { data }?.reinterpret<kotlinx.cinterop.ByteVar>() ?: return null
+    val len = useContents { len }
+    if (len < 0L)
+        throw IllegalStateException("Trying to call asByteBuffer with negative length")
 
-internal actual fun RustBuffer.free(): Unit =
-    rustCall { status: {{ config.package_name() }}.RustCallStatus ->
-        UniFFILib.{{ ci.ffi_rustbuffer_free().name() }}(this, status)
+    if (len == 0L)
+        return buffer
+
+    // Copy over bytes 1 by 1
+    for (i in 0..<len) {
+        buffer.put(data[i])
     }
+    
+    return buffer   
+}
 
-internal actual fun allocRustBuffer(buffer: Buffer): RustBuffer =
-    rustCall { status: {{ config.package_name() }}.RustCallStatus ->
-        val size = buffer.size
-        UniFFILib.{{ ci.ffi_rustbuffer_alloc().name() }}(size.toInt(), status).also {
-            it.useContents {
-                val notNullData = data
-                checkNotNull(notNullData) { "RustBuffer.alloc() returned null data pointer (size=${size})" }
-                buffer.readByteArray().forEachIndexed { index, byte ->
-                    notNullData[index] = byte.toUByte()
-                }
-            }
+internal actual object RustBufferHelper
+internal actual fun RustBufferHelper.allocFromByteBuffer(buffer: ByteBuffer): RustBufferByValue
+     = uniffiRustCall() { status ->
+        // Note: need to convert the size to a `Long` value to make this work with JVM.
+        UniffiLib.INSTANCE.{{ ci.ffi_rustbuffer_alloc().name() }}(buffer.internal().size.toLong(), status)!!
+    }.also {
+        val size = buffer.internal().size
+        it.useContents {
+            val notNullData = data
+            checkNotNull(notNullData) { "RustBuffer.alloc() returned null data pointer (size=${size})" }
+
+           for (i in 0..<size) {
+                notNullData[i.toInt()] = buffer.get().toUByte()
+           }
+
         }
     }
 
-internal actual fun RustBufferByReference.setValue(value: RustBuffer) {
-    this.pointed.capacity = value.useContents { capacity }
-    this.pointed.len = value.useContents { len }
-    this.pointed.data = value.useContents { data }
+internal actual typealias RustBufferByReference = CPointer<{{ ci.namespace() }}.cinterop.RustBufferByReference>
+
+// TODO: Implement reading/writing to pointer value inside CPointer
+internal actual fun RustBufferByReference.setValue(value: RustBufferByValue) {
+    TODO("Not implemented yet!")
 }
+internal actual fun RustBufferByReference.getValue(): RustBufferByValue
+    = TODO("Not implemented yet!")
 
-internal actual fun emptyRustBuffer(): RustBuffer {
-    return allocRustBuffer(Buffer())
-}
 
-// This is a helper for safely passing byte references into the rust code.
-// It's not actually used at the moment, because there aren't many things that you
-// can take a direct pointer to in the JVM, and if we're going to copy something
-// then we might as well copy it into a `RustBuffer`. But it's here for API
-// completeness.
+internal actual typealias ForeignBytes = CPointer<{{ ci.namespace() }}.cinterop.ForeignBytes>
+internal actual var ForeignBytes.len: Int
+    get() = pointed.len
+    set(value) { pointed.len = value }
+internal actual var ForeignBytes.data: Pointer?
+    get() = pointed.data
+    set(value) { pointed.data = value?.reinterpret() }
 
-// TODO remove suppress when https://youtrack.jetbrains.com/issue/KT-29819/New-rules-for-expect-actual-declarations-in-MPP is solved
-@Suppress("ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION")
-internal actual typealias ForeignBytes = kotlinx.cinterop.CValue<{{ ci.namespace() }}.cinterop.ForeignBytes>
+internal actual typealias ForeignBytesByValue = CValue<{{ ci.namespace() }}.cinterop.ForeignBytes>
+internal actual var ForeignBytesByValue.len: Int
+    get() = useContents { len }
+    set(value) { TODO("Not implemented yet!") }
+internal actual var ForeignBytesByValue.data: Pointer?
+    get() = useContents { data }
+    set(value) { TODO("Not implemented yet!") }

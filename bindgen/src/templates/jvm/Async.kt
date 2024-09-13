@@ -1,8 +1,8 @@
-internal actual typealias UniFfiRustFutureContinuationCallbackType = UniFfiRustFutureContinuationCallbackImpl
 
-internal actual fun createUniFfiRustFutureContinuationCallback(): UniFfiRustFutureContinuationCallbackType =
-    UniFfiRustFutureContinuationCallbackImpl()
-
-internal class UniFfiRustFutureContinuationCallbackImpl : com.sun.jna.Callback {
-    fun invoke(continuationHandle: kotlin.ULong, pollResult: kotlin.Short) = resumeContinuation(continuationHandle, pollResult)
+actual fun createUniffiRustFutureContinuationCallbackCallback() : Any {
+    return object: Callback {
+        fun callback(handle: Long, pollResult: Byte) {
+            uniffiContinuationHandleMap.remove(handle).resume(pollResult)
+        }
+    }
 }

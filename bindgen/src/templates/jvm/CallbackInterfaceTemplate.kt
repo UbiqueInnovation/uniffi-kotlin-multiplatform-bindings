@@ -1,7 +1,11 @@
+
 {%- let cbi = ci|get_callback_interface_definition(name) %}
-{%- let foreign_callback_name = format!("ForeignCallback{}", canonical_type_name) %}
+{%- let ffi_init_callback = cbi.ffi_init_callback() %}
+{%- let interface_name = cbi|type_name(ci) %}
+{%- let interface_docstring = cbi.docstring() %}
+{%- let methods = cbi.methods() %}
+{%- let vtable = cbi.vtable() %}
+{%- let vtable_methods = cbi.vtable_methods() %}
 
-{% if self.include_once_check("CallbackInterfaceRuntime.kt") %}{% include "CallbackInterfaceRuntime.kt" %}{% endif %}
+{% include "CallbackInterfaceImpl.kt" %}
 
-internal actual fun {{ foreign_callback_name }}.toForeignCallback() : ForeignCallback =
-    NativeCallback(this::callback)

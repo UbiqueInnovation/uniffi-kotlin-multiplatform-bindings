@@ -4,9 +4,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use uniffi_bindgen::ComponentInterface;
-
 use super::CodeType;
+use uniffi_bindgen::ComponentInterface;
 
 #[derive(Debug)]
 pub struct ExternalCodeType {
@@ -20,8 +19,8 @@ impl ExternalCodeType {
 }
 
 impl CodeType for ExternalCodeType {
-    fn type_label(&self, _ci: &ComponentInterface) -> String {
-        self.name.clone()
+    fn type_label(&self, ci: &ComponentInterface) -> String {
+        super::KotlinCodeOracle.class_name(ci, &self.name)
     }
 
     fn canonical_name(&self) -> String {

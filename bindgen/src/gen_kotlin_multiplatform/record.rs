@@ -4,9 +4,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use uniffi_bindgen::ComponentInterface;
-
 use super::CodeType;
+use uniffi_bindgen::ComponentInterface;
 
 #[derive(Debug)]
 pub struct RecordCodeType {

@@ -1,6 +1,6 @@
 [package]
-name = "uniffi_bindgen_kotlin_multiplatform"
-version = "0.1.0"
+name = "uniffi_kotlin_multiplatform_bindgen"
+version = "0.1.2"
 edition = "2021"
 authors = ["UniFFI Kotlin Multiplatform bindings team"]
 description = "a Kotlin Multiplatform bindings generator for rust (codegen and cli tooling)"
@@ -11,18 +11,20 @@ readme = "../README.md"
 license = "MPL-2.0"
 keywords = ["ffi", "bindgen", "kotlin"]
 
-[dependencies]
-anyhow = "1.0.66"
-askama = { version = "0.12", default-features = false, features = ["config"] }
-camino = "1.1.1"
-heck = "0.4"
-include_dir = "0.7.3"
-paste = "1.0"
-serde = "1"
-toml = "0.5"
-uniffi_bindgen = "0.25.2"
-clap = { version = "4", features = ["cargo", "std", "derive"] }
-
 [[bin]]
 name = "uniffi-bindgen-kotlin-multiplatform"
 path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.86"
+askama = { version = "0.12.1", default-features = false, features = ["config"] }
+camino = "1.1.7"
+clap = { version = "4.5.7", features = ["derive", "cargo", "std"] }
+fs-err = "2.11.0"
+heck = "0.5.0"
+paste = "1.0.15"
+serde = "1.0.203"
+textwrap = "0.16.1"
+toml = "0.5"
+uniffi_bindgen = "=0.28.0"
+uniffi_meta = "=0.28.0"

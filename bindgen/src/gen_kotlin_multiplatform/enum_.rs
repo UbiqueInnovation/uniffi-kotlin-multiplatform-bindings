@@ -4,10 +4,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+use super::CodeType;
 use uniffi_bindgen::backend::Literal;
 use uniffi_bindgen::ComponentInterface;
-
-use crate::gen_kotlin_multiplatform::CodeType;
 
 #[derive(Debug)]
 pub struct EnumCodeType {

@@ -4,9 +4,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use uniffi_bindgen::ComponentInterface;
-
 use super::CodeType;
+use uniffi_bindgen::ComponentInterface;
 
 #[derive(Debug)]
 pub struct CallbackInterfaceCodeType {
@@ -29,6 +28,6 @@ impl CodeType for CallbackInterfaceCodeType {
     }
 
     fn initialization_fn(&self) -> Option<String> {
-        Some(format!("{}.register", self.ffi_converter_name()))
+        Some(format!("uniffiCallbackInterface{}.register", self.id))
     }
 }

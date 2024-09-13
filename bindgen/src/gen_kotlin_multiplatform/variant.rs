@@ -4,9 +4,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use uniffi_bindgen::interface::{ComponentInterface, Variant};
-
 use super::{CodeType, KotlinCodeOracle};
+use uniffi_bindgen::interface::{ComponentInterface, Variant};
 
 #[derive(Debug)]
 pub(super) struct VariantCodeType {

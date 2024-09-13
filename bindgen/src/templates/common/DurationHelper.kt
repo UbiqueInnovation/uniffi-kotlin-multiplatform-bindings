@@ -1,26 +1,32 @@
+
 {{ self.add_import("kotlin.time.Duration.Companion.nanoseconds") }}
 {{ self.add_import("kotlin.time.Duration.Companion.seconds") }}
 
-internal object FfiConverterDuration : FfiConverterRustBuffer<kotlin.time.Duration> {
-    override fun read(buf: NoCopySource): kotlin.time.Duration {
-        val seconds = buf.readLong().seconds
-        val nanoseconds = buf.readInt().nanoseconds
-        val duration = seconds + nanoseconds
-        if (duration < 0.nanoseconds) {
+public object FfiConverterDuration: FfiConverterRustBuffer<kotlin.time.Duration> {
+    override fun read(buf: ByteBuffer): kotlin.time.Duration {
+        // Type mismatch (should be u64) but we check for overflow/underflow below
+        val secs = buf.getLong()
+        // Type mismatch (should be u32) but we check for overflow/underflow below
+        val nanos = buf.getInt().toLong()
+        if (secs < 0) {
+            throw IllegalArgumentException("Duration exceeds minimum or maximum value supported by uniffi")
+        }
+        if (nanos < 0) {
             throw IllegalArgumentException("Duration nanoseconds exceed minimum or maximum supported by uniffi")
         }
-        return duration
+        return secs.seconds + nanos.nanoseconds
     }
 
-    override fun allocationSize(value: kotlin.time.Duration) = 12
+    // 8 bytes for seconds, 4 bytes for nanoseconds
+    override fun allocationSize(value: kotlin.time.Duration) = 12UL
 
-    override fun write(value: kotlin.time.Duration, buf: Buffer) {
+    override fun write(value: kotlin.time.Duration, buf: ByteBuffer) {
         if (value < 0.nanoseconds) {
             throw IllegalArgumentException("Invalid duration, must be non-negative")
         }
         value.toComponents { seconds, nanoseconds ->
-            buf.writeLong(seconds)
-            buf.writeInt(nanoseconds)
+            buf.putLong(seconds)
+            buf.putInt(nanoseconds)
         }
     }
 }

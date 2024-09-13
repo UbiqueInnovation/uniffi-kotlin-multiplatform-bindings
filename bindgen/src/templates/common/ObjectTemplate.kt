@@ -1,167 +1,219 @@
+
+{%- if self.include_once_check("interface-support") %}
+    {%- include "ObjectCleanerHelper.kt" %}
+{%- endif %}
+
 {%- let obj = ci|get_object_definition(name) %}
-{%- if self.include_once_check("ObjectRuntime.kt") %}{% include "ObjectRuntime.kt" %}{% endif %}
+{%- let (interface_name, impl_class_name) = obj|object_names(ci) %}
+{%- let methods = obj.methods() %}
+{%- let interface_docstring = obj.docstring() %}
+{%- let is_error = ci.is_name_used_as_error(name) %}
+{%- let ffi_converter_name = obj|ffi_converter_name %}
 
-public interface {{ type_name }}Interface {
-    {% for meth in obj.methods() -%}
-    {%- match meth.throws_type() -%}
-    {%- when Some with (throwable) -%}
-    @Throws({{ throwable|type_name(ci) }}::class{%- if meth.is_async() -%}, CancellationException::class{%- endif -%})
-    {%- when None -%}
-    {%- endmatch %}
-    {% if meth.is_async() -%}
-    suspend fun {{ meth.name()|fn_name }}({% call kt::arg_list_decl(meth) %})
-    {%- else -%}
-    fun {{ meth.name()|fn_name }}({% call kt::arg_list_decl(meth) %})
-    {%- endif %}
-    {%- match meth.return_type() -%}
-    {%- when Some with (return_type) %}: {{ return_type|type_name(ci) -}}
-    {%- when None -%}
-    {%- endmatch %}
+{%- include "Interface.kt" %}
 
-    {% endfor %}
-    companion object
-}
+{%- call kt::docstring(obj, 0) %}
+{% if (is_error) %}
+open class {{ impl_class_name }} : kotlin.Exception, Disposable, AutoCloseable, {{ interface_name }} {
+{% else -%}
+open class {{ impl_class_name }}: Disposable, AutoCloseable, {{ interface_name }} {
+{%- endif %}
 
-class {{ type_name }} internal constructor(
-    pointer: Pointer
-) : FFIObject(pointer), {{ type_name }}Interface {
+    constructor(pointer: Pointer) {
+        this.pointer = pointer
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
+    }
+
+    /**
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noPointer: NoPointer) {
+        this.pointer = null
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
+    }
 
     {%- match obj.primary_constructor() %}
-    {%- when Some with (cons) %}
-    constructor({% call kt::arg_list_decl(cons) -%}) :
+    {%- when Some(cons) %}
+    {%-     if cons.is_async() %}
+    // Note no constructor generated for this object as it is async.
+    {%-     else %}
+    {%- call kt::docstring(cons, 4) %}
+    constructor({% call kt::arg_list(cons, true) -%}) :
         this({% call kt::to_ffi_call(cons) %})
+    {%-     endif %}
     {%- when None %}
     {%- endmatch %}
 
-    /**
-     * Disconnect the object from the underlying Rust object.
-     *
-     * It can be called more than once, but once called, interacting with the object
-     * causes an `IllegalStateException`.
-     *
-     * Clients **must** call this method once done with the object, or cause a memory leak.
-     */
-    override protected fun freeRustArcPtr() {
-        rustCall { status: RustCallStatus ->
-            UniFFILib.{{ obj.ffi_object_free().name() }}(this.pointer, status)
+    protected val pointer: Pointer?
+    protected val cleanable: UniffiCleaner.Cleanable
+
+    private val wasDestroyed: kotlinx.atomicfu.AtomicBoolean = kotlinx.atomicfu.atomic(false)
+    private val callCounter: kotlinx.atomicfu.AtomicLong = kotlinx.atomicfu.atomic(1L)
+
+    private val lock = kotlinx.atomicfu.locks.ReentrantLock()
+
+    private fun <T> synchronized(block: () -> T): T {
+        lock.lock()
+        try {
+            return block()
+        } finally {
+            lock.unlock()
+        }
+    }
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable.clean()
+            }
+        }
+    }
+
+    override fun close() {
+        synchronized { this.destroy() }
+    }
+
+    internal inline fun <R> callWithPointer(block: (ptr: Pointer) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.value
+            if (c == 0L) {
+                throw IllegalStateException("${this::class::simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this::class::simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the pointer being freed concurrently.
+        try {
+            return block(this.uniffiClonePointer())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+        override fun run() {
+            pointer?.let { ptr ->
+                uniffiRustCall { status ->
+                    UniffiLib.INSTANCE.{{ obj.ffi_object_free().name() }}(ptr, status)!!
+                }
+            }
+        }
+    }
+
+    fun uniffiClonePointer(): Pointer {
+        return uniffiRustCall() { status ->
+            UniffiLib.INSTANCE.{{ obj.ffi_object_clone().name() }}(pointer!!, status)!!
         }
     }
 
     {% for meth in obj.methods() -%}
-    {%- match meth.throws_type() -%}
-    {%- when Some with (throwable) %}
-    @Throws({{ throwable|type_name(ci) }}::class{%- if meth.is_async() -%}, CancellationException::class{%- endif -%})
-    {%- else -%}
-    {%- endmatch %}
-    {%- if meth.is_async() %}
-    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun {{ meth.name()|fn_name }}({%- call kt::arg_list_decl(meth) -%}){% match meth.return_type() %}{% when Some with (return_type) %} : {{ return_type|type_name(ci) }}{% when None %}{%- endmatch %} {
-        return uniffiRustCallAsync(
-            callWithPointer { thisPtr ->
-                UniFFILib.{{ meth.ffi_func().name() }}(
-                    thisPtr,
-                    {% call kt::arg_list_lowered(meth) %}
-                )
-            },
-            {{ meth|async_poll(ci) }},
-            {{ meth|async_complete(ci) }},
-            {{ meth|async_free(ci) }},
-            // lift function
-            {%- match meth.return_type() %}
-            {%- when Some(return_type) %}
-            { {{ return_type|lift_fn }}(it) },
-            {%- when None %}
-            { Unit },
-            {% endmatch %}
-            // Error FFI converter
-            {%- match meth.throws_type() %}
-            {%- when Some(e) %}
-            {{ e|type_name(ci) }}.ErrorHandler,
-            {%- when None %}
-            NullCallStatusErrorHandler,
-            {%- endmatch %}
-        )
-    }
-    {%- else -%}
-    {%- match meth.return_type() -%}
-    {%- when Some with (return_type) -%}
-    override fun {{ meth.name()|fn_name }}({% call kt::arg_list_protocol(meth) %}): {{ return_type|type_name(ci) }} =
-        callWithPointer {
-            {%- call kt::to_ffi_call_with_prefix("it", meth) %}
-        }.let {
-            {{ return_type|lift_fn }}(it)
-        }
-
-    {%- when None -%}
-    override fun {{ meth.name()|fn_name }}({% call kt::arg_list_protocol(meth) %}) =
-        callWithPointer {
-            {%- call kt::to_ffi_call_with_prefix("it", meth) %}
-        }
-    {% endmatch %}
-    {% endif %}
+    {%- call kt::func_decl("override", meth, 4) %}
     {% endfor %}
 
     {%- for tm in obj.uniffi_traits() %}
     {%-     match tm %}
-    {%-         when UniffiTrait::Display { fmt } %}
-    override fun toString(): String =
-        callWithPointer {
-            {%- call kt::to_ffi_call_with_prefix("it", fmt) %}
-        }.let {
-            {{ fmt.return_type().unwrap()|lift_fn }}(it)
-        }
-    {%-         when UniffiTrait::Eq { eq, ne } %}
+    {%         when UniffiTrait::Display { fmt } %}
+    override fun toString(): String {
+        return {{ fmt.return_type().unwrap()|lift_fn }}({% call kt::to_ffi_call(fmt) %})
+    }
+    {%         when UniffiTrait::Eq { eq, ne } %}
     {# only equals used #}
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is {{ type_name }}) return false
-        return callWithPointer {
-            {%- call kt::to_ffi_call_with_prefix("it", eq) %}
-        }.let {
-            {{ eq.return_type().unwrap()|lift_fn }}(it)
-        }
+        if (other !is {{ impl_class_name}}) return false
+        return {{ eq.return_type().unwrap()|lift_fn }}({% call kt::to_ffi_call(eq) %})
     }
-    {%-         when UniffiTrait::Hash { hash } %}
-    override fun hashCode(): Int =
-        callWithPointer {
-            {%- call kt::to_ffi_call_with_prefix("it", hash) %}
-        }.let {
-            {{ hash.return_type().unwrap()|lift_fn }}(it).toInt()
-        }
+    {%         when UniffiTrait::Hash { hash } %}
+    override fun hashCode(): Int {
+        return {{ hash.return_type().unwrap()|lift_fn }}({%- call kt::to_ffi_call(hash) %}).toInt()
+    }
     {%-         else %}
     {%-     endmatch %}
     {%- endfor %}
 
+    {# XXX - "companion object" confusion? How to have alternate constructors *and* be an error? #}
     {% if !obj.alternate_constructors().is_empty() -%}
     companion object {
         {% for cons in obj.alternate_constructors() -%}
-        fun {{ cons.name()|fn_name }}({% call kt::arg_list_decl(cons) %}): {{ type_name }} =
-            {{ type_name }}({% call kt::to_ffi_call(cons) %})
+        {% call kt::func_decl("", cons, 4) %}
         {% endfor %}
+    }
+    {% else if is_error %}
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<{{ impl_class_name }}> {
+        override fun lift(error_buf: RustBufferByValue): {{ impl_class_name }} {
+            // Due to some mismatches in the ffi converter mechanisms, errors are a RustBuffer.
+            val bb = error_buf.asByteBuffer()
+            if (bb == null) {
+                throw InternalException("?")
+            }
+            return {{ ffi_converter_name }}.read(bb)
+        }
     }
     {% else %}
     companion object
     {% endif %}
 }
+{%- if obj.has_callback_interface() %}
+{%- let vtable = obj.vtable().expect("trait interface should have a vtable") %}
+{%- let vtable_methods = obj.vtable_methods() %}
+{%- let ffi_init_callback = obj.ffi_init_callback() %}
 
-internal object {{ obj|ffi_converter_name }}: FfiConverter<{{ type_name }}, Pointer> {
-    override fun lower(value: {{ type_name }}): Pointer = value.callWithPointer { it }
+{% include "CallbackInterfaceImpl.kt" %}
 
-    override fun lift(value: Pointer): {{ type_name }} {
-        return {{ type_name }}(value)
+{%- endif %}
+
+{% macro converter_type(obj) %}
+{% if obj.has_callback_interface() %}
+{{ interface_name }}
+{% else %}
+{{ impl_class_name }}
+{% endif %}
+{% endmacro %}
+
+public object {{ ffi_converter_name }}: FfiConverter<{%- call converter_type(obj) -%}, Pointer> {
+    {%- if obj.has_callback_interface() %}
+    internal val handleMap = UniffiHandleMap<{%- call converter_type(obj) -%}>()
+    {%- endif %}
+
+    override fun lower(value: {%- call converter_type(obj) -%}): Pointer {
+        {%- if obj.has_callback_interface() %}
+        return handleMap.insert(value).toPointer()
+        {%- else %}
+        val obj = value as {{ impl_class_name }}
+        return obj.uniffiClonePointer()
+        {%- endif %}
+        }
+
+
+    override fun lift(value: Pointer): {%- call converter_type(obj) -%} {
+        return {{ impl_class_name }}(value)
     }
 
-    override fun read(buf: NoCopySource): {{ type_name }} {
+    override fun read(buf: ByteBuffer): {%- call converter_type(obj) -%} {
         // The Rust code always writes pointers as 8 bytes, and will
         // fail to compile if they don't fit.
-        return lift(buf.readLong().toPointer())
+        return lift(buf.getLong().toPointer())
     }
 
-    override fun allocationSize(value: {{ type_name }}) = 8
+    override fun allocationSize(value: {%- call converter_type(obj) -%}) = 8UL
 
-    override fun write(value: {{ type_name }}, buf: Buffer) {
+    override fun write(value: {%- call converter_type(obj) -%}, buf: ByteBuffer) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
-        buf.writeLong(lower(value).toLong())
+        buf.putLong(getPointerNativeValue(lower(value)))
     }
 }
