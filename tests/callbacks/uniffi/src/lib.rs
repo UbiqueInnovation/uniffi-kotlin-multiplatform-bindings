@@ -5,7 +5,7 @@
  */
 
 pub struct VoidCallbackProcessor {
-    new_value: u64
+    new_value: u64,
 }
 
 pub trait VoidCallback: Send + Sync + std::fmt::Debug {
@@ -14,9 +14,7 @@ pub trait VoidCallback: Send + Sync + std::fmt::Debug {
 
 impl VoidCallbackProcessor {
     pub fn new(new_value: u64) -> Self {
-        VoidCallbackProcessor {
-            new_value
-        }
+        VoidCallbackProcessor { new_value }
     }
 
     pub fn process(&self, void_callback: Box<dyn VoidCallback>) {
@@ -29,14 +27,12 @@ pub trait VoidCallbackWithError: Send + Sync + std::fmt::Debug {
 }
 
 pub struct VoidCallbackWithErrorProcessor {
-    callback: Box<dyn VoidCallbackWithError>
+    callback: Box<dyn VoidCallbackWithError>,
 }
 
 impl VoidCallbackWithErrorProcessor {
     pub fn new(callback: Box<dyn VoidCallbackWithError>) -> Self {
-        VoidCallbackWithErrorProcessor {
-            callback
-        }
+        VoidCallbackWithErrorProcessor { callback }
     }
 
     pub fn process(&self, new_value: u64) -> Result<(), ComplexError> {
@@ -138,7 +134,7 @@ impl Default for RustGetters {
 
 // Use `Send+Send` because we want to store the callback in an exposed
 // `Send+Sync` object.
-#[allow(clippy::wrong_self_convention)]
+#[allow(clippy::wrong_self_convention, dead_code)]
 trait StoredForeignStringifier: Send + Sync + std::fmt::Debug {
     fn from_simple_type(&self, value: i32) -> String;
     fn from_complex_type(&self, values: Option<Vec<Option<f64>>>) -> String;
