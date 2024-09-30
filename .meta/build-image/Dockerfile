@@ -19,10 +19,11 @@ RUN apt update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Use Zig as cross-compilation linker for Arm64 Linux
-ENV ZIG_BUILD=zig-linux-x86_64-0.12.0-dev.3052+4e2570baa
+ENV ZIG_VERSION=0.12.1
+ENV ZIG_BUILD=zig-linux-x86_64-$ZIG_VERSION
 RUN mkdir -p /zig
 WORKDIR /zig
-RUN wget -c https://ziglang.org/builds/$ZIG_BUILD.tar.xz && \
+RUN wget -c https://ziglang.org/download/$ZIG_VERSION/$ZIG_BUILD.tar.xz && \
     tar -xf $ZIG_BUILD.tar.xz && \
     rm $ZIG_BUILD.tar.xz && \
     printf "#! /bin/sh\n/zig/$ZIG_BUILD/zig cc -target aarch64-linux-gnu \"\$@\"" > aarch64-unknown-linux-gnu-cc.sh && \
