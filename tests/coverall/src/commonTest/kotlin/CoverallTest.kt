@@ -16,6 +16,8 @@ import kotlin.math.abs
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
+expect fun runGC()
+
 class CoverallTest {
     private val GC_DELAY: Long = 10L
 

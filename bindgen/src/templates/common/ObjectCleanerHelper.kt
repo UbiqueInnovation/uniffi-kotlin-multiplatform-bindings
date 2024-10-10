@@ -16,5 +16,3 @@ interface UniffiCleaner {
 
     companion object
 }
-
-expect fun runGC()

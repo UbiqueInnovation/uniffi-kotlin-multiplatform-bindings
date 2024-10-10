@@ -13,7 +13,3 @@ private class UniffiJnaCleanable(
 }
 
 private fun UniffiCleaner.Companion.create(): UniffiCleaner = UniffiJnaCleaner()
-
-actual fun runGC() {
-    System.gc()
-}

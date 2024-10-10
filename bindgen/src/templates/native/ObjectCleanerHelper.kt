@@ -18,7 +18,3 @@ private class UniffiNativeCleanable(val value: Any, val cleanUpTask: Runnable) :
 
 private fun UniffiCleaner.Companion.create(): UniffiCleaner =
     NativeCleaner()
-
-actual fun runGC() {
-    kotlin.native.internal.GC.collect()
-}
