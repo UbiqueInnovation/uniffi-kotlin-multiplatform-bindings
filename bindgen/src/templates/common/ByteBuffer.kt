@@ -1,6 +1,7 @@
 
-class ByteBuffer {
-    private val _buffer = okio.Buffer()
+@kotlin.jvm.JvmInline
+value class ByteBuffer(private val _buffer: okio.Buffer) {
+    constructor() : this(okio.Buffer()) {}
 
     fun internal() = _buffer
 
