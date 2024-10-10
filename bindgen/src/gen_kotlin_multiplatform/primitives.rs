@@ -4,10 +4,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use super::CodeType;
 use paste::paste;
 use uniffi_bindgen::backend::Literal;
 use uniffi_bindgen::interface::{ComponentInterface, Radix, Type};
+
+use super::CodeType;
 
 fn render_literal(literal: &Literal, _ci: &ComponentInterface) -> String {
     fn typed_number(type_: &Type, num_str: String) -> String {

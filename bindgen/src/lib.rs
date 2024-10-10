@@ -4,10 +4,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+use std::{collections::HashMap, fs::File, io::Write};
+
 use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
 use fs_err as fs;
-use std::{collections::HashMap, fs::File, io::Write};
 use uniffi_bindgen::{BindingGenerator, Component, ComponentInterface, GenerationSettings};
 
 mod gen_kotlin_multiplatform;

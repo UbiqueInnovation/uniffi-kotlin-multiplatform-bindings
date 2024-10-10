@@ -4,9 +4,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use super::{AsCodeType, CodeType};
 use uniffi_bindgen::backend::{Literal, Type};
 use uniffi_bindgen::ComponentInterface;
+
+use super::{AsCodeType, CodeType};
 
 #[derive(Debug)]
 pub struct OptionalCodeType {

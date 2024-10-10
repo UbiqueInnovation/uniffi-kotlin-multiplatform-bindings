@@ -4,9 +4,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use super::CodeType;
 use paste::paste;
 use uniffi_bindgen::ComponentInterface;
+
+use super::CodeType;
 
 macro_rules! impl_code_type_for_miscellany {
     ($T:ty, $class_name:literal, $canonical_name:literal) => {

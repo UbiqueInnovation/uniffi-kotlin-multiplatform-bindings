@@ -11,13 +11,10 @@ use std::fmt::Debug;
 
 use anyhow::{Context, Result};
 use askama::Template;
-
 use filters::header_escape_name;
 use heck::{ToLowerCamelCase, ToShoutySnakeCase, ToUpperCamelCase};
 use serde::{Deserialize, Serialize};
-
 use uniffi_bindgen::backend::TemplateExpression;
-
 use uniffi_bindgen::interface::*;
 
 mod callback_interface;
@@ -611,10 +608,11 @@ impl<T: AsType> AsCodeType for T {
 }
 
 mod filters {
-    use super::*;
     pub use uniffi_bindgen::backend::filters::*;
     use uniffi_meta::LiteralMetadata;
     use variant::VariantCodeType;
+
+    use super::*;
 
     pub(super) fn type_name(
         as_ct: &impl AsCodeType,
