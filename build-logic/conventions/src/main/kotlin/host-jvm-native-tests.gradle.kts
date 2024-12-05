@@ -11,9 +11,9 @@ kotlin {
     jvm()
     hostNativeTarget()
     sourceSets {
-        // https://github.com/gradle/gradle/issues/15383
-        val libs = the<LibrariesForLibs>()
-
+        // https://github.com/gradle/gradle/issues/15383 and https://github.com/gradle/gradle/issues/19813
+        val libs = project.extensions.getByName("libs") as org.gradle.accessors.dm.LibrariesForLibs
+        
         commonTest {
             dependencies {
                 implementation(kotlin("test"))

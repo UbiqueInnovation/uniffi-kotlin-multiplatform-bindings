@@ -1,13 +1,13 @@
 [versions]
 
-kotlin = "1.9.21"
+kotlin = "2.1.0"
 agp = "8.2.2"
 
 gradle-publish = "1.2.1"
 buildconfig = "4.1.2"
 
 kotlinx-serialization = "1.6.1"
-kotlinx-coroutines = "1.7.3"
+kotlinx-coroutines = "1.7.3"    # Don't forget to change in build-logic/convetions/host-jvm-native-tests.gradle.kts
 kotlinx-atomicfu = "0.24.0"
 kotlinx-datetime = "0.4.1"
 
