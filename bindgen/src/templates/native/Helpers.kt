@@ -1,32 +1,32 @@
 
-internal actual typealias UniffiRustCallStatus = CPointer<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>
+internal actual class UniffiRustCallStatus(val inner: CPointer<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>) {}
 internal actual var UniffiRustCallStatus.code: Byte
-    get() = pointed.code
-    set(value) { pointed.code = value }
+    get() = inner.pointed.code
+    set(value) { inner.pointed.code = value }
 internal actual var UniffiRustCallStatus.error_buf: RustBufferByValue
-    get() = pointed.errorBuf.readValue()
-    set(value) { value.place(pointed.errorBuf.ptr) }
+    get() = RustBufferByValue(inner.pointed.errorBuf.readValue())
+    set(value) { value.inner.place(inner.pointed.errorBuf.ptr) }
 
-internal actual typealias UniffiRustCallStatusByValue = CValue<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>
+internal actual class UniffiRustCallStatusByValue(val inner: CValue<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>) {}
 internal actual var UniffiRustCallStatusByValue.code: Byte
-    get() = useContents { code }
+    get() = inner.useContents { code }
     set(value) {
         println("tried writing value")
     }
 internal actual var UniffiRustCallStatusByValue.error_buf: RustBufferByValue
-    get() = useContents { errorBuf.readValue() }
+    get() = inner.useContents { RustBufferByValue(errorBuf.readValue()) }
     set(value)  {
         println("tried writing value")
     }
 
 internal actual object UniffiRustCallStatusHelper
 internal actual fun UniffiRustCallStatusHelper.allocValue(): UniffiRustCallStatusByValue
-    = cValue<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>()
+    = UniffiRustCallStatusByValue(cValue<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>())
 internal actual fun <U> UniffiRustCallStatusHelper.withReference(
     block: (UniffiRustCallStatus) -> U
 ): U {
     return memScoped {
         val status = alloc<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>()
-        block(status.ptr)
+        block(UniffiRustCallStatus(status.ptr))
     }
 }

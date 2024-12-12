@@ -2,7 +2,7 @@ FROM rust:1.74-slim
 
 RUN apt update && \
     apt install -y \
-      openjdk-17-jdk-headless \
+      openjdk-21-jdk-headless \
       build-essential \
       binutils \
       # For Android

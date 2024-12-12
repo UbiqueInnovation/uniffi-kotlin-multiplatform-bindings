@@ -21,6 +21,9 @@ package {{ config.package_name() }}
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.CPointerVarOf
+import kotlinx.cinterop.interpretCPointer
+import kotlinx.cinterop.nativeNullPtr
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.DoubleVar
 import kotlinx.cinterop.ExperimentalForeignApi

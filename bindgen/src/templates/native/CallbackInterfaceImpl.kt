@@ -6,16 +6,24 @@
 {%- if !ffi_callback.name().contains("ForeignFuture") %}
 actual fun create{{ ffi_callback.name()|ffi_callback_name }}Callback() : Any = staticCFunction {
     {%- for arg in ffi_callback.arguments() -%}
-    {{ arg.name().borrow()|var_name }}: {{ arg.type_().borrow()|ffi_type_name_by_value }},
+    {{ arg.name().borrow()|var_name }}: {{ arg.type_().borrow()|wrapped_ffi_type_name_by_value(ci.namespace()) }},
     {%- endfor -%}
     {%- if ffi_callback.has_rust_call_status_arg() -%}
-    uniffiCallStatus: UniffiRustCallStatus,
+    uniffiCallStatus: CPointer<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>,
     {%- endif -%} ->
 
     {%- match ffi_callback.return_type() %}
     {%- when Some(return_type) %}: {{ return_type|ffi_type_name_by_value }},
     {%- when None %}
     {%- endmatch %}
+
+    val uniffiCallStatus = UniffiRustCallStatus(uniffiCallStatus) 
+    {% for arg in ffi_callback.arguments() %}
+    {%- if arg.type_().borrow()|is_reference -%}
+    val {{ arg.name().borrow()|var_name }} = {{ arg.type_().borrow()|get_wrapper_type }}({{ arg.name().borrow()|var_name }}!!);
+    {% endif %}
+    {%- endfor -%}
+
     val uniffiObj = {{ ffi_converter_name }}.handleMap.get(uniffiHandle)
     val makeCall = {% if meth.is_async() %}suspend {% endif %}{ ->
         uniffiObj.{{ meth.name()|fn_name() }}(
@@ -107,12 +115,12 @@ actual internal open class {{ vtable|ffi_type_name }}Factory {
                     {%- endfor %}
                     uniffiFree : Any,
             ) : {{ vtable|ffi_type_name }} {
-                return nativeHeap.alloc<{{ci.namespace()}}.cinterop.{{ vtable|ffi_type_name }}> {
+                return {{ vtable|ffi_type_name }}(nativeHeap.alloc<{{ci.namespace()}}.cinterop.{{ vtable|ffi_type_name }}> {
                     {%- for (ffi_callback, meth) in vtable_methods.iter() %}
                          this.{{ meth.name()|var_name() }} = {{ meth.name()|var_name() }} as {{ ci.namespace() }}.cinterop.{{ ffi_callback.name()|ffi_callback_name }}
                     {%- endfor %}
                     this.uniffiFree = uniffiFree as {{ ci.namespace() }}.cinterop.UniffiCallbackInterfaceFree
-                }.ptr
+                }.ptr)
             }
         }
 }

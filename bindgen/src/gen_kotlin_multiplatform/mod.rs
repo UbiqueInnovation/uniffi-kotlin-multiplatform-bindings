@@ -400,6 +400,10 @@ impl KotlinCodeOracle {
         format!("Uniffi{}", nm.to_upper_camel_case())
     }
 
+    fn wrapped_ffi_struct_name(&self, ns: &str, nm: &str) -> String {
+        format!("CPointer<{ns}.cinterop.Uniffi{}>", nm.to_upper_camel_case())
+    }
+
     fn ffi_struct_name_header(&self, nm: &str) -> String {
         format!("Uniffi{}", nm.to_upper_camel_case())
     }
@@ -413,6 +417,34 @@ impl KotlinCodeOracle {
         }
     }
 
+    fn get_wrapper_type(&self, ffi_type: &FfiType) -> String {
+        match ffi_type {
+            FfiType::RustBuffer(_) => format!("{}ByValue", self.ffi_type_label(ffi_type)),
+            FfiType::Struct(name) => format!("{}UniffiByValue", self.ffi_struct_name(name)),
+            // FfiType::Callback(name) => format!("{}", self.ffi_callback_name(name)),
+            // Note that unsigned integers in Kotlin are currently experimental, but java.nio.ByteBuffer does not
+            // support them yet. Thus, we use the signed variants to represent both signed and unsigned
+            // types from the component API.
+            FfiType::RustArcPtr(_) => "Pointer".to_string(),
+            FfiType::RustCallStatus => "UniffiRustCallStatusByValue".to_string(),
+            FfiType::ForeignBytes => "ForeignBytesByValue".to_string(),
+            FfiType::Reference(inner) => self.ffi_type_label_by_reference(inner),
+            FfiType::VoidPointer => "Pointer".to_string(),
+            _ => panic!("Not a wrapper type!"),
+        }
+    }
+
+    fn wrapped_ffi_type_label_by_value(&self, ns: &str, ffi_type: &FfiType) -> String {
+        match ffi_type {
+            FfiType::RustBuffer(_) => {
+                format!("CValue<{ns}.cinterop.{}>", self.ffi_type_label(ffi_type))
+            }
+            FfiType::Struct(name) => format!("{}UniffiByValue", self.ffi_struct_name(name)),
+            // FfiType::Callback(name) => format!("{}", self.ffi_callback_name(name)),
+            _ => self.wrapped_ffi_type_label(ns, ffi_type),
+        }
+    }
+
     /// FFI type name to use inside structs
     ///
     /// The main requirement here is that all types must have default values or else the struct
@@ -423,6 +455,15 @@ impl KotlinCodeOracle {
             // function pointer better and allows for `null` as a default value.
             // NOTE: Type any used here, as native and jvm types differ.
             FfiType::Callback(_name) => "Any?".into(), // format!("{}?", self.ffi_callback_name(name)),
+            _ => self.ffi_type_label_by_value(ffi_type),
+        }
+    }
+    fn ffi_type_label_for_ffi_struct_with_callback(&self, ffi_type: &FfiType) -> String {
+        match ffi_type {
+            // Make callbacks function pointers nullable. This matches the semantics of a C
+            // function pointer better and allows for `null` as a default value.
+            // NOTE: Type any used here, as native and jvm types differ.
+            FfiType::Callback(name) => format!("{}?", self.ffi_callback_name(name)),
             _ => self.ffi_type_label_by_value(ffi_type),
         }
     }
@@ -477,6 +518,26 @@ impl KotlinCodeOracle {
         }
     }
 
+    fn wrapped_ffi_type_label_by_reference(&self, ns: &str, ffi_type: &FfiType) -> String {
+        match ffi_type {
+            FfiType::Int8
+            | FfiType::UInt8
+            | FfiType::Int16
+            | FfiType::UInt16
+            | FfiType::Int32
+            | FfiType::UInt32
+            | FfiType::Int64
+            | FfiType::UInt64
+            | FfiType::Float32
+            | FfiType::Float64 => format!("CPointer<{}Var>", self.ffi_type_label(ffi_type)),
+            FfiType::RustArcPtr(_) => "PointerByReference".to_owned(),
+            // JNA structs default to ByReference
+            FfiType::RustBuffer(_) => format!("CPointer<{ns}.cinterop.RustBuffer>"),
+            FfiType::Struct(_) => self.ffi_type_label(ffi_type),
+            _ => panic!("{ffi_type:?} by reference is not implemented"),
+        }
+    }
+
     fn ffi_type_label_by_reference_header(&self, ffi_type: &FfiType) -> String {
         match ffi_type {
             FfiType::Int8
@@ -520,6 +581,31 @@ impl KotlinCodeOracle {
             FfiType::Struct(name) => self.ffi_struct_name(name),
             FfiType::Reference(inner) => self.ffi_type_label_by_reference(inner),
             FfiType::VoidPointer => "Pointer".to_string(),
+        }
+    }
+
+    fn wrapped_ffi_type_label(&self, ns: &str, ffi_type: &FfiType) -> String {
+        match ffi_type {
+            // Note that unsigned integers in Kotlin are currently experimental, but java.nio.ByteBuffer does not
+            // support them yet. Thus, we use the signed variants to represent both signed and unsigned
+            // types from the component API.
+            FfiType::Int8 | FfiType::UInt8 => "Byte".to_string(),
+            FfiType::Int16 | FfiType::UInt16 => "Short".to_string(),
+            FfiType::Int32 | FfiType::UInt32 => "Int".to_string(),
+            FfiType::Int64 | FfiType::UInt64 => "Long".to_string(),
+            FfiType::Float32 => "Float".to_string(),
+            FfiType::Float64 => "Double".to_string(),
+            FfiType::Handle => "Long".to_string(),
+            FfiType::RustArcPtr(_) => "CPointer<out kotlinx.cinterop.CPointed>?".to_string(),
+            FfiType::RustBuffer(maybe_suffix) => {
+                format!("RustBuffer{}", maybe_suffix.as_deref().unwrap_or_default())
+            }
+            FfiType::RustCallStatus => "UniffiRustCallStatusByValue".to_string(),
+            FfiType::ForeignBytes => "ForeignBytesByValue".to_string(),
+            FfiType::Callback(_) => "Any".to_string(),
+            FfiType::Struct(name) => self.wrapped_ffi_struct_name(ns, name),
+            FfiType::Reference(inner) => self.wrapped_ffi_type_label_by_reference(ns, inner),
+            FfiType::VoidPointer => "CPointer<out kotlinx.cinterop.CPointed>".to_string(),
         }
     }
 
@@ -722,6 +808,17 @@ mod filters {
         Ok(KotlinCodeOracle.ffi_type_label_by_value(type_))
     }
 
+    pub fn get_wrapper_type(type_: &FfiType) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.get_wrapper_type(type_))
+    }
+
+    pub fn wrapped_ffi_type_name_by_value(
+        type_: &FfiType,
+        ns: &str,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.wrapped_ffi_type_label_by_value(ns, type_))
+    }
+
     pub fn ffi_type_name(type_: &FfiType) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.ffi_type_label(type_))
     }
@@ -729,6 +826,16 @@ mod filters {
     pub fn is_callback(type_: &FfiType) -> Result<bool, askama::Error> {
         Ok(match type_ {
             FfiType::Callback(_) => true,
+            _ => false,
+        })
+    }
+
+    pub fn is_reference(type_: &FfiType) -> Result<bool, askama::Error> {
+        Ok(match type_ {
+            FfiType::Reference(_)
+            | FfiType::RustBuffer(_)
+            | FfiType::VoidPointer
+            | FfiType::RustArcPtr(_) => true,
             _ => false,
         })
     }
@@ -746,9 +853,39 @@ mod filters {
         Ok(KotlinCodeOracle.ffi_type_label_header(type_))
     }
 
+    pub fn is_pointer_type(type_: &FfiType) -> Result<bool, askama::Error> {
+        Ok(match type_ {
+            FfiType::RustArcPtr(_) | FfiType::VoidPointer => true,
+            _ => false,
+        })
+    }
+
+    pub fn is_internal_type(type_: &FfiType) -> Result<bool, askama::Error> {
+        match type_ {
+            FfiType::RustCallStatus
+            | FfiType::RustBuffer(_)
+            | FfiType::Struct(_)
+            | FfiType::Callback(_)
+            | FfiType::ForeignBytes => Ok(true),
+            FfiType::Reference(t) => is_internal_type(t),
+            _ => Ok(false),
+        }
+    }
+
+    pub fn type_string(type_: &FfiType) -> Result<String, askama::Error> {
+        Ok(format!("{type_:?}"))
+    }
+
     pub fn ffi_type_name_for_ffi_struct(type_: &FfiType) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct(type_))
     }
+
+    pub fn ffi_type_name_for_ffi_struct_with_callback(
+        type_: &FfiType,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct_with_callback(type_))
+    }
+
     pub fn ffi_type_name_for_ffi_callback(type_: &FfiType) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.callback_label_name(type_))
     }

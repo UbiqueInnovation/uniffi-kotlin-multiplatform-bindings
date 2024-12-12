@@ -1,3 +1,4 @@
+@OptIn(kotlin.native.runtime.NativeRuntimeApi::class)
 actual fun runGC() {
-    kotlin.native.internal.GC.collect()
+    kotlin.native.runtime.GC.collect()
 }

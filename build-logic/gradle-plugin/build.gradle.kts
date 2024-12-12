@@ -14,7 +14,7 @@ description = "Gradle UniFFI Plugin"
 version = bindgenInfo.version
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 dependencies {

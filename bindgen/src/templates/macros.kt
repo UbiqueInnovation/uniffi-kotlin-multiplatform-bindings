@@ -137,6 +137,23 @@
     {%- if func.has_rust_call_status_arg() %}uniffi_out_err, {% endif %}
 {%- endmacro -%}
 
+{%- macro ptrwrap_arg_list_ffi_call(func) %}
+    {%- for arg in func.arguments() %}
+        {%- if arg.type_().borrow()|is_callback -%}
+        {{ arg.name()|var_name }} as {{ci.namespace()}}.cinterop.{{ arg.type_().borrow()|ffi_type_name_for_ffi_callback }}
+        {%- else -%}
+            {%- if arg.type_().borrow()|is_pointer_type -%}
+            {{- arg.name()|var_name }}?.inner
+            {%- else if arg.type_().borrow()|is_internal_type -%}
+            {{- arg.name()|var_name }}.inner
+            {%- else -%}
+            {{- arg.name()|var_name }} /* {{ arg.type_().borrow()|type_string }} */
+            {%- endif -%}
+        {%- endif %},
+    {%- endfor %}
+    {%- if func.has_rust_call_status_arg() %}uniffi_out_err.inner, {% endif %}
+{%- endmacro -%}
+
 {% macro field_name(field, field_num) %}
 {%- if field.name().is_empty() -%}
 v{{- field_num -}}

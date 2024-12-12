@@ -17,12 +17,27 @@ internal actual fun create{{ callback.name()|ffi_callback_name }}Callback(
 }
 {%- endif -%}
 {%- when FfiDefinition::Struct(ffi_struct) %}
-internal actual typealias {{ ffi_struct.name()|ffi_struct_name }} = CPointer<{{ ci.namespace() }}.cinterop.{{ ffi_struct.name()|ffi_struct_name }}>
+internal actual class {{ ffi_struct.name()|ffi_struct_name }} (val inner: CPointer<{{ ci.namespace() }}.cinterop.{{ ffi_struct.name()|ffi_struct_name }}>) {
+    actual constructor(
+        {%- for field in ffi_struct.fields() -%}
+            {{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }},
+        {%- endfor -%}
+    ) : this(nativeHeap.alloc<{{ci.namespace()}}.cinterop.{{ ffi_struct.name()|ffi_struct_name  }}>().ptr)
+}
 {% for field in ffi_struct.fields() %}
 internal actual var {{ ffi_struct.name()|ffi_struct_name }}.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }}
 {% let type_name = field.type_().borrow()|ffi_type_name_for_ffi_struct -%}
 
-    get() = pointed.{{ field.name()|var_name }} {%  if type_name.contains("ByValue") %}.readValue() {%- else -%}/* test  {{ type_name }} */{% endif %}
+    get() = {%- if field.type_().borrow()|is_pointer_type -%}
+                inner.pointed.{{ field.name()|var_name }} {%  if type_name.contains("ByValue") %}.readValue() {%- else -%}?.let { Pointer(it) } {% endif %} 
+            {%- else -%}
+                {%- if type_name.contains("ByValue") -%}
+                    {{ type_name }}(inner.pointed.{{ field.name()|var_name }}.readValue())
+                {%- else -%}
+                    inner.pointed.{{ field.name()|var_name }}
+                {%- endif -%}
+            {%- endif %} 
+    
     set(value) {
     TODO("implement setter")
     // pointed.{{ field.name()|var_name }} = value as  {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }}
@@ -40,11 +55,26 @@ internal actual fun {{ ffi_struct.name()|ffi_struct_name }}.uniffiSetValue(other
     {%- endfor %}
 }
 
-internal actual typealias {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue = CValue<{{ ci.namespace() }}.cinterop.{{ ffi_struct.name()|ffi_struct_name }}>
+internal actual class {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue (val inner: CValue<{{ ci.namespace() }}.cinterop.{{ ffi_struct.name()|ffi_struct_name }}>) {
+    actual constructor(
+        {%- for field in ffi_struct.fields() -%}
+            {{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }},
+        {%- endfor -%}
+    ) : this(nativeHeap.alloc<{{ ci.namespace() }}.cinterop.{{ ffi_struct.name()|ffi_struct_name }}>().readValue()) 
+}
 {% for field in ffi_struct.fields() %}
 internal actual var {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }}
 {% let type_name = field.type_().borrow()|ffi_type_name_for_ffi_struct -%}
-    get() = useContents { {{ field.name()|var_name }} {%  if type_name.contains("ByValue") %}.readValue() {%- else -%}/* test  {{ type_name }} */{% endif %} }
+    get() = {% if field.type_().borrow()|is_pointer_type %}
+        inner.useContents { {{ field.name()|var_name }} {%  if type_name.contains("ByValue") %}.readValue() {%- else -%}?.let { Pointer(it) }{% endif %} }
+    {% else %}
+        {%- if type_name.contains("ByValue") -%}
+            inner.useContents { {{ type_name }} ({{ field.name()|var_name }}.readValue()) }
+        {%- else -%}
+            inner.useContents { {{ field.name()|var_name }} }
+        {%- endif -%}
+    {% endif %} 
+    
     set(value) { TODO("Not implemented") }
 {% endfor %}
 
@@ -93,6 +123,16 @@ internal class UniffiLibInstance: UniffiLib {
     override fun {{ func.name() }}(
         {%- call kt::arg_list_ffi_decl(func) %}
     ): {% match func.return_type() %}{% when Some with (return_type) %}{{ return_type.borrow()|ffi_type_name_by_value }}{% when None %}Unit{% endmatch %}
-        = {{ ci.namespace() }}.cinterop.{{ func.name() }}({%- call kt::arg_list_ffi_call(func) %})
+        =   {%- match func.return_type() -%}
+                {%- when Some with (return_type) -%}
+                    {%- if return_type.borrow()|ffi_type_name_by_value == "RustBufferByValue" -%}
+                        RustBufferByValue({{ ci.namespace() }}.cinterop.{{ func.name() }}({%- call kt::ptrwrap_arg_list_ffi_call(func) %}){% match func.return_type() %}{% when Some with (return_type) %}{% if return_type.borrow()|is_pointer_type %}?.let { Pointer(it) } {% endif %} {% when None %}{% endmatch %} )
+                    {%- else -%}
+                        {{ ci.namespace() }}.cinterop.{{ func.name() }}({%- call kt::ptrwrap_arg_list_ffi_call(func) %}){% match func.return_type() %}{% when Some with (return_type) %}{% if return_type.borrow()|is_pointer_type %}?.let { Pointer(it) } {% endif %} {% when None %}{% endmatch %} 
+                    {%- endif -%}
+                {%- when None -%}
+                    {{ ci.namespace() }}.cinterop.{{ func.name() }}({%- call kt::ptrwrap_arg_list_ffi_call(func) %}){% match func.return_type() %}{% when Some with (return_type) %}{% if return_type.borrow()|is_pointer_type %}?.let { Pointer(it) } {% endif %} {% when None %}{% endmatch %} 
+            {%- endmatch %}
+    
     {% endfor %}
 }
