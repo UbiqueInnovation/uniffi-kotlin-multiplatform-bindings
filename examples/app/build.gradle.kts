@@ -5,6 +5,7 @@ plugins {
     kotlin("multiplatform")
     id("io.gitlab.trixnity.rustlink.kotlin.multiplatform")
     alias(libs.plugins.android.application)
+    alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.compose.compiler)
 }
 
@@ -78,6 +79,7 @@ kotlin {
         commonMain.dependencies {
             api(project(":examples:arithmetic-procmacro"))
             api(project(":examples:todolist"))
+            implementation(compose.runtime)
         }
 
         commonTest {
@@ -127,8 +129,5 @@ android {
 
     buildFeatures {
         compose = true
-        composeOptions {
-            kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
-        }
     }
 }
