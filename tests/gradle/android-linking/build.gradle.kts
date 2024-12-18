@@ -7,6 +7,8 @@ plugins {
     kotlin("multiplatform")
     id("io.gitlab.trixnity.cargo.kotlin.multiplatform")
     alias(libs.plugins.android.library)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.compose.multiplatform)
 }
 
 // Build a library manually to test passing an absolute path to `ndkLibraries` works well
@@ -72,6 +74,9 @@ cargo {
 kotlin {
     androidTarget()
     sourceSets {
+        commonMain.dependencies {
+            implementation(compose.runtime)
+        }
         getByName("androidInstrumentedTest") {
             dependencies {
                 implementation("junit:junit:4.13.2")
