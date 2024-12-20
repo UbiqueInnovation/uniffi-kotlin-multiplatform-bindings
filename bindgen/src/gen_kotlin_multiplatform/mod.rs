@@ -458,15 +458,7 @@ impl KotlinCodeOracle {
             _ => self.ffi_type_label_by_value(ffi_type),
         }
     }
-    fn ffi_type_label_for_ffi_struct_with_callback(&self, ffi_type: &FfiType) -> String {
-        match ffi_type {
-            // Make callbacks function pointers nullable. This matches the semantics of a C
-            // function pointer better and allows for `null` as a default value.
-            // NOTE: Type any used here, as native and jvm types differ.
-            FfiType::Callback(name) => format!("{}?", self.ffi_callback_name(name)),
-            _ => self.ffi_type_label_by_value(ffi_type),
-        }
-    }
+
     fn callback_label_name(&self, ffi_type: &FfiType) -> String {
         match ffi_type {
             // Make callbacks function pointers nullable. This matches the semantics of a C
@@ -530,7 +522,7 @@ impl KotlinCodeOracle {
             | FfiType::UInt64
             | FfiType::Float32
             | FfiType::Float64 => format!("CPointer<{}Var>", self.ffi_type_label(ffi_type)),
-            FfiType::RustArcPtr(_) => "PointerByReference".to_owned(),
+            FfiType::RustArcPtr(_) => "CPointerVarOf<CPointer<out CPointed>>".to_owned(),
             // JNA structs default to ByReference
             FfiType::RustBuffer(_) => format!("CPointer<{ns}.cinterop.RustBuffer>"),
             FfiType::Struct(_) => self.ffi_type_label(ffi_type),
@@ -878,12 +870,6 @@ mod filters {
 
     pub fn ffi_type_name_for_ffi_struct(type_: &FfiType) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct(type_))
-    }
-
-    pub fn ffi_type_name_for_ffi_struct_with_callback(
-        type_: &FfiType,
-    ) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct_with_callback(type_))
     }
 
     pub fn ffi_type_name_for_ffi_callback(type_: &FfiType) -> Result<String, askama::Error> {
