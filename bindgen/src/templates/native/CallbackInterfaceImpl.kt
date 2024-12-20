@@ -107,7 +107,7 @@ actual fun create{{ "CallbackInterfaceFree"|ffi_callback_name }}{{name}}Callback
     val _dontReturn = {{ ffi_converter_name }}.handleMap.remove(handle)
 }
 
-actual internal open class {{ vtable|ffi_type_name }}Factory {
+actual internal open class Uniffi{{ vtable|ffi_type_name }}Factory {
         actual companion object {
             actual fun create(
             {%- for (ffi_callback, meth) in vtable_methods.iter() %}

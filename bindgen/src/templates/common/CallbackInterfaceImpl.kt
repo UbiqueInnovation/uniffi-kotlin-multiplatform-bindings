@@ -11,7 +11,7 @@ internal object {{ trait_impl }} {
 
     internal val uniffiFree = create{{ "CallbackInterfaceFree"|ffi_callback_name }}{{name}}Callback()
 
-    internal var vtable = {{ vtable|ffi_type_name }}Factory.create(
+    internal var vtable = Uniffi{{ vtable|ffi_type_name }}Factory.create(
         {%- for (ffi_callback, meth) in vtable_methods.iter() %}
         {{ meth.name()|var_name() }},
         {%- endfor %}
@@ -29,7 +29,7 @@ internal object {{ trait_impl }} {
 {%- endfor %}
 
 expect fun create{{ "CallbackInterfaceFree"|ffi_callback_name }}{{name}}Callback() : Any
-expect internal open class {{ vtable|ffi_type_name }}Factory {
+expect internal open class Uniffi{{ vtable|ffi_type_name }}Factory {
         companion object {
             fun create(
             {%- for (ffi_callback, meth) in vtable_methods.iter() %}
