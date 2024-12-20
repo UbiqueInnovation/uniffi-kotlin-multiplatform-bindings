@@ -3,10 +3,10 @@ publishing {
 	repositories {
 		maven {
 			name = "Ubique"
-			url = project.property('ubiqueMavenUrl')
+			url = project.findProperty('ubiqueMavenUrl') ?: ""
 			credentials {
-				username project.property('ubiqueMavenUser')
-				password project.property('ubiqueMavenPass')
+				username project.findProperty('ubiqueMavenUser') ?: ""
+				password project.findProperty('ubiqueMavenPass') ?: ""
 			}
 		}
 	}

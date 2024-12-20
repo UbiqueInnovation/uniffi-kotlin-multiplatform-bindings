@@ -37,21 +37,25 @@ jobs:
           mkdir -p $HOME/zig && cd $HOME/zig && \
           wget -c https://ziglang.org/download/$ZIG_VERSION/$ZIG_BUILD.tar.xz && \
           tar -xf $ZIG_BUILD.tar.xz && \
-          echo "[target.aarch64-unknown-linux-gnu]\nlinker = \"/home/runner/zig/$ZIG_BUILD/zig cc -target aarch64-linux-gnu\"" > $HOME/.cargo/config.toml
+          printf "#! /bin/sh\n$HOME/zig/$ZIG_BUILD/zig cc -target aarch64-linux-gnu \"\$@\"" > aarch64-unknown-linux-gnu-cc.sh && \
+          chmod 777 aarch64-unknown-linux-gnu-cc.sh && \
+          mkdir -p $HOME/.cargo && \
+          echo "[target.aarch64-unknown-linux-gnu]
+          linker = \"$HOME/zig/aarch64-unknown-linux-gnu-cc.sh\"" > $HOME/.cargo/config.toml
       
       - name: Install Android SDK
         run: |
-          mkdir -p $HOME/android-sdk && export ANDROID_HOME=$HOME/android-sdk && \
-          yes | sdkmanager --install "cmake;3.22.1" "build-tools;34.0.0" "platforms;android-34" "ndk;26.1.10909125" && \
+          mkdir -p $HOME/android-sdk
+          export ANDROID_HOME=$HOME/android-sdk
+          yes | sdkmanager --install "build-tools;34.0.0" "platforms;android-34" "ndk;26.1.10909125"
           yes | sdkmanager --licenses
       
       - name: Build and Test
         run: |
-          cargo build --verbose && \
-          cargo test --verbose && \
+          cargo build && \
+          cargo test && \
           ./gradlew :build-logic:gradle-plugin:test && \
-          ./gradlew build && \
-          ./gradlew clean
+          ./gradlew build
       
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
