@@ -23,6 +23,7 @@ internal suspend fun<T, F, E: kotlin.Exception> uniffiRustCallAsync(
                 val pollResult = suspendCancellableCoroutine<Byte> { continuation ->
                     val handle = uniffiContinuationHandleMap.insert(continuation)
                     continuation.invokeOnCancellation {
+                        uniffiContinuationHandleMap.remove(handle)
                         cancelFunc(rustFuture)
                     }
                     pollFunc(
