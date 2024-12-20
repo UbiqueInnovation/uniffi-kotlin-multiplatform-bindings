@@ -1,3 +1,4 @@
+use anyhow::Context;
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -40,6 +41,14 @@ struct Cli {
 
     /// Path to the UDL file, or cdylib if `library-mode` is specified.
     source: Utf8PathBuf,
+
+    /// Whether we should exclude dependencies when running "cargo metadata".
+    /// This will mean external types may not be resolved if they are implemented in crates
+    /// outside of this workspace.
+    /// This can be used in environments when all types are in the namespace and fetching
+    /// all sub-dependencies causes obscure platform specific problems.
+    #[clap(long)]
+    metadata_no_deps: bool,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -51,6 +60,7 @@ fn main() -> anyhow::Result<()> {
         crate_name,
         source,
         try_format_code,
+        metadata_no_deps,
     } = Cli::parse();
 
     let binding_generator = KotlinBindingGenerator;
@@ -61,10 +71,21 @@ fn main() -> anyhow::Result<()> {
         }
         let out_dir = out_dir.expect("--out-dir is required when using --library");
 
+        let config_supplier = {
+            use uniffi_bindgen::cargo_metadata::CrateConfigSupplier;
+            let mut cmd = cargo_metadata::MetadataCommand::new();
+            if metadata_no_deps {
+                cmd.no_deps();
+            }
+            let metadata = cmd.exec().context("error running cargo metadata")?;
+            CrateConfigSupplier::from(metadata)
+        };
+
         uniffi_bindgen::library_mode::generate_bindings(
             &source,
             crate_name,
             &binding_generator,
+            &config_supplier,
             config.as_deref(),
             &out_dir,
             try_format_code,
