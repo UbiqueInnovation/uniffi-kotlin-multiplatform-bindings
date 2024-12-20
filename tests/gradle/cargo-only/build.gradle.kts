@@ -3,8 +3,6 @@ import io.gitlab.trixnity.gradle.cargo.rust.profiles.CargoProfile
 plugins {
     id("cargo-tests")
     kotlin("multiplatform")
-    alias(libs.plugins.compose.compiler)
-    alias(libs.plugins.compose.multiplatform)
 }
 
 // Defined in the workspace manifest
@@ -20,13 +18,6 @@ cargo {
         features.add("feature5")
         variants {
             features.add("feature7")
-        }
-    }
-}
-kotlin {
-    sourceSets {
-        commonMain.dependencies {
-            implementation(compose.runtime)
         }
     }
 }
