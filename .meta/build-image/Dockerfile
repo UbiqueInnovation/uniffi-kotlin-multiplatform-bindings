@@ -6,7 +6,7 @@ RUN echo "deb https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION
 
 RUN apt update && \
     apt install -y \
-      temurin-21-jdk \
+      openjdk-17-jdk-headless \
       build-essential \
       binutils \
       # For Android
