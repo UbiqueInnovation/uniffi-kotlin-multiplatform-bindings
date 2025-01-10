@@ -7,6 +7,7 @@ plugins {
     id("io.gitlab.trixnity.uniffi.kotlin.multiplatform")
     alias(libs.plugins.kotlin.atomicfu)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 uniffi {
@@ -36,8 +37,14 @@ kotlin {
     }
 
     sourceSets {
+        commonMain {
+            dependencies {
+                implementation(libs.kotlinx.serialization.json)
+            }
+        }
         commonTest {
             dependencies {
+                implementation(libs.kotlinx.serialization.json)
                 implementation(kotlin("test"))
                 implementation(libs.kotest.assertions.core)
             }
@@ -61,7 +68,7 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_22
+        targetCompatibility = JavaVersion.VERSION_22
     }
 }

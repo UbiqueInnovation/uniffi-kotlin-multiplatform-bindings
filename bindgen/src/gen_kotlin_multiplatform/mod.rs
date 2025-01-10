@@ -92,6 +92,7 @@ pub struct Config {
     pub(super) package_name: Option<String>,
     pub(super) cdylib_name: Option<String>,
     generate_immutable_records: Option<bool>,
+    generate_serializabel_records: Option<bool>,
     #[serde(default)]
     custom_types: HashMap<String, CustomTypeConfig>,
     #[serde(default)]
@@ -126,6 +127,10 @@ impl Config {
 
     /// Whether to generate immutable records (`val` instead of `var`)
     pub fn generate_immutable_records(&self) -> bool {
+        self.generate_immutable_records.unwrap_or(false)
+    }
+    /// Whether to use kotlinx Serializable annotation on the data class
+    pub fn generate_serializable_records(&self) -> bool {
         self.generate_immutable_records.unwrap_or(false)
     }
 

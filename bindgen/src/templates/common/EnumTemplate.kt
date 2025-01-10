@@ -11,6 +11,9 @@
 {%- call kt::docstring(e, 0) %}
 {% match e.variant_discr_type() %}
 {% when None %}
+{%- if config.generate_serializable_records() %}
+@kotlinx.serialization.Serializable
+{% endif%}
 enum class {{ type_name }} {
     {% for variant in e.variants() -%}
     {%- call kt::docstring(variant, 4) %}
@@ -19,6 +22,9 @@ enum class {{ type_name }} {
     companion object
 }
 {% when Some with (variant_discr_type) %}
+{%- if config.generate_serializable_records() %}
+@kotlinx.serialization.Serializable
+{% endif%}
 enum class {{ type_name }}(val value: {{ variant_discr_type|type_name(ci) }}) {
     {% for variant in e.variants() -%}
     {%- call kt::docstring(variant, 4) %}

@@ -8,6 +8,7 @@ import io.gitlab.trixnity.uniffi.examples.arithmeticpm.*
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.matchers.shouldBe
 import kotlin.test.Test
+import kotlinx.serialization.json.*
 
 class ArithmeticTest {
     @Test
@@ -19,6 +20,9 @@ class ArithmeticTest {
 
     @Test
     fun testBasicOperations() {
+        val test = "{\"ty\": \"ADD\", \"a\": 2, \"b\": 3}"
+        val operation = Json {}.decodeFromString<Operation>(test)
+        applyOperation(operation) shouldBe 5uL
         add(2uL, 4uL) shouldBe 6uL
         sub(4uL, 2uL) shouldBe 2uL
         div(8uL, 4uL) shouldBe 2uL

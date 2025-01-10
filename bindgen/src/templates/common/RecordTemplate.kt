@@ -1,8 +1,11 @@
 
 {%- let rec = ci|get_record_definition(name) %}
-
+// Generated records, do not modify
 {%- if rec.has_fields() %}
 {%- call kt::docstring(rec, 0) %}
+{%- if config.generate_serializable_records() %}
+@kotlinx.serialization.Serializable
+{% endif%}
 data class {{ type_name }} (
     {%- for field in rec.fields() %}
     {%- call kt::docstring(field, 4) %}
