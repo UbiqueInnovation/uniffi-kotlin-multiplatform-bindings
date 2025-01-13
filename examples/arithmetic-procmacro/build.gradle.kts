@@ -4,7 +4,7 @@ import io.gitlab.trixnity.gradle.rustlink.useRustUpLinker
 plugins {
     kotlin("multiplatform")
     id("io.gitlab.trixnity.cargo.kotlin.multiplatform")
-    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform")
+    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform") version "0.4.7"
     alias(libs.plugins.kotlin.atomicfu)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
@@ -17,7 +17,7 @@ uniffi {
 
 kotlin {
     androidTarget()
-    jvm("desktop")
+//    jvm("desktop")
     arrayOf(
         mingwX64(),
     ).forEach { nativeTarget ->

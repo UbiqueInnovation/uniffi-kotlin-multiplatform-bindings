@@ -3,7 +3,8 @@
 // Generated records, do not modify
 {%- if rec.has_fields() %}
 {%- call kt::docstring(rec, 0) %}
-{%- if config.generate_serializable_records() %}
+{%- if config.generate_serializable_records() && self.is_serializable(rec) %}
+// it is serializable
 @kotlinx.serialization.Serializable
 {% endif%}
 data class {{ type_name }} (
