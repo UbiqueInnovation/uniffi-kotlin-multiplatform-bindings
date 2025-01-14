@@ -16,6 +16,7 @@ use heck::{ToLowerCamelCase, ToShoutySnakeCase, ToUpperCamelCase};
 use serde::{Deserialize, Serialize};
 use uniffi_bindgen::backend::TemplateExpression;
 use uniffi_bindgen::interface::*;
+use crate::gen_kotlin_multiplatform::filters::header_noescape_name;
 
 mod callback_interface;
 mod compounds;
@@ -60,6 +61,8 @@ trait CodeType: Debug {
     fn literal(&self, _literal: &Literal, ci: &ComponentInterface) -> String {
         unimplemented!("Unimplemented for {}", self.type_label(ci))
     }
+
+    fn is_optional(&self) -> bool { false }
 
     /// Name of the FfiConverter
     ///
@@ -315,13 +318,27 @@ macro_rules! kotlin_type_renderer {
                 for f in rec.fields() {
                     for inner_ty in f.iter_types() {
                         match inner_ty {
-                           Type::Object{ .. }
-                           |Type::CallbackInterface{ .. }
-                           | Type::External{ .. }
-                           |  Type::Custom{ .. } => {
-                               return false
-                           }
-                            _ => return true
+                            Type::Object { .. }
+                            | Type::CallbackInterface { .. }
+                            | Type::External { .. }
+                            | Type::Custom { .. } => return false,
+                            _ => return true,
+                        }
+                    }
+                }
+                true
+            }
+            // Helper to check if a enum variant can be serialized
+            // We only allow records that store primitive types or other records and enums
+            fn is_variant_serializable(&self, rec: &Variant) -> bool {
+                for f in rec.fields() {
+                    for inner_ty in f.iter_types() {
+                        match inner_ty {
+                            Type::Object { .. }
+                            | Type::CallbackInterface { .. }
+                            | Type::External { .. }
+                            | Type::Custom { .. } => return false,
+                            _ => return true,
                         }
                     }
                 }
@@ -451,6 +468,9 @@ impl KotlinCodeOracle {
     /// `var_name` without the backticks.  Useful for using in `@Structure.FieldOrder`.
     pub fn var_name_raw(&self, nm: &str) -> String {
         header_escape_name(&nm.to_lower_camel_case()).unwrap()
+    }
+    pub fn var_name_raw_noescape(&self, nm: &str) -> String {
+        header_noescape_name(&nm.to_lower_camel_case()).unwrap()
     }
 
     /// Get the idiomatic Kotlin rendering of an individual enum variant.
@@ -915,6 +935,10 @@ mod filters {
             Ok(nm.to_owned())
         }
     }
+    /// Append a `_` if the name is a valid c/c++ keyword
+    pub fn header_noescape_name(nm: &str) -> Result<String, askama::Error> {
+        Ok(nm.to_owned())
+    }
 
     pub fn header_ffi_type_name(type_: &FfiType) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.ffi_type_label_header(type_))
@@ -968,6 +992,14 @@ mod filters {
     /// Get the idiomatic Kotlin rendering of a variable name.
     pub fn var_name(nm: &str) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.var_name(nm))
+    }
+    /// Check if type is Option
+    pub fn is_optional( as_ct: &impl AsCodeType,) -> Result<bool, askama::Error> {
+        Ok(as_ct.as_codetype().is_optional())
+    }
+    /// Get the idiomatic Kotlin rendering of a variable name.
+    pub fn var_name_raw_noescape(nm: &str) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.var_name_raw_noescape(nm))
     }
 
     /// Get the idiomatic Kotlin rendering of a variable name.

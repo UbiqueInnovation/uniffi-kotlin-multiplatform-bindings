@@ -55,16 +55,96 @@ public object {{ e|ffi_converter_name }}: FfiConverterRustBuffer<{{ type_name }}
 {% else %}
 
 {%- call kt::docstring(e, 0) %}
+{% if contains_object_references %}
+{% else %}
+{%- if config.generate_serializable_records() %}
+// we can serialize this here, but it only works some times
+object {{ type_name }}PolySerializer : kotlinx.serialization.json.JsonContentPolymorphicSerializer<{{ type_name }}>({{ type_name }}::class) {
+    override fun selectDeserializer(element: kotlinx.serialization.json.JsonElement) : kotlinx.serialization.DeserializationStrategy<{{ type_name }}> {
+        {{ self.add_import("kotlinx.serialization.json.jsonObject") }}
+        {{ self.add_import("kotlinx.serialization.json.Json") }}
+        {{ self.add_import("kotlinx.serialization.builtins.serializer") }}
+
+        val jsonObject = element.jsonObject
+        {% for variant in e.variants() -%}
+        var is{{ variant|variant_type_name(ci) }} = true
+        {% endfor %}
+        var fieldName = ""
+        var alternativeFieldName = ""
+        val jsonTester = Json {}
+
+        {% for variant in e.variants() -%}
+        {% if variant.has_fields() %}
+        {%for field in variant.fields() %}
+
+            {%- let fieldNameInternal = field.name()|var_name|unquote %}
+            fieldName = "{% call kt::field_name_unquoted_unescaped(field, loop.index) %}"
+            alternativeFieldName = "{{ field.name() }}"
+
+
+
+            // if it has fields, try all field names
+            {% if fieldNameInternal != ""  %}
+                {% let is_optional = field|is_optional %}
+                {% if !is_optional %}
+                        if (!jsonObject.containsKey(fieldName) && !jsonObject.containsKey(alternativeFieldName)) {
+                            is{{ variant|variant_type_name(ci) }} = false
+                        }
+                {% endif %}
+            {%else %}
+
+               var innerObject{{ variant|variant_type_name(ci) }} = jsonObject.getValue(fieldName)
+                try {
+                    val objectSerializer : kotlinx.serialization.KSerializer<{{ field|type_name(ci) }}> = kotlinx.serialization.serializer()
+                 val inner : {{ field|type_name(ci) }} = jsonTester.decodeFromJsonElement(objectSerializer,innerObject{{ variant|variant_type_name(ci) }})
+                 } catch(e: Exception) {
+                  is{{ variant|variant_type_name(ci) }} = false
+                 }
+            {% endif %}
+
+        {% endfor %}
+        {% endif %}
+        {% endfor %}
+
+        return when {
+            {% for variant in e.variants() -%}
+                is{{ variant|variant_type_name(ci) }} -> {{type_name}}.{{ variant|variant_type_name(ci) }}.serializer()
+            {% endfor %}
+            else -> throw IllegalArgumentException("Unsupported BaseType")
+        }
+
+
+    }
+}
+// it is serializable
+@kotlinx.serialization.Serializable({{ type_name }}PolySerializer::class)
+{% endif%}
+{% endif %}
 sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% endif %} {
     {% for variant in e.variants() -%}
     {%- call kt::docstring(variant, 4) %}
     {% if !variant.has_fields() -%}
+    @kotlinx.serialization.Serializable
     object {{ variant|variant_type_name(ci) }} : {{ type_name }}()
     {% else -%}
+    {% if contains_object_references %}
+    {% else %}
+    {%- if config.generate_serializable_records() && self.is_variant_serializable(variant) %}
+    // it is serializable but it is not clear how to do it
+     @kotlinx.serialization.Serializable
+    {% endif%}
+    {% endif %}
     data class {{ variant|variant_type_name(ci) }}(
         {%- for field in variant.fields() -%}
         {%- call kt::docstring(field, 8) %}
-        val {% call kt::field_name(field, loop.index) %}: {{ field|type_name(ci) }}{% if loop.last %}{% else %}, {% endif %}
+        {%- if config.generate_serializable_records() && self.is_variant_serializable(variant) %}
+        // it is serializable but it is not clear how to do it
+        @kotlinx.serialization.SerialName("{% call kt::field_name_unquoted_unescaped(field, loop.index) %}")
+        {%-if !field.name().is_empty() %}
+        @kotlinx.serialization.json.JsonNames("{{ field.name() }}")
+        {%- endif %}
+        {% endif%}
+        val {% call kt::field_name(field, loop.index) %}: {{ field|type_name(ci) }} {% if field|is_optional %} = null {% endif %} {% if loop.last %}{% else %}, {% endif %}
         {%- endfor -%}
     ) : {{ type_name }}() {
         companion object

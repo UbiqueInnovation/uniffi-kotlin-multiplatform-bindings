@@ -170,6 +170,14 @@ v{{- field_num -}}
 {%- endif -%}
 {%- endmacro %}
 
+{% macro field_name_unquoted_unescaped(field, field_num) %}
+{%- if field.name().is_empty() -%}
+v{{- field_num -}}
+{%- else -%}
+{{ field.name()|var_name_raw_noescape }}
+{%- endif -%}
+{%- endmacro %}
+
  // Macro for destroying fields
 {%- macro destroy_fields(member) %}
     {%- for field in member.fields() %}
