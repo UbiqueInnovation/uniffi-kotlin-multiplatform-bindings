@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Debug;
 
+use crate::gen_kotlin_multiplatform::filters::header_noescape_name;
 use anyhow::{anyhow, Context, Result};
 use askama::Template;
 use filters::header_escape_name;
@@ -16,7 +17,6 @@ use heck::{ToLowerCamelCase, ToShoutySnakeCase, ToUpperCamelCase};
 use serde::{Deserialize, Serialize};
 use uniffi_bindgen::backend::TemplateExpression;
 use uniffi_bindgen::interface::*;
-use crate::gen_kotlin_multiplatform::filters::header_noescape_name;
 
 mod callback_interface;
 mod compounds;
@@ -30,7 +30,7 @@ mod record;
 mod variant;
 
 #[rustfmt::skip]
-const KEYWORDS: &[&str] = &[
+const CPP_KEYWORDS: &[&str] = &[
     "alignas", "alignof", "and", "and_eq", "asm", "auto", "bitand", "bitor", "bool",
     "break", "case", "catch", "char", "char8_t", "char16_t", "char32_t", "class",
     "compl", "concept", "const", "const_cast", "consteval", "constexpr", "constinit",
@@ -62,7 +62,9 @@ trait CodeType: Debug {
         unimplemented!("Unimplemented for {}", self.type_label(ci))
     }
 
-    fn is_optional(&self) -> bool { false }
+    fn is_optional(&self) -> bool {
+        false
+    }
 
     /// Name of the FfiConverter
     ///
@@ -929,7 +931,7 @@ mod filters {
 
     /// Append a `_` if the name is a valid c/c++ keyword
     pub fn header_escape_name(nm: &str) -> Result<String, askama::Error> {
-        if KEYWORDS.contains(&nm) {
+        if CPP_KEYWORDS.contains(&nm) {
             Ok(format!("{nm}_"))
         } else {
             Ok(nm.to_owned())
@@ -994,7 +996,7 @@ mod filters {
         Ok(KotlinCodeOracle.var_name(nm))
     }
     /// Check if type is Option
-    pub fn is_optional( as_ct: &impl AsCodeType,) -> Result<bool, askama::Error> {
+    pub fn is_optional(as_ct: &impl AsCodeType) -> Result<bool, askama::Error> {
         Ok(as_ct.as_codetype().is_optional())
     }
     /// Get the idiomatic Kotlin rendering of a variable name.
