@@ -1716,6 +1716,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "uniffi-kmm-fixture-docstring"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "once_cell",
+ "thiserror",
+ "uniffi",
+ "uniffi_bindgen",
+ "uniffi_macros",
+]
+
+[[package]]
+name = "uniffi-kmm-fixture-docstring-proc-macro"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "once_cell",
+ "thiserror",
+ "uniffi",
+ "uniffi_bindgen",
+ "uniffi_macros",
+]
+
+[[package]]
+name = "uniffi-kmm-fixture-enum-types"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "once_cell",
+ "thiserror",
+ "uniffi",
+ "uniffi_bindgen",
+ "uniffi_macros",
+]
+
+[[package]]
+name = "uniffi-kmm-fixture-error-types"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "camino",
+ "once_cell",
+ "thiserror",
+ "uniffi",
+ "uniffi_bindgen",
+ "uniffi_macros",
+]
+
+[[package]]
 name = "uniffi-kmm-fixture-external-types"
 version = "0.1.0"
 dependencies = [
