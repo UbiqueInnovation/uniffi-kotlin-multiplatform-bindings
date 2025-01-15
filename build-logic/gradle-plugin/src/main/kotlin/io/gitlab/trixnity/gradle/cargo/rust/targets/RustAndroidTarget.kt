@@ -74,18 +74,25 @@ enum class RustAndroidTarget(
     ): Map<String, Any> {
         val actualNdkRoot = tryRetrieveNdkRoot(sdkRoot, ndkVersion, ndkRoot)!!
         val toolchainBinaryDir = ndkToolchainDir(sdkRoot, ndkVersion, ndkRoot)!!.resolve("bin")
+        val currentPlatform = CargoHost.current.platform
+        val clang =
+            toolchainBinaryDir.resolve(currentPlatform.convertExeName("${ndkLlvmTriple}$apiLevel-clang"))
+        val clangCpp =
+            toolchainBinaryDir.resolve(currentPlatform.convertExeName("${ndkLlvmTriple}$apiLevel-clang++"))
+        val ar = toolchainBinaryDir.resolve(currentPlatform.convertExeName("llvm-ar"))
+        val ranlib = toolchainBinaryDir.resolve(currentPlatform.convertExeName("llvm-ranlib"))
         return mapOf(
             "ANDROID_HOME" to sdkRoot,
             "ANDROID_NDK_HOME" to actualNdkRoot,
             "ANDROID_NDK_ROOT" to actualNdkRoot,
             "CARGO_TARGET_${
                 rustTriple.replace('-', '_').uppercase()
-            }_LINKER" to toolchainBinaryDir.resolve("${ndkLlvmTriple}$apiLevel-clang"),
-            "CC_$rustTriple" to toolchainBinaryDir.resolve("${ndkLlvmTriple}$apiLevel-clang"),
-            "CLANG_PATH" to toolchainBinaryDir.resolve("${ndkLlvmTriple}$apiLevel-clang"),
-            "CXX_$rustTriple" to toolchainBinaryDir.resolve("${ndkLlvmTriple}$apiLevel-clang++"),
-            "AR_$rustTriple" to toolchainBinaryDir.resolve("llvm-ar"),
-            "RANLIB_$rustTriple" to toolchainBinaryDir.resolve("llvm-ranlib"),
+            }_LINKER" to clang,
+            "CC_$rustTriple" to clang,
+            "CLANG_PATH" to clang,
+            "CXX_$rustTriple" to clangCpp,
+            "AR_$rustTriple" to ar,
+            "RANLIB_$rustTriple" to ranlib,
             "CFLAGS_$rustTriple" to "-D__ANDROID_MIN_SDK_VERSION__=$apiLevel",
             "CXXFLAGS_$rustTriple" to "-D__ANDROID_MIN_SDK_VERSION__=$apiLevel",
         )
@@ -113,7 +120,8 @@ enum class RustAndroidTarget(
             }
         }
 
-        private fun ndkRootFromAndroidNdkRoot(): File? = System.getenv("ANDROID_NDK_ROOT")?.let(::File)
+        private fun ndkRootFromAndroidNdkRoot(): File? =
+            System.getenv("ANDROID_NDK_ROOT")?.let(::File)
 
         private fun tryRetrieveNdkRoot(
             sdkRoot: File,
