@@ -58,6 +58,30 @@ public object {{ e|ffi_converter_name }}: FfiConverterRustBuffer<{{ type_name }}
 {% if contains_object_references %}
 {% else %}
 {%- if config.generate_serializable_records() %}
+
+{%  for variant in e.variants() %}
+{% if variant.has_fields() && variant.fields().len() == 1 && variant.fields()[0].name()|var_name|unquote == "" %}
+{%- let field = variant.fields()[0] %}
+object {{ type_name }}{{ variant|variant_type_name(ci) }}Serializer : kotlinx.serialization.KSerializer<{{ type_name }}> {
+    override val descriptor: kotlinx.serialization.descriptors.SerialDescriptor
+    get() =  kotlinx.serialization.descriptors.buildClassSerialDescriptor("{{ type_name }}{{ variant|variant_type_name(ci) }}") {
+        element("v1",  kotlinx.serialization.serializer<{{ field|type_name(ci) }}>().descriptor)
+    }
+
+    override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: {{ type_name }}) {
+        when(value) {
+            is {{type_name}}.{{ variant|variant_type_name(ci) }} ->encoder.encodeSerializableValue(kotlinx.serialization.serializer(),value.v1)
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+    override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): {{type_name}}.{{ variant|variant_type_name(ci) }} {
+        val inner : {{ field|type_name(ci) }} = decoder.decodeSerializableValue(kotlinx.serialization.serializer())
+        return {{type_name}}.{{ variant|variant_type_name(ci) }}(inner)
+    }
+}
+{% endif %}
+{%  endfor %}
+
 // we can serialize this here, but it only works some times
 object {{ type_name }}PolySerializer : kotlinx.serialization.json.JsonContentPolymorphicSerializer<{{ type_name }}>({{ type_name }}::class) {
     override fun selectDeserializer(element: kotlinx.serialization.json.JsonElement) : kotlinx.serialization.DeserializationStrategy<{{ type_name }}> {
@@ -66,67 +90,50 @@ object {{ type_name }}PolySerializer : kotlinx.serialization.json.JsonContentPol
         {{ self.add_import("kotlinx.serialization.builtins.serializer") }}
 
 
-        {% for variant in e.variants() -%}
+        {%- for variant in e.variants() %}
         var is{{ variant|variant_type_name(ci) }} = true
-        {% endfor %}
+        {%- endfor %}
         var fieldName = ""
         var alternativeFieldName = ""
         val jsonTester = Json {}
 
-        {% for variant in e.variants() -%}
-        {% if variant.has_fields() %}
-        {%for field in variant.fields() %}
+        {%- for variant in e.variants() -%}
+        {%- if variant.has_fields() -%}
+        {%- for field in variant.fields() -%}
 
             {%- let fieldNameInternal = field.name()|var_name|unquote %}
             fieldName = "{% call kt::field_name_unquoted_unescaped(field, loop.index) %}"
             alternativeFieldName = "{{ field.name() }}"
 
-
-
             // if it has fields, try all field names
-            {% if fieldNameInternal != ""  %}
-                {% let is_optional = field|is_optional %}
-                {% if !is_optional %}
-                        if (!element.jsonObject.containsKey(fieldName) && !element.jsonObject.containsKey(alternativeFieldName)) {
+            {%- if fieldNameInternal != ""  -%}
+                {%- let is_optional = field|is_optional -%}
+                {%- if !is_optional %}
+                        if ( element is kotlinx.serialization.json.JsonObject && !element.jsonObject.containsKey(fieldName) && !element.jsonObject.containsKey(alternativeFieldName)) {
                             is{{ variant|variant_type_name(ci) }} = false
                         }
-                {% endif %}
-            {%else %}
+                {%- endif -%}
+            {%- else %}
                 try {
                     val objectSerializer : kotlinx.serialization.KSerializer<{{ field|type_name(ci) }}> = kotlinx.serialization.serializer()
                  val inner : {{ field|type_name(ci) }} = jsonTester.decodeFromJsonElement(objectSerializer,element)
                  } catch(e: Exception) {
                   is{{ variant|variant_type_name(ci) }} = false
                  }
-            {% endif %}
+            {%- endif -%}
 
-        {% endfor %}
-        {% endif %}
-        {% endfor %}
-
+        {%- endfor -%}
+        {%- endif -%}
+        {%- endfor %}
         return when {
-            {% for variant in e.variants() -%}
-            {% if variant.has_fields() && variant.fields().len() == 1 && variant.fields()[0].name()|var_name|unquote == "" %}
+            {%- for variant in e.variants() %}
+            {%- if variant.has_fields() && variant.fields().len() == 1 && variant.fields()[0].name()|var_name|unquote == "" -%}
             {%- let field = variant.fields()[0] %}
-                    is{{ variant|variant_type_name(ci) }} -> object: kotlinx.serialization.KSerializer<{{ type_name }}> {
-                override val descriptor: kotlinx.serialization.descriptors.SerialDescriptor
-                get() =  {{type_name}}.{{ variant|variant_type_name(ci) }}.serializer().descriptor
-
-                override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: {{ type_name }}) {
-                    when(value) {
-                        is {{type_name}}.{{ variant|variant_type_name(ci) }} ->encoder.encodeSerializableValue(kotlinx.serialization.serializer(),value.v1)
-                        else -> throw RuntimeException("invalid enum value, something is very wrong!!")
-                    }
-                 }
-                override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): {{type_name}}.{{ variant|variant_type_name(ci) }} {
-                    val inner : {{ field|type_name(ci) }} = decoder.decodeSerializableValue(kotlinx.serialization.serializer())
-                    return {{type_name}}.{{ variant|variant_type_name(ci) }}(inner)
-                }
-            }
-            {% else %}
+                    is{{ variant|variant_type_name(ci) }} -> {{ type_name }}{{ variant|variant_type_name(ci) }}Serializer
+                    {% else %}
                 is{{ variant|variant_type_name(ci) }} ->  {{type_name}}.{{ variant|variant_type_name(ci) }}.serializer()
-            {% endif %}
-            {% endfor %}
+            {%- endif -%}
+            {%- endfor %}
             else -> throw IllegalArgumentException("Unsupported BaseType")
         }
 
@@ -148,7 +155,7 @@ sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% e
     {% else %}
     {%- if config.generate_serializable_records() && self.is_variant_serializable(variant) %}
     // it is serializable but it is not clear how to do it
-     @kotlinx.serialization.Serializable
+     @kotlinx.serialization.Serializable{% if variant.has_fields() && variant.fields().len() == 1 && variant.fields()[0].name()|var_name|unquote == "" %}({{ type_name }}{{ variant|variant_type_name(ci) }}Serializer::class) {% endif %}
     {% endif%}
     {% endif %}
     data class {{ variant|variant_type_name(ci) }}(
@@ -156,9 +163,9 @@ sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% e
         {%- call kt::docstring(field, 8) %}
         {%- if config.generate_serializable_records() && self.is_variant_serializable(variant) %}
         // it is serializable but it is not clear how to do it
-        @kotlinx.serialization.SerialName("{% call kt::field_name_unquoted_unescaped(field, loop.index) %}")
+        @kotlinx.serialization.json.JsonNames("{% call kt::field_name_unquoted_unescaped(field, loop.index) %}")
         {%-if !field.name().is_empty() %}
-        @kotlinx.serialization.json.JsonNames("{{ field.name() }}")
+        @kotlinx.serialization.SerialName("{{ field.name() }}")
         {%- endif %}
         {% endif%}
         val {% call kt::field_name(field, loop.index) %}: {{ field|type_name(ci) }} {% if field|is_optional %} = null {% endif %} {% if loop.last %}{% else %}, {% endif %}

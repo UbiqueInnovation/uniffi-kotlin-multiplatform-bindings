@@ -10,9 +10,9 @@
 data class {{ type_name }} (
     {%- for field in rec.fields() %}
     {%- call kt::docstring(field, 4) %}
-    @kotlinx.serialization.SerialName("{% call kt::field_name_unquoted_unescaped(field, loop.index) %}")
+    @kotlinx.serialization.json.JsonNames("{% call kt::field_name_unquoted_unescaped(field, loop.index) %}")
     {%-if !field.name().is_empty() %}
-    @kotlinx.serialization.json.JsonNames("{{ field.name() }}")
+    @kotlinx.serialization.SerialName("{{ field.name() }}")
     {%- endif %}
     {% if config.generate_immutable_records() %}val{% else %}var{% endif %} {{ field.name()|var_name }}: {{ field|type_name(ci) -}}
     {%- match field.default_value() %}
