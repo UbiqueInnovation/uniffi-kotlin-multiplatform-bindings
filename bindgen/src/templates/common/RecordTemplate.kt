@@ -39,7 +39,7 @@ class {{ type_name }} {
     }
 
     override fun hashCode(): Int {
-        return javaClass.hashCode()
+        return {{ type_name }}::class.hashCode()
     }
 
     companion object
