@@ -23,6 +23,11 @@ abstract class UniFfiExtension(internal val project: Project) {
         project.objects.property<BindgenSource>().convention(BindgenSource.Registry())
 
     /**
+     * Runs `ktlint` on the generated bindings
+     */
+    val formatCode: Property<Boolean> = project.objects.property<Boolean>()
+
+    /**
      * Install the bindgen of the given [version] from the given [registry]. If [registry] is not specified, this will
      * download the bindgen from `crates.io`.
      */
@@ -121,6 +126,7 @@ sealed class BindingsGeneration(internal val project: Project) {
 
     /**
      * Path to the optional uniffi config file.
+     * If not provided, uniffi-bindgen will try to guess it.
      */
     abstract val config: RegularFileProperty
 }

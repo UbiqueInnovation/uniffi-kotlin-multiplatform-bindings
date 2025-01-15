@@ -135,6 +135,8 @@ class UniFfiPlugin : Plugin<Project> {
             cargoPackage.set(cargoExtension.cargoPackage)
             bindgen.set(installBindgen.get().bindgen)
             outputDirectory.set(bindingsDirectory)
+            if (uniFfiExtension.formatCode.isPresent)
+                formatCode.set(uniFfiExtension.formatCode.get())
 
             if (bindingsGeneration.config.isPresent)
                 config.set(bindingsGeneration.config)
@@ -217,6 +219,7 @@ class UniFfiPlugin : Plugin<Project> {
                 implementation("org.jetbrains.kotlinx:atomicfu:${DependencyVersions.KOTLINX_ATOMICFU}")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:${DependencyVersions.KOTLINX_DATETIME}")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${DependencyVersions.KOTLINX_COROUTINES}")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${DependencyVersions.KOTLINX_SERIALIZATION}")
             }
         }
     }

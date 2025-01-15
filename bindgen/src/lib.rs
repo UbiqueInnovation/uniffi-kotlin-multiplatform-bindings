@@ -4,7 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use std::{collections::HashMap, fs::File, io::Write};
+use std::{collections::HashMap, fs::File, io::Write, process::Command};
 
 use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -66,16 +66,12 @@ impl BindingGenerator for KotlinBindingGenerator {
         for Component { ci, config, .. } in components {
             let bindings = generate_bindings(config, ci)?;
 
-            write_bindings_target(ci, config, &settings.out_dir, "common", bindings.common);
-            write_bindings_target(ci, config, &settings.out_dir, "jvm", bindings.jvm);
-            write_bindings_target(ci, config, &settings.out_dir, "android", bindings.android);
-            write_bindings_target(ci, config, &settings.out_dir, "native", bindings.native);
+            write_bindings_target(ci, settings, config, "common", bindings.common);
+            write_bindings_target(ci, settings, config, "jvm", bindings.jvm);
+            write_bindings_target(ci, settings, config, "android", bindings.android);
+            write_bindings_target(ci, settings, config, "native", bindings.native);
 
             write_cinterop(ci, &settings.out_dir, bindings.header);
-
-            if settings.try_format_code {
-                todo!()
-            }
         }
         Ok(())
     }
@@ -83,8 +79,8 @@ impl BindingGenerator for KotlinBindingGenerator {
 
 fn write_bindings_target(
     ci: &ComponentInterface,
+    settings: &GenerationSettings,
     config: &Config,
-    out_dir: &Utf8Path,
     target: &str,
     content: String,
 ) {
@@ -92,15 +88,24 @@ fn write_bindings_target(
     let package_path: Utf8PathBuf = config.package_name().split('.').collect();
     let file_name = format!("{}.{}.kt", ci.namespace(), target);
 
-    let dest_dir = Utf8PathBuf::from(out_dir)
-        .join(&source_set_name)
+    let dest_dir = Utf8PathBuf::from(&settings.out_dir)
+        .join(source_set_name)
         .join("kotlin")
         .join(package_path);
     let file_path = Utf8PathBuf::from(&dest_dir).join(file_name);
 
     fs::create_dir_all(dest_dir).unwrap();
-    let mut f = File::create(&file_path).unwrap();
-    write!(f, "{}", content).unwrap();
+    fs::write(&file_path, content).unwrap();
+
+    if settings.try_format_code {
+        println!("Code generation complete, formatting with ktlint (use --no-format to disable)");
+        if let Err(e) = Command::new("ktlint").arg("-F").arg(&file_path).output() {
+            println!(
+                "Warning: Unable to auto-format {} using ktlint: {e:?}",
+                file_path.file_name().unwrap(),
+            );
+        }
+    }
 }
 
 fn write_cinterop(ci: &ComponentInterface, out_dir: &Utf8Path, content: String) {
@@ -110,7 +115,7 @@ fn write_cinterop(ci: &ComponentInterface, out_dir: &Utf8Path, content: String) 
         .join("headers")
         .join(ci.namespace());
     fs::create_dir_all(&dst_dir).unwrap();
-    let file_path = Utf8PathBuf::from(dst_dir).join(format!("{}.h", ci.namespace()));
-    let mut f = File::create(&file_path).unwrap();
+    let file_path = dst_dir.join(format!("{}.h", ci.namespace()));
+    let mut f = File::create(file_path).unwrap();
     write!(f, "{}", content).unwrap();
 }

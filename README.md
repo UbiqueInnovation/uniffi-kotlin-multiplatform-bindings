@@ -368,6 +368,14 @@ uniffi {
 }
 ```
 
+If you want to run `ktlint` on the generated bindings set `formatCode` to `true`.
+
+```kotlin
+uniffi {
+    formatCode = true
+}
+```
+
 ### The helper plugin for linking
 
 The helper plugin exposes two extension functions `KotlinMultiplatformExtension.hostNativeTarget`

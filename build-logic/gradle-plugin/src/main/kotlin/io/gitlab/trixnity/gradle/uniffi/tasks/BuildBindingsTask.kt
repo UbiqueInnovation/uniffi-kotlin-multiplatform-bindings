@@ -74,6 +74,13 @@ abstract class BuildBindingsTask : CargoPackageTask() {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val source: RegularFileProperty
 
+    /**
+     * Tries to run `ktlint` on the generated bindings
+     */
+    @get:Input
+    @get:Optional
+    abstract val formatCode: Property<Boolean>
+
     @TaskAction
     fun buildBindings() {
         command(bindgen) {
@@ -92,6 +99,9 @@ abstract class BuildBindingsTask : CargoPackageTask() {
             }
             if (crateName.isPresent) {
                 arguments("--crate", crateName.get())
+            }
+            if (formatCode.isPresent && formatCode.get()) {
+                arguments("--format")
             }
             arguments(source.get())
             suppressXcodeIosToolchains()
