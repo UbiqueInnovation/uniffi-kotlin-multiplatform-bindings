@@ -8,8 +8,9 @@ typedef struct RustBuffer
 
 typedef struct RustBufferByReference
 {
-    RustBuffer *ptr;
-    uint64_t len;
+    int64_t capacity;
+    int64_t len;
+    uint8_t *_Nullable data;
 } RustBufferByReference;
 
 typedef struct ForeignBytes

@@ -19,6 +19,7 @@ package {{ config.package_name() }}
 // helpers directly inline like we're doing here.
 
 import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.COpaquePointerVar
 import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CPointerVarOf
@@ -59,7 +60,7 @@ import kotlin.coroutines.resume
 {% include "ReferenceHelper.kt" %}
 
 // Contains loading, initialization code,
-// and the FFI Function declarations in a com.sun.jna.Library.
+// and the FFI Function declarations.
 {% include "NamespaceLibraryTemplate.kt" %}
 
 // Public interface members begin here.

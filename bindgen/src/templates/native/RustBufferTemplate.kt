@@ -80,14 +80,15 @@ public actual fun RustBufferHelper.allocFromByteBuffer(buffer: ByteBuffer): Rust
         }
     }
 
-public actual class RustBufferByReference(inner: CPointer<{{ ci.namespace() }}.cinterop.RustBufferByReference>) {}
+public actual class RustBufferByReference(val inner: CPointer<{{ ci.namespace() }}.cinterop.RustBufferByReference>) {}
 
-// TODO: Implement reading/writing to pointer value inside CPointer
 public actual fun RustBufferByReference.setValue(value: RustBufferByValue) {
-    TODO("Not implemented yet!")
+    inner.pointed.capacity = value.capacity
+    inner.pointed.len = value.len
+    inner.pointed.data = value.data?.inner?.reinterpret()
 }
 public actual fun RustBufferByReference.getValue(): RustBufferByValue
-    = TODO("Not implemented yet!")
+    = RustBufferByValue(inner.pointed.reinterpret<{{ ci.namespace() }}.cinterop.RustBuffer>().readValue())
 
 
 public actual class ForeignBytes(val inner: CPointer<{{ ci.namespace() }}.cinterop.ForeignBytes>) {}
