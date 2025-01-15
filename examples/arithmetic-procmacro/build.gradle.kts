@@ -17,7 +17,7 @@ uniffi {
 
 kotlin {
     androidTarget()
-//    jvm("desktop")
+    jvm("desktop")
     arrayOf(
         mingwX64(),
     ).forEach { nativeTarget ->
@@ -37,11 +37,6 @@ kotlin {
     }
 
     sourceSets {
-        commonMain {
-            dependencies {
-                implementation(libs.kotlinx.serialization.json)
-            }
-        }
         commonTest {
             dependencies {
                 implementation(libs.kotlinx.serialization.json)
@@ -68,7 +63,7 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_22
-        targetCompatibility = JavaVersion.VERSION_22
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }

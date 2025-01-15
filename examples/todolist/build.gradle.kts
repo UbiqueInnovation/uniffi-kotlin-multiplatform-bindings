@@ -7,6 +7,7 @@ plugins {
     id("io.gitlab.trixnity.uniffi.kotlin.multiplatform")
     alias(libs.plugins.kotlin.atomicfu)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 uniffi {
@@ -43,6 +44,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("test"))
                 implementation(libs.kotest.assertions.core)
+                implementation(libs.kotlinx.serialization.json)
             }
         }
     }

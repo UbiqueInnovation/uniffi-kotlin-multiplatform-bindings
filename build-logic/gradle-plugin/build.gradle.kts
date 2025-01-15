@@ -49,6 +49,7 @@ buildConfig {
         buildConfigField("String", "KOTLINX_ATOMICFU", "\"${libs.versions.kotlinx.atomicfu.get()}\"")
         buildConfigField("String", "KOTLINX_DATETIME", "\"${libs.versions.kotlinx.datetime.get()}\"")
         buildConfigField("String", "KOTLINX_COROUTINES", "\"${libs.versions.kotlinx.coroutines.get()}\"")
+        buildConfigField("String", "KOTLINX_SERIALIZATION", "\"${libs.versions.kotlinx.serialization.get()}\"")
         buildConfigField("String", "JNA", "\"${libs.versions.jna.get()}\"")
         buildConfigField("String", "ANDROIDX_ANNOTATION", "\"${libs.versions.androidx.annotation.get()}\"")
     }
