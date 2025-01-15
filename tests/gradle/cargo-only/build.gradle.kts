@@ -2,7 +2,6 @@ import io.gitlab.trixnity.gradle.cargo.rust.profiles.CargoProfile
 
 plugins {
     id("cargo-tests")
-    kotlin("multiplatform")
 }
 
 // Defined in the workspace manifest

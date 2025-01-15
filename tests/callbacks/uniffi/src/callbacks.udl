@@ -12,6 +12,7 @@ interface ComplexError {
    UnexpectedErrorWithReason(string reason);
 };
 
+
 /// These objects are implemented by the foreign language and passed
 /// to Rust. Rust then calls methods on it when it needs to.
 ///
@@ -25,6 +26,8 @@ callback interface ForeignGetters {
   string? get_option(string? v, boolean arg2);
   [Throws=SimpleError]
   sequence<i32> get_list(sequence<i32> v, boolean arg2);
+  [Throws=SimpleError]
+  void get_nothing(string v);
 };
 
 /// These objects are implemented in Rust, and call out to `ForeignGetters`
@@ -41,6 +44,8 @@ interface RustGetters {
   sequence<i32> get_list(ForeignGetters callback, sequence<i32> v, boolean arg2);
   [Throws=SimpleError]
   string? get_string_optional_callback(ForeignGetters? callback, string v, boolean arg2);
+  [Throws=SimpleError]
+  void get_nothing(ForeignGetters callback, string v);
 };
 
 /// These objects are implemented by the foreign language and passed
@@ -63,24 +68,4 @@ callback interface StoredForeignStringifier {
 interface RustStringifier {
   constructor(StoredForeignStringifier callback);
   string from_simple_type(i32 value);
-};
-
-callback interface VoidCallback {
-    void call_back(u64 new_value);
-};
-
-interface VoidCallbackProcessor {
-    constructor(u64 new_value);
-    void process(VoidCallback void_callback);
-};
-
-callback interface VoidCallbackWithError {
-    [Throws=ComplexError]
-    void call_back(u64 new_value);
-};
-
-interface VoidCallbackWithErrorProcessor {
-    constructor(VoidCallbackWithError void_callback);
-    [Throws=ComplexError]
-    void process(u64 new_value);
 };

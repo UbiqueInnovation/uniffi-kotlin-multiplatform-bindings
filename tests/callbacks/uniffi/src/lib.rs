@@ -1,50 +1,13 @@
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
-
-pub struct VoidCallbackProcessor {
-    new_value: u64,
-}
-
-pub trait VoidCallback: Send + Sync + std::fmt::Debug {
-    fn call_back(&self, new_value: u64);
-}
-
-impl VoidCallbackProcessor {
-    pub fn new(new_value: u64) -> Self {
-        VoidCallbackProcessor { new_value }
-    }
-
-    pub fn process(&self, void_callback: Box<dyn VoidCallback>) {
-        void_callback.call_back(self.new_value);
-    }
-}
-
-pub trait VoidCallbackWithError: Send + Sync + std::fmt::Debug {
-    fn call_back(&self, new_value: u64) -> Result<(), ComplexError>;
-}
-
-pub struct VoidCallbackWithErrorProcessor {
-    callback: Box<dyn VoidCallbackWithError>,
-}
-
-impl VoidCallbackWithErrorProcessor {
-    pub fn new(callback: Box<dyn VoidCallbackWithError>) -> Self {
-        VoidCallbackWithErrorProcessor { callback }
-    }
-
-    pub fn process(&self, new_value: u64) -> Result<(), ComplexError> {
-        self.callback.call_back(new_value)
-    }
-}
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 trait ForeignGetters {
     fn get_bool(&self, v: bool, argument_two: bool) -> Result<bool, SimpleError>;
     fn get_string(&self, v: String, arg2: bool) -> Result<String, SimpleError>;
     fn get_option(&self, v: Option<String>, arg2: bool) -> Result<Option<String>, ComplexError>;
     fn get_list(&self, v: Vec<i32>, arg2: bool) -> Result<Vec<i32>, SimpleError>;
+    fn get_nothing(&self, v: String) -> Result<(), SimpleError>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -88,8 +51,7 @@ impl RustGetters {
         v: bool,
         argument_two: bool,
     ) -> Result<bool, SimpleError> {
-        let ret = callback.get_bool(v, argument_two);
-        ret
+        callback.get_bool(v, argument_two)
     }
     fn get_string(
         &self,
@@ -124,6 +86,10 @@ impl RustGetters {
     ) -> Result<Option<String>, SimpleError> {
         callback.map(|c| c.get_string(v, arg2)).transpose()
     }
+
+    fn get_nothing(&self, callback: Box<dyn ForeignGetters>, v: String) -> Result<(), SimpleError> {
+        callback.get_nothing(v)
+    }
 }
 
 impl Default for RustGetters {
@@ -134,7 +100,7 @@ impl Default for RustGetters {
 
 // Use `Send+Send` because we want to store the callback in an exposed
 // `Send+Sync` object.
-#[allow(clippy::wrong_self_convention, dead_code)]
+#[allow(clippy::wrong_self_convention)]
 trait StoredForeignStringifier: Send + Sync + std::fmt::Debug {
     fn from_simple_type(&self, value: i32) -> String;
     fn from_complex_type(&self, values: Option<Vec<Option<f64>>>) -> String;
@@ -157,4 +123,3 @@ impl RustStringifier {
 }
 
 uniffi::include_scaffolding!("callbacks");
-uniffi_reexport_scaffolding!();

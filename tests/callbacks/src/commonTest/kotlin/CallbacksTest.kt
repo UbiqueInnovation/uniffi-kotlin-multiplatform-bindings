@@ -7,7 +7,6 @@
 import callbacks.*
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldInclude
 import kotlin.test.Test
 
 class CallbacksTest {
@@ -35,8 +34,21 @@ class CallbacksTest {
         }
 
         override fun getList(v: List<Int>, arg2: Boolean): List<Int> = if (arg2) v else listOf()
+        override fun getNothing(v: String): Unit {
+            if (v == "bad-argument") {
+                throw SimpleException.BadArgument("bad argument")
+            }
+            if (v == "unexpected-error") {
+                throw RuntimeException("something failed")
+            }
+        }
     }
 
+    // A bit more systematic in testing, but this time in English.
+    //
+    // 1. Pass in the callback as arguments.
+    // Make the callback methods use multiple arguments, with a variety of types, and
+    // with a variety of return types.
     @Test
     fun callbackAsArgument() {
         val rustGetters = RustGetters()
@@ -73,6 +85,9 @@ class CallbacksTest {
         rustGetters.getStringOptionalCallback(callback, "TestString", false) shouldBe "TestString"
         rustGetters.getStringOptionalCallback(null, "TestString", false) shouldBe null
 
+        // Should not throw
+        rustGetters.getNothing(callback, "TestString")
+
         shouldThrow<SimpleException.BadArgument> {
             rustGetters.getString(callback, "bad-argument", true)
         }
@@ -90,6 +105,13 @@ class CallbacksTest {
             rustGetters.getOption(callback, "unexpected-error", true)
         }.also {
             it.reason shouldBe RuntimeException("something failed").toString()
+        }
+
+        shouldThrow<SimpleException.BadArgument> {
+            rustGetters.getNothing(callback, "bad-argument")
+        }
+        shouldThrow<SimpleException.UnexpectedException> {
+            rustGetters.getNothing(callback, "unexpected-error")
         }
 
         rustGetters.destroy()
@@ -114,51 +136,13 @@ class CallbacksTest {
             expected shouldBe observed
         }
         rustStringifier.destroy()
+
+        // `stringifier` must remain valid after `rustStringifier2` drops the reference
+        val stringifier = StoredKotlinStringifier()
+        val rustStringifier1 = RustStringifier(stringifier)
+        val rustStringifier2 = RustStringifier(stringifier)
+        rustStringifier2.fromSimpleType(123) shouldBe "kotlin: 123"
+        rustStringifier2.destroy()
+        rustStringifier1.fromSimpleType(123) shouldBe "kotlin: 123"
     }
-
-        @Test
-        fun callbackReturningVoid() {
-            val answer = 42uL
-
-            val callback = object : VoidCallback {
-                var answer: ULong? = null
-
-                override fun callBack(newValue: ULong) {
-                    this.answer = newValue
-                }
-            }
-
-            VoidCallbackProcessor(answer).use {
-                it.process(callback)
-            }
-
-            callback.answer shouldBe answer
-        }
-
-        @Test
-        fun callBackReturningResultOfVoid() {
-            val answer = 42uL
-            val errorMessage = "That feels off"
-
-            val throwingCallback = object : VoidCallbackWithError {
-                var answer: ULong? = null
-
-
-                override fun callBack(newValue: ULong) {
-                    if (newValue != 42uL) {
-                        throw ComplexException.UnexpectedErrorWithReason(errorMessage)
-                    }
-                    this.answer = answer
-                }
-            }
-
-            VoidCallbackWithErrorProcessor(throwingCallback).use {
-                shouldThrow<ComplexException> { it.process(7uL) }
-                    .message shouldInclude errorMessage
-
-                it.process(answer)
-            }
-
-            throwingCallback.answer shouldBe answer
-        }
 }

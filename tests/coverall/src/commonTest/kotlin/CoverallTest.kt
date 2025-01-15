@@ -4,26 +4,86 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-import coverall.*
+import coverall.Color
+import coverall.ComplexException
+import coverall.CoverallException
+import coverall.Coveralls
+import coverall.DictWithDefaults
+import coverall.EmptyStruct
+import coverall.FalliblePatch
+import coverall.Getters
+import coverall.InternalException
+import coverall.NoPointer
+import coverall.NodeTrait
+import coverall.OtherError
+import coverall.Patch
+import coverall.Repair
+import coverall.RootException
+import coverall.ThreadsafeCounter
+import coverall.ancestorNames
+import coverall.createNoneDict
+import coverall.createSomeDict
+import coverall.getComplexError
+import coverall.getErrorDict
+import coverall.getNumAlive
+import coverall.getRootError
+import coverall.getStringUtilTraits
+import coverall.getTraits
+import coverall.makeRustGetters
+import coverall.testGetters
+import coverall.testRoundTripThroughForeign
+import coverall.testRoundTripThroughRust
+import coverall.throwRootError
+import coverall.use
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.matchers.collections.shouldBeIn
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
+import io.kotest.matchers.doubles.ToleranceMatcher
+import io.kotest.matchers.floats.FloatToleranceMatcher
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.*
+import io.kotest.matchers.types.shouldBeInstanceOf
+import io.kotest.matchers.types.shouldNotBeSameInstanceAs
+import kotlinx.atomicfu.locks.ReentrantLock
+import kotlinx.atomicfu.locks.withLock
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.newFixedThreadPoolContext
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
-import kotlin.math.abs
+import kotlin.math.max
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
 expect fun runGC()
 
 class CoverallTest {
-    private val GC_DELAY: Long = 10L
+    private val gcDelay: Long = 100
 
     private fun runGCWithDelay() {
         runGC()
-        runBlocking { delay(GC_DELAY) }
+        runBlocking { delay(gcDelay) }
+    }
+
+    // Ensures getNumAlive() always returns deterministic value
+    private val coverallLock = ReentrantLock()
+
+    private class CoverallLockScope(val initialNumAlive: ULong) {
+        fun getNumAlive(): ULong {
+            return max(coverall.getNumAlive(), initialNumAlive) - initialNumAlive
+        }
+    }
+
+    private inline fun <T> withCoverallLock(block: CoverallLockScope.() -> T) {
+        coverallLock.withLock {
+            CoverallLockScope(getNumAlive()).block()
+        }
     }
 
     @BeforeTest
@@ -33,9 +93,18 @@ class CoverallTest {
 
     @Test
     fun dict() {
+        // floats should be "close enough".
+        infix fun Float.almostEquals(other: Float) =
+            shouldBe(FloatToleranceMatcher(other, 0.000001F))
+
+        infix fun Double.almostEquals(other: Double) =
+            shouldBe(ToleranceMatcher(other, 0.000001))
+
         createSomeDict().use { d ->
             d.text shouldBe "text"
             d.maybeText shouldBe "maybe_text"
+            d.someBytes shouldBe "some_bytes".encodeToByteArray()
+            d.maybeSomeBytes shouldBe "maybe_some_bytes".encodeToByteArray()
             d.aBool shouldBe true
             d.maybeABool shouldBe false
             d.unsigned8 shouldBe 1.toUByte()
@@ -49,24 +118,43 @@ class CoverallTest {
             d.signed64 shouldBe 9223372036854775807L
             d.maybeSigned64 shouldBe 0L
 
-            // floats should be "close enough".
-            infix fun Float.almostEquals(other: Float) = (abs(this - other) < 0.000001) shouldBe true
-            infix fun Double.almostEquals(other: Double) = (abs(this - other) < 0.000001) shouldBe true
-
             d.float32 almostEquals 1.2345F
             d.maybeFloat32!! almostEquals (22.0F / 7.0F)
             d.float64 almostEquals 0.0
             d.maybeFloat64!! almostEquals 1.0
 
-            d.byteArray shouldBe byteArrayOf(5, 4, 3, 2, 1)
-            d.maybeByteArray shouldBe byteArrayOf(10, 8, 6, 4, 2)
-
             d.coveralls!!.getName() shouldBe "some_dict"
+        }
+
+        createNoneDict().use { d ->
+            d.text shouldBe "text"
+            d.maybeText shouldBe null
+            d.someBytes shouldBe "some_bytes".encodeToByteArray()
+            d.maybeSomeBytes shouldBe null
+            d.aBool shouldBe true
+            d.maybeABool shouldBe null
+            d.unsigned8 shouldBe 1.toUByte()
+            d.maybeUnsigned8 shouldBe null
+            d.unsigned16 shouldBe 3.toUShort()
+            d.maybeUnsigned16 shouldBe null
+            d.unsigned64 shouldBe 18446744073709551615UL
+            d.maybeUnsigned64 shouldBe null
+            d.signed8 shouldBe 8.toByte()
+            d.maybeSigned8 shouldBe null
+            d.signed64 shouldBe 9223372036854775807L
+            d.maybeSigned64 shouldBe null
+
+            d.float32 almostEquals 1.2345F
+            d.maybeFloat32 shouldBe null
+            d.float64 almostEquals 0.0
+            d.maybeFloat64 shouldBe null
+
+            d.coveralls shouldBe null
         }
     }
 
     @Test
-    fun arcs() {
+    fun coverallTests() = withCoverallLock {
         Coveralls("test_arcs").use { coveralls ->
             getNumAlive() shouldBe 1UL
             // One ref held by the foreign-language code, one created for this method call.
@@ -101,10 +189,7 @@ class CoverallTest {
         runGCWithDelay()
 
         getNumAlive() shouldBe 0UL
-    }
 
-    @Test
-    fun returnObjects() {
         Coveralls("test_return_objects").use { coveralls ->
             getNumAlive() shouldBe 1UL
             coveralls.strongCount() shouldBe 2UL
@@ -171,9 +256,33 @@ class CoverallTest {
                 )
             }
 
-            shouldThrow<InternalException> {
+            shouldThrow<ComplexException.UnknownException> {
                 coveralls.maybeThrowComplex(3)
+            }.also { e ->
+                e.toString() shouldBeIn setOf(
+                    "coverall.ComplexException.UnknownException: ",
+                    "coverall.ComplexException\$UnknownException: "
+                )
             }
+
+            shouldThrow<InternalException> {
+                coveralls.maybeThrowComplex(4)
+            }
+        }
+
+        Coveralls("test_error_values").use { _ ->
+            shouldThrow<RootException.Complex> {
+                throwRootError()
+            }.also { e ->
+                e.error.shouldBeInstanceOf<ComplexException.OsException>()
+            }
+            val e = getRootError()
+            if (e is RootException.Other) {
+                e.error shouldBe OtherError.UNEXPECTED
+            }
+            val ce = getComplexError(null)
+            ce.shouldBeInstanceOf<ComplexException.PermissionDenied>()
+            getErrorDict(null).complexError shouldBe null
         }
 
         Coveralls("test_interfaces_in_dicts").use { coveralls ->
@@ -187,6 +296,219 @@ class CoverallTest {
         Coveralls("test_regressions").use { coveralls ->
             coveralls.getStatus("success") shouldBe "status: success"
         }
+
+        Coveralls("test_empty_records").use { coveralls ->
+            coveralls.setAndGetEmptyStruct(EmptyStruct()) shouldBe EmptyStruct()
+            EmptyStruct() shouldNotBeSameInstanceAs EmptyStruct()
+        }
+
+        runGCWithDelay()
+    }
+
+    @Test
+    fun gc() = withCoverallLock {
+        // The GC test; we should have 1000 alive by the end of the loop.
+        //
+        // Later on, nearer the end of the script, we'll test again, when the cleaner
+        // has had time to clean up.
+        //
+        // The number alive then should be zero.
+        //
+        // First we make 1000 objects, and wait for the rest of the test to run. If it has, then
+        // the garbage objects have been collected, and the Rust counter parts have been dropped.
+        repeat(1000) {
+            val c = Coveralls("GC testing $it")
+            @Suppress("UNUSED_EXPRESSION")
+            c
+        }
+
+        // This is from an earlier GC test; ealier, we made 1000 new objects.
+        // By now, the GC has had time to clean up, and now we should see 0 alive.
+        // (hah! Wishful-thinking there ;)
+        // * We need to System.gc() and/or sleep.
+        // * There's one stray thing alive, not sure what that is, but it's unrelated.
+        for (i in 1..100) {
+            if (getNumAlive() <= 1UL) {
+                break
+            }
+            runGCWithDelay()
+        }
+
+        getNumAlive() shouldBeLessThanOrEqualTo 1UL
+
+        runGCWithDelay()
+    }
+
+    class KotlinGetters : Getters {
+        override fun getBool(v: Boolean, arg2: Boolean): Boolean {
+            return v != arg2
+        }
+
+        override fun getString(v: String, arg2: Boolean): String {
+            return if (v == "too-many-holes") {
+                throw CoverallException.TooManyHoles("too many holes")
+            } else if (v == "unexpected-error") {
+                throw RuntimeException("unexpected error")
+            } else if (arg2) {
+                v.uppercase()
+            } else {
+                v
+            }
+        }
+
+        override fun getOption(v: String, arg2: Boolean): String? {
+            if (v == "os-error") {
+                throw ComplexException.OsException(100, 200)
+            } else if (v == "unknown-error") {
+                throw ComplexException.UnknownException()
+            } else if (arg2) {
+                if (!v.isEmpty()) {
+                    return v.uppercase()
+                } else {
+                    return null
+                }
+            } else {
+                return v
+            }
+        }
+
+        override fun getList(v: List<Int>, arg2: Boolean): List<Int> {
+            if (arg2) {
+                return v
+            } else {
+                return listOf()
+            }
+        }
+
+        override fun getNothing(v: String) = Unit
+
+        override fun roundTripObject(coveralls: Coveralls): Coveralls {
+            return coveralls
+        }
+    }
+
+    @Test
+    fun getters() {
+        // Test traits implemented in Rust
+        makeRustGetters().let { rustGetters ->
+            testGetters(rustGetters)
+            testGettersFromKotlin(rustGetters)
+        }
+
+        // Test traits implemented in Kotlin
+        KotlinGetters().let { kotlinGetters ->
+            testGetters(kotlinGetters)
+            testGettersFromKotlin(kotlinGetters)
+        }
+    }
+
+    @Suppress("BooleanLiteralArgument")
+    private fun testGettersFromKotlin(getters: Getters) {
+        getters.getBool(true, true) shouldBe false
+        getters.getBool(true, false) shouldBe true
+        getters.getBool(false, true) shouldBe true
+        getters.getBool(false, false) shouldBe false
+
+        getters.getString("hello", false) shouldBe "hello"
+        getters.getString("hello", true) shouldBe "HELLO"
+
+        getters.getOption("hello", true) shouldBe "HELLO"
+        getters.getOption("hello", false) shouldBe "hello"
+        getters.getOption("", true) shouldBe null
+
+        getters.getList(listOf(1, 2, 3), true) shouldBe listOf(1, 2, 3)
+        getters.getList(listOf(1, 2, 3), false) shouldBe listOf<Int>()
+
+        getters.getNothing("hello") shouldBe Unit
+
+        shouldThrow<CoverallException.TooManyHoles> {
+            getters.getString("too-many-holes", true)
+        }
+
+        shouldThrow<ComplexException.OsException> {
+            getters.getOption("os-error", true)
+        }.also { e ->
+            e.code.toInt() shouldBe 100
+            e.extendedCode.toInt() shouldBe 200
+        }
+
+        shouldThrow<ComplexException.UnknownException> {
+            getters.getOption("unknown-error", true)
+        }
+
+        shouldThrowAny { getters.getString("unexpected-error", true) }
+    }
+
+    class KotlinNode() : NodeTrait {
+        var currentParent: NodeTrait? = null
+
+        override fun name() = "node-kt"
+
+        override fun setParent(parent: NodeTrait?) {
+            currentParent = parent
+        }
+
+        override fun getParent() = currentParent
+
+        override fun strongCount(): ULong {
+            return 0.toULong() // TODO
+        }
+    }
+
+    @Test
+    fun nodeTrait() {
+        // Test NodeTrait
+        getTraits().let { traits ->
+            traits[0].name() shouldBe "node-1"
+            // Note: strong counts are 1 more than you might expect, because the strongCount() method
+            // holds a strong ref.
+            traits[0].strongCount() shouldBe 2UL
+
+            traits[1].name() shouldBe "node-2"
+            traits[1].strongCount() shouldBe 2UL
+
+            // Note: this doesn't increase the Rust strong count, since we wrap the Rust impl with a
+            // Swift impl before passing it to `setParent()`
+            traits[0].setParent(traits[1])
+            ancestorNames(traits[0]) shouldBe listOf("node-2")
+            ancestorNames(traits[1]).isEmpty() shouldBe true
+            traits[1].strongCount() shouldBe 2UL
+            traits[0].getParent()!!.name() shouldBe "node-2"
+
+            val ktNode = KotlinNode()
+            traits[1].setParent(ktNode)
+            ancestorNames(traits[0]) shouldBe listOf("node-2", "node-kt")
+            ancestorNames(traits[1]) shouldBe listOf("node-kt")
+            ancestorNames(ktNode) shouldBe listOf<String>()
+
+            traits[1].setParent(null)
+            ktNode.setParent(traits[0])
+            ancestorNames(ktNode) shouldBe listOf("node-1", "node-2")
+            ancestorNames(traits[0]) shouldBe listOf("node-2")
+            ancestorNames(traits[1]) shouldBe listOf<String>()
+
+            // Unset everything and check that we don't get a memory error
+            ktNode.setParent(null)
+            traits[0].setParent(null)
+
+            // FIXME: We should be calling `NodeTraitImpl.close()` to release the Rust pointer, however that's
+            // not possible through the `NodeTrait` interface (see #1787).
+        }
+
+        makeRustGetters().let { rustGetters ->
+            // Check that these don't cause use-after-free bugs
+            testRoundTripThroughRust(rustGetters)
+
+            testRoundTripThroughForeign(KotlinGetters())
+        }
+    }
+
+    @Test
+    fun stringUtil() {
+        getStringUtilTraits().let { traits ->
+            traits[0].concat("cow", "boy") shouldBe "cowboy"
+            traits[1].concat("cow", "boy") shouldBe "cowboy"
+        }
     }
 
     // This tests that the UniFFI-generated scaffolding doesn't introduce any unexpected locking.
@@ -195,17 +517,20 @@ class CoverallTest {
     // not be blocked on the first, and should reliably observe the first thread being busy.
     // If it does not, that suggests UniFFI is accidentally serializing the two threads on access
     // to the shared counter object.
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun threadSafe() = runTest {
-        val scope = CoroutineScope(Dispatchers.Default)
-        try {
-            ThreadsafeCounter().use { counter ->
-                val busyWaiting = scope.launch {
+        ThreadsafeCounter().use { counter ->
+            val coroutineScope = CoroutineScope(
+                newFixedThreadPoolContext(3, "CoverallTest.threadSafe Thread Pool")
+            )
+            try {
+                val busyWaiting = coroutineScope.launch {
                     // 300 ms should be long enough for the other thread to easily finish
                     // its loop, but not so long as to annoy the user with a slow test.
                     counter.busyWait(300)
                 }
-                val incrementing = scope.async {
+                val incrementing = coroutineScope.async {
                     var count = 0
                     for (n in 1..100) {
                         // We expect most iterations of this loop to run concurrently
@@ -218,9 +543,9 @@ class CoverallTest {
                 busyWaiting.join()
                 val count = incrementing.await()
                 count shouldBeGreaterThan 0
+            } finally {
+                coroutineScope.cancel()
             }
-        } finally {
-            scope.cancel()
         }
     }
 
@@ -236,5 +561,54 @@ class CoverallTest {
         d.name shouldBe "this"
         d.category shouldBe "that"
         d.integer shouldBe 42UL
+    }
+
+    @Test
+    fun bytes() = withCoverallLock {
+        Coveralls("test_bytes").use { coveralls ->
+            coveralls.reverse("123".encodeToByteArray()).decodeToString() shouldBe "321"
+        }
+        runGCWithDelay()
+    }
+
+    class FakePatch(private val color: Color) : Patch(NoPointer) {
+        override fun getColor(): Color = color
+    }
+
+    class FakeCoveralls(private val name: String) : Coveralls(NoPointer) {
+        private val repairs = mutableListOf<Repair>()
+
+        override fun addPatch(patch: Patch) {
+            repairs += Repair(Clock.System.now(), patch)
+        }
+
+        override fun getRepairs(): List<Repair> {
+            return repairs
+        }
+    }
+
+    @Test
+    fun fakesUsingOpenClasses() = withCoverallLock {
+        FakeCoveralls("using_fakes").use { coveralls ->
+            val patch = FakePatch(Color.RED)
+            coveralls.addPatch(patch)
+            coveralls.getRepairs().isEmpty() shouldBe false
+        }
+
+        FakeCoveralls("using_fakes_and_calling_methods_without_override_crashes").use { coveralls ->
+            shouldThrowAny { coveralls.cloneMe() }
+        }
+
+        FakeCoveralls("using_fallible_constructors").use { _ ->
+            shouldThrowAny { FalliblePatch() }
+            shouldThrowAny { FalliblePatch.secondary() }
+        }
+
+        Coveralls("using_fakes_with_real_objects_crashes").use { coveralls ->
+            val patch = FakePatch(Color.RED)
+            shouldThrowAny { coveralls.addPatch(patch) }
+        }
+
+        runGCWithDelay()
     }
 }
