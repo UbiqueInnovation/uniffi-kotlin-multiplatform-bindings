@@ -10,7 +10,7 @@ on:
 jobs:
   build-and-test:
     name: Build and run tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout Code
@@ -27,7 +27,7 @@ jobs:
           sudo apt update && sudo apt install -y \
             build-essential binutils sdkmanager \
             gcc-mingw-w64 mingw-w64-x86-64-dev \
-            libgtk-4-dev wget perl && \
+            libgtk-4-dev wget perl libssl-dev && \
           sudo rm -rf /var/lib/apt/lists/*
       
       - name: Install Zig
