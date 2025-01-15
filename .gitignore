@@ -2,6 +2,7 @@ target
 build
 .cxx
 .gradle
+.kotlin
 .idea
 .DS_Store
 local.properties
