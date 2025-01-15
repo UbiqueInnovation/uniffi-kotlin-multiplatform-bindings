@@ -98,6 +98,7 @@ pub struct Config {
     pub(super) cdylib_name: Option<String>,
     generate_immutable_records: Option<bool>,
     generate_serializable_records: Option<bool>,
+    import_pointer_from: Option<String>,
     #[serde(default)]
     custom_types: HashMap<String, CustomTypeConfig>,
     #[serde(default)]
@@ -137,6 +138,13 @@ impl Config {
     /// Whether to use kotlinx Serializable annotation on the data class
     pub fn generate_serializable_records(&self) -> bool {
         self.generate_serializable_records.unwrap_or(false)
+    }
+    /// Whether to use kotlinx Serializable annotation on the data class
+    pub fn has_import_helpers(&self) -> bool {
+        self.import_pointer_from.is_some()
+    }
+    pub fn import_helper_namespace(&self) ->String {
+        self.import_pointer_from.as_ref().unwrap_or(&String::from("<ARG>")).to_string()
     }
 
     pub(crate) fn use_enum_entries(&self) -> bool {

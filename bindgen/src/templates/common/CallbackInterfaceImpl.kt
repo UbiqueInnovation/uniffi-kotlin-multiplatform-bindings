@@ -6,12 +6,12 @@
 // Put the implementation in an object so we don't pollute the top-level namespace
 internal object {{ trait_impl }} {
     {%- for (ffi_callback, meth) in vtable_methods.iter() %}
-    internal var {{ meth.name()|var_name }}: Any = create{{ ffi_callback.name()|ffi_callback_name }}Callback()
+     var {{ meth.name()|var_name }}: Any = create{{ ffi_callback.name()|ffi_callback_name }}Callback()
     {%- endfor %}
 
-    internal val uniffiFree = create{{ "CallbackInterfaceFree"|ffi_callback_name }}{{name}}Callback()
+     val uniffiFree = create{{ "CallbackInterfaceFree"|ffi_callback_name }}{{name}}Callback()
 
-    internal var vtable = Uniffi{{ vtable|ffi_type_name }}Factory.create(
+     var vtable = Uniffi{{ vtable|ffi_type_name }}Factory.create(
         {%- for (ffi_callback, meth) in vtable_methods.iter() %}
         {{ meth.name()|var_name() }},
         {%- endfor %}
@@ -20,7 +20,7 @@ internal object {{ trait_impl }} {
 
     // Registers the foreign callback with the Rust side.
     // This method is generated for each callback interface.
-    internal fun register(lib: UniffiLib) {
+     fun register(lib: UniffiLib) {
         lib.{{ ffi_init_callback.name() }}(vtable)
     }
 }
@@ -28,8 +28,8 @@ internal object {{ trait_impl }} {
     expect fun create{{ ffi_callback.name()|ffi_callback_name }}Callback() : Any
 {%- endfor %}
 
-expect fun create{{ "CallbackInterfaceFree"|ffi_callback_name }}{{name}}Callback() : Any
-expect internal open class Uniffi{{ vtable|ffi_type_name }}Factory {
+internal expect fun create{{ "CallbackInterfaceFree"|ffi_callback_name }}{{name}}Callback() : Any
+internal expect  open class Uniffi{{ vtable|ffi_type_name }}Factory {
         companion object {
             fun create(
             {%- for (ffi_callback, meth) in vtable_methods.iter() %}

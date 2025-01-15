@@ -1,39 +1,39 @@
 
-internal const val UNIFFI_CALL_SUCCESS = 0.toByte()
-internal const val UNIFFI_CALL_ERROR = 1.toByte()
-internal const val UNIFFI_CALL_UNEXPECTED_ERROR = 2.toByte()
+ const val UNIFFI_CALL_SUCCESS = 0.toByte()
+ const val UNIFFI_CALL_ERROR = 1.toByte()
+ const val UNIFFI_CALL_UNEXPECTED_ERROR = 2.toByte()
 
-internal expect class UniffiRustCallStatus
-internal expect var UniffiRustCallStatus.code: Byte
-internal expect var UniffiRustCallStatus.error_buf: RustBufferByValue
+ expect class UniffiRustCallStatus
+ expect var UniffiRustCallStatus.code: Byte
+ expect var UniffiRustCallStatus.error_buf: RustBufferByValue
 
-internal expect class UniffiRustCallStatusByValue
-internal expect var UniffiRustCallStatusByValue.code: Byte
-internal expect var UniffiRustCallStatusByValue.error_buf: RustBufferByValue
+ expect class UniffiRustCallStatusByValue
+ expect var UniffiRustCallStatusByValue.code: Byte
+ expect var UniffiRustCallStatusByValue.error_buf: RustBufferByValue
 
-internal expect object UniffiRustCallStatusHelper
-internal expect fun UniffiRustCallStatusHelper.allocValue(): UniffiRustCallStatusByValue
-internal expect fun <U> UniffiRustCallStatusHelper.withReference(
+ expect object UniffiRustCallStatusHelper
+ expect fun UniffiRustCallStatusHelper.allocValue(): UniffiRustCallStatusByValue
+ expect fun <U> UniffiRustCallStatusHelper.withReference(
     block: (UniffiRustCallStatus) -> U
 ): U
 
 // Default Implementations
-internal fun UniffiRustCallStatus.isSuccess(): Boolean
+ fun UniffiRustCallStatus.isSuccess(): Boolean
     = code == UNIFFI_CALL_SUCCESS
 
-internal fun UniffiRustCallStatus.isError(): Boolean
+ fun UniffiRustCallStatus.isError(): Boolean
     = code == UNIFFI_CALL_ERROR
 
-internal fun UniffiRustCallStatus.isPanic(): Boolean
+ fun UniffiRustCallStatus.isPanic(): Boolean
     = code == UNIFFI_CALL_UNEXPECTED_ERROR
 
-internal fun UniffiRustCallStatusByValue.isSuccess(): Boolean
+ fun UniffiRustCallStatusByValue.isSuccess(): Boolean
     = code == UNIFFI_CALL_SUCCESS
 
-internal fun UniffiRustCallStatusByValue.isError(): Boolean
+ fun UniffiRustCallStatusByValue.isError(): Boolean
     = code == UNIFFI_CALL_ERROR
 
-internal fun UniffiRustCallStatusByValue.isPanic(): Boolean
+ fun UniffiRustCallStatusByValue.isPanic(): Boolean
     = code == UNIFFI_CALL_UNEXPECTED_ERROR
 
 class InternalException(message: String) : kotlin.Exception(message)
@@ -48,7 +48,7 @@ interface UniffiRustCallStatusErrorHandler<E> {
 // synchronize itself
 
 // Call a rust function that returns a Result<>.  Pass in the Error class companion that corresponds to the Err
-internal inline fun <U, E: kotlin.Exception> uniffiRustCallWithError(errorHandler: UniffiRustCallStatusErrorHandler<E>, crossinline callback: (UniffiRustCallStatus) -> U): U {
+ inline fun <U, E: kotlin.Exception> uniffiRustCallWithError(errorHandler: UniffiRustCallStatusErrorHandler<E>, crossinline callback: (UniffiRustCallStatus) -> U): U {
     return UniffiRustCallStatusHelper.withReference() { status ->
         val returnValue = callback(status)
         uniffiCheckCallStatus(errorHandler, status)
@@ -57,7 +57,7 @@ internal inline fun <U, E: kotlin.Exception> uniffiRustCallWithError(errorHandle
 }
 
 // Check `status` and throw an error if the call wasn't successful
-internal fun<E: kotlin.Exception> uniffiCheckCallStatus(errorHandler: UniffiRustCallStatusErrorHandler<E>, status: UniffiRustCallStatus) {
+ fun<E: kotlin.Exception> uniffiCheckCallStatus(errorHandler: UniffiRustCallStatusErrorHandler<E>, status: UniffiRustCallStatus) {
     if (status.isSuccess()) {
         return
     } else if (status.isError()) {
@@ -85,11 +85,11 @@ object UniffiNullRustCallStatusErrorHandler: UniffiRustCallStatusErrorHandler<In
 }
 
 // Call a rust function that returns a plain value
-internal inline fun <U> uniffiRustCall(crossinline callback: (UniffiRustCallStatus) -> U): U {
+ inline fun <U> uniffiRustCall(crossinline callback: (UniffiRustCallStatus) -> U): U {
     return uniffiRustCallWithError(UniffiNullRustCallStatusErrorHandler, callback)
 }
 
-internal inline fun<T> uniffiTraitInterfaceCall(
+ inline fun<T> uniffiTraitInterfaceCall(
     callStatus: UniffiRustCallStatus,
     makeCall: () -> T,
     writeReturn: (T) -> Unit,
@@ -102,7 +102,7 @@ internal inline fun<T> uniffiTraitInterfaceCall(
     }
 }
 
-internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallWithError(
+ inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallWithError(
     callStatus: UniffiRustCallStatus,
     makeCall: () -> T,
     writeReturn: (T) -> Unit,

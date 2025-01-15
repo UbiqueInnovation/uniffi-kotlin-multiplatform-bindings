@@ -1,9 +1,9 @@
 
 expect class RustBuffer
-internal expect var RustBuffer.capacity: Long
-internal expect var RustBuffer.len: Long
-internal expect var RustBuffer.data: Pointer?
-internal expect fun RustBuffer.asByteBuffer(): ByteBuffer?
+ expect var RustBuffer.capacity: Long
+ expect var RustBuffer.len: Long
+ expect var RustBuffer.data: Pointer?
+ expect fun RustBuffer.asByteBuffer(): ByteBuffer?
 
 fun RustBuffer.setValue(array: RustBufferByValue) {
     this.data = array.data
@@ -12,14 +12,14 @@ fun RustBuffer.setValue(array: RustBufferByValue) {
 }
 
 expect class RustBufferByValue
-internal expect var RustBufferByValue.capacity: Long
-internal expect var RustBufferByValue.len: Long
-internal expect var RustBufferByValue.data: Pointer?
-internal expect fun RustBufferByValue.asByteBuffer(): ByteBuffer?
+ expect var RustBufferByValue.capacity: Long
+ expect var RustBufferByValue.len: Long
+ expect var RustBufferByValue.data: Pointer?
+ expect fun RustBufferByValue.asByteBuffer(): ByteBuffer?
 
-internal expect object RustBufferHelper
-internal expect fun RustBufferHelper.allocFromByteBuffer(buffer: ByteBuffer): RustBufferByValue
-internal fun RustBufferHelper.allocValue(size: ULong = 0UL): RustBufferByValue = uniffiRustCall() { status ->
+ expect object RustBufferHelper
+ expect fun RustBufferHelper.allocFromByteBuffer(buffer: ByteBuffer): RustBufferByValue
+ fun RustBufferHelper.allocValue(size: ULong = 0UL): RustBufferByValue = uniffiRustCall() { status ->
     // Note: need to convert the size to a `Long` value to make this work with JVM.
     UniffiLib.INSTANCE.{{ ci.ffi_rustbuffer_alloc().name() }}(size.toLong(), status)
 }.also {
@@ -27,7 +27,7 @@ internal fun RustBufferHelper.allocValue(size: ULong = 0UL): RustBufferByValue =
         throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=${size})")
     }
 }
-internal fun RustBufferHelper.free(buf: RustBufferByValue) = uniffiRustCall() { status ->
+ fun RustBufferHelper.free(buf: RustBufferByValue) = uniffiRustCall() { status ->
     UniffiLib.INSTANCE.{{ ci.ffi_rustbuffer_free().name() }}(buf, status)!!
 }
 
@@ -37,15 +37,15 @@ internal fun RustBufferHelper.free(buf: RustBufferByValue) = uniffiRustCall() { 
  *
  * Size is the sum of all values in the struct.
  */
-internal expect class RustBufferByReference
+ expect class RustBufferByReference
 /**
  * Set the pointed-to `RustBuffer` to the given value.
  */
-internal expect fun RustBufferByReference.setValue(value: RustBufferByValue)
+ expect fun RustBufferByReference.setValue(value: RustBufferByValue)
 /**
  * Get a `RustBufferByValue` from this reference.
  */ 
-internal expect fun RustBufferByReference.getValue(): RustBufferByValue
+ expect fun RustBufferByReference.getValue(): RustBufferByValue
 
 
 // This is a helper for safely passing byte references into the rust code.
@@ -53,10 +53,10 @@ internal expect fun RustBufferByReference.getValue(): RustBufferByValue
 // can take a direct pointer to in the JVM, and if we're going to copy something
 // then we might as well copy it into a `RustBuffer`. But it's here for API
 // completeness.
-internal expect class ForeignBytes
-internal expect var ForeignBytes.len: Int
-internal expect var ForeignBytes.data: Pointer?
+ expect class ForeignBytes
+ expect var ForeignBytes.len: Int
+ expect var ForeignBytes.data: Pointer?
 
-internal expect class ForeignBytesByValue
-internal expect var ForeignBytesByValue.len: Int
-internal expect var ForeignBytesByValue.data: Pointer?
+ expect class ForeignBytesByValue
+ expect var ForeignBytesByValue.len: Int
+ expect var ForeignBytesByValue.data: Pointer?

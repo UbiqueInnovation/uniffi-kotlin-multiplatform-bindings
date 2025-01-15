@@ -99,7 +99,7 @@ actual fun create{{ ffi_callback.name()|ffi_callback_name }}Callback() : Any {
 {%- endif %}
 {%- endfor %}
 
-actual fun create{{ "CallbackInterfaceFree"|ffi_callback_name }}{{name}}Callback() : Any {
+actual internal fun create{{ "CallbackInterfaceFree"|ffi_callback_name }}{{name}}Callback() : Any {
     return object: Callback {
         fun callback(handle: Long) {
             {{ ffi_converter_name }}.handleMap.remove(handle)

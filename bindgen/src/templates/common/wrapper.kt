@@ -23,6 +23,8 @@ import kotlin.jvm.JvmField
 {{ req.render() }}
 {%- endfor %}
 
+{% if  !config.has_import_helpers() %}
+
 {% include "PointerHelper.kt" %}
 
 {% include "ByteBuffer.kt" %}
@@ -32,14 +34,14 @@ import kotlin.jvm.JvmField
 {% include "HandleMap.kt" %}
 {% include "ReferenceHelper.kt" %}
 
-// Contains loading, initialization code,
-// and the FFI Function declarations in a com.sun.jna.Library.
-{% include "NamespaceLibraryTemplate.kt" %}
-
 // Async support
 {%- if ci.has_async_fns() %}
 {% include "Async.kt" %}
 {%- endif %}
+
+{% else %}
+import {{ config.import_helper_namespace() }}.*
+{% endif %}
 
 // Public interface members begin here.
 {{ type_helper_code }}
@@ -49,3 +51,7 @@ import kotlin.jvm.JvmField
 {%- endfor %}
 
 {% import "macros.kt" as kt %}
+
+// Contains loading, initialization code,
+// and the FFI Function declarations in a com.sun.jna.Library.
+{% include "NamespaceLibraryTemplate.kt" %}

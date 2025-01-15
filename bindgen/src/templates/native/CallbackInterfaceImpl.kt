@@ -102,7 +102,7 @@ actual fun create{{ ffi_callback.name()|ffi_callback_name }}Callback() : Any = s
 {%- endif %}
 {%- endfor %}
 
-actual fun create{{ "CallbackInterfaceFree"|ffi_callback_name }}{{name}}Callback() : Any = staticCFunction {
+actual internal fun create{{ "CallbackInterfaceFree"|ffi_callback_name }}{{name}}Callback() : Any = staticCFunction {
     handle: Long ->
     val _dontReturn = {{ ffi_converter_name }}.handleMap.remove(handle)
 }

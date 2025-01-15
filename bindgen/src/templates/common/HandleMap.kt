@@ -1,5 +1,5 @@
 
-internal class UniffiHandleMap<T: Any> {
+ class UniffiHandleMap<T: Any> {
     // NOTE: java.util.concurrent.ConcurrentMap will be more efficient than a coarse grained lock
     //       use it on JVM platforms
     private val mapLock = kotlinx.atomicfu.locks.ReentrantLock()

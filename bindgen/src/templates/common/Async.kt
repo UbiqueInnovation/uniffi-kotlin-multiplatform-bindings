@@ -1,13 +1,13 @@
 
-internal const val UNIFFI_RUST_FUTURE_POLL_READY = 0.toByte()
-internal const val UNIFFI_RUST_FUTURE_POLL_MAYBE_READY = 1.toByte()
+ const val UNIFFI_RUST_FUTURE_POLL_READY = 0.toByte()
+ const val UNIFFI_RUST_FUTURE_POLL_MAYBE_READY = 1.toByte()
 
-internal val uniffiContinuationHandleMap = UniffiHandleMap<CancellableContinuation<Byte>>()
+ val uniffiContinuationHandleMap = UniffiHandleMap<CancellableContinuation<Byte>>()
 
 expect fun createUniffiRustFutureContinuationCallbackCallback() : Any
 
 // FFI type for Rust future continuations
-internal suspend fun<T, F, E: kotlin.Exception> uniffiRustCallAsync(
+ suspend fun<T, F, E: kotlin.Exception> uniffiRustCallAsync(
     rustFuture: Long,
     pollFunc: (Long, Any, Long) -> Unit,
     completeFunc: (Long, UniffiRustCallStatus) -> F,
@@ -44,7 +44,7 @@ internal suspend fun<T, F, E: kotlin.Exception> uniffiRustCallAsync(
 }
 
 {%- if ci.has_async_callback_interface_definition() %}
-internal inline fun<T> uniffiTraitInterfaceCallAsync(
+ inline fun<T> uniffiTraitInterfaceCallAsync(
     crossinline makeCall: suspend () -> T,
     crossinline handleSuccess: (T) -> Unit,
     crossinline handleError: (UniffiRustCallStatusByValue) -> Unit,
@@ -75,7 +75,7 @@ internal inline fun<T> uniffiTraitInterfaceCallAsync(
     })
 }
 
-internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallAsyncWithError(
+ inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallAsyncWithError(
     crossinline makeCall: suspend () -> T,
     crossinline handleSuccess: (T) -> Unit,
     crossinline handleError: (UniffiRustCallStatusByValue) -> Unit,
@@ -103,7 +103,7 @@ internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallAsyncWithEr
     return UniffiForeignFuture(handle, uniffiForeignFutureFreeImpl)
 }
 
-internal val uniffiForeignFutureHandleMap = UniffiHandleMap<Job>()
+ val uniffiForeignFutureHandleMap = UniffiHandleMap<Job>()
 // For testing
 public fun uniffiForeignFutureHandleCount() = uniffiForeignFutureHandleMap.size
 

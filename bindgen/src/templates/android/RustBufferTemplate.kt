@@ -3,25 +3,25 @@
 open class RustBufferStruct : Structure() {
     // Note: `capacity` and `len` are actually `ULong` values, but JVM only supports signed values.
     // When dealing with these fields, make sure to call `toULong()`.
-    @JvmField internal var capacity: Long = 0
-    @JvmField internal var len: Long = 0
-    @JvmField internal var data: Pointer? = null
+    @JvmField  var capacity: Long = 0
+    @JvmField  var len: Long = 0
+    @JvmField  var data: Pointer? = null
 
     class ByValue: RustBuffer(), Structure.ByValue
     class ByReference: RustBuffer(), Structure.ByReference
 }
 
 actual typealias RustBuffer = RustBufferStruct
-internal actual var RustBuffer.capacity: Long
+ actual var RustBuffer.capacity: Long
     get() = this.capacity
     set(value) { this.capacity = value }
-internal actual var RustBuffer.len: Long
+ actual var RustBuffer.len: Long
     get() = this.len
     set(value) { this.len = value }
-internal actual var RustBuffer.data: Pointer?
+ actual var RustBuffer.data: Pointer?
     get() = this.data
     set(value) { this.data = value }
-internal actual fun RustBuffer.asByteBuffer(): ByteBuffer? {
+ actual fun RustBuffer.asByteBuffer(): ByteBuffer? {
     val ibuf = data?.getByteBuffer(0L, this.len.toLong()) ?: return null
     // Read java.nio.ByteBuffer into ByteArray
     val arr = ByteArray(ibuf.remaining())
@@ -33,16 +33,16 @@ internal actual fun RustBuffer.asByteBuffer(): ByteBuffer? {
 }
 
 actual typealias RustBufferByValue = RustBufferStruct.ByValue
-internal actual var RustBufferByValue.capacity: Long
+ actual var RustBufferByValue.capacity: Long
     get() = this.capacity
     set(value) { this.capacity = value }
-internal actual var RustBufferByValue.len: Long
+ actual var RustBufferByValue.len: Long
     get() = this.len
     set(value) { this.len = value }
-internal actual var RustBufferByValue.data: Pointer?
+ actual var RustBufferByValue.data: Pointer?
     get() = this.data
     set(value) { this.data = value }
-internal actual fun RustBufferByValue.asByteBuffer(): ByteBuffer? {
+ actual fun RustBufferByValue.asByteBuffer(): ByteBuffer? {
     val ibuf = data?.getByteBuffer(0L, this.len.toLong()) ?: return null
     // Read java.nio.ByteBuffer into ByteArray
     val arr = ByteArray(ibuf.remaining())
@@ -54,8 +54,8 @@ internal actual fun RustBufferByValue.asByteBuffer(): ByteBuffer? {
 }
 
 
-internal actual object RustBufferHelper
-internal actual fun RustBufferHelper.allocFromByteBuffer(buffer: ByteBuffer): RustBufferByValue
+ actual object RustBufferHelper
+ actual fun RustBufferHelper.allocFromByteBuffer(buffer: ByteBuffer): RustBufferByValue
      = uniffiRustCall() { status ->
         // Note: need to convert the size to a `Long` value to make this work with JVM.
         UniffiLib.INSTANCE.{{ ci.ffi_rustbuffer_alloc().name() }}(buffer.internal().size.toLong(), status)!!
@@ -74,15 +74,15 @@ internal actual fun RustBufferHelper.allocFromByteBuffer(buffer: ByteBuffer): Ru
         }
     }
 
-internal actual class RustBufferByReference : com.sun.jna.ptr.ByReference(16)
-internal actual fun RustBufferByReference.setValue(value: RustBufferByValue) {
+ actual class RustBufferByReference : com.sun.jna.ptr.ByReference(16)
+ actual fun RustBufferByReference.setValue(value: RustBufferByValue) {
     // NOTE: The offsets are as they are in the C-like struct.
     val pointer = getPointer()
     pointer.setLong(0, value.capacity)
     pointer.setLong(8, value.len)
     pointer.setPointer(16, value.data)
 }
-internal actual fun RustBufferByReference.getValue(): RustBufferByValue {
+ actual fun RustBufferByReference.getValue(): RustBufferByValue {
     val pointer = getPointer()
     val value = RustBufferByValue()
     value.writeField("capacity", pointer.getLong(0))
@@ -100,25 +100,25 @@ internal actual fun RustBufferByReference.getValue(): RustBufferByValue {
 // completeness.
 
 @Structure.FieldOrder("len", "data")
-internal open class ForeignBytesStruct : Structure() {
-    @JvmField internal var len: Int = 0
-    @JvmField internal var data: Pointer? = null
+ open class ForeignBytesStruct : Structure() {
+    @JvmField  var len: Int = 0
+    @JvmField  var data: Pointer? = null
 
-    internal class ByValue : ForeignBytes(), Structure.ByValue
+    class ByValue : ForeignBytes(), Structure.ByValue
 }
 
-internal actual typealias ForeignBytes = ForeignBytesStruct
-internal actual var ForeignBytes.len: Int
+ actual typealias ForeignBytes = ForeignBytesStruct
+ actual var ForeignBytes.len: Int
     get() = this.len
     set(value) { this.len = value }
-internal actual var ForeignBytes.data: Pointer?
+ actual var ForeignBytes.data: Pointer?
     get() = this.data
     set(value) { this.data = value }
 
-internal actual typealias ForeignBytesByValue = ForeignBytesStruct.ByValue
-internal actual var ForeignBytesByValue.len: Int
+ actual typealias ForeignBytesByValue = ForeignBytesStruct.ByValue
+ actual var ForeignBytesByValue.len: Int
     get() = this.len
     set(value) { this.len = value }
-internal actual var ForeignBytesByValue.data: Pointer?
+ actual var ForeignBytesByValue.data: Pointer?
     get() = this.data
     set(value) { this.data = value }
