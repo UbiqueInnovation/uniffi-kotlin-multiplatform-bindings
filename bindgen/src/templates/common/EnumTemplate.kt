@@ -73,7 +73,6 @@ object {{ type_name }}PolySerializer : kotlinx.serialization.json.JsonContentPol
         {%- endfor %}
         var fieldName = ""
         var alternativeFieldName = ""
-        val jsonTester = Json {}
 
         {%- for variant in e.variants() -%}
         {%- if variant.has_fields() -%}
@@ -87,14 +86,14 @@ object {{ type_name }}PolySerializer : kotlinx.serialization.json.JsonContentPol
             {%- if fieldNameInternal != ""  -%}
                 {%- let is_optional = field|is_optional -%}
                 {%- if !is_optional %}
-                        if ( element is kotlinx.serialization.json.JsonObject && !element.jsonObject.containsKey(fieldName) && !element.jsonObject.containsKey(alternativeFieldName)) {
+                        if ( element is kotlinx.serialization.json.JsonObject && !element.containsKey(fieldName) && !element.containsKey(alternativeFieldName)) {
                             is{{ variant|variant_type_name(ci) }} = false
                         }
                 {%- endif -%}
             {%- else %}
                 try {
                     val objectSerializer : kotlinx.serialization.KSerializer<{{ field|type_name(ci) }}> = kotlinx.serialization.serializer()
-                 val inner : {{ field|type_name(ci) }} = jsonTester.decodeFromJsonElement(objectSerializer,element)
+                 val inner : {{ field|type_name(ci) }} = kotlinx.serialization.json.Json.decodeFromJsonElement(objectSerializer,element)
                  } catch(e: Exception) {
                   is{{ variant|variant_type_name(ci) }} = false
                  }
@@ -130,8 +129,8 @@ sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% e
         override fun destroy() = Unit
     } {% endif %}
     {% else -%}
-    {%- if contains_object_references && config.generate_serializable_records() && self.is_variant_serializable(variant) %}
-     @kotlinx.serialization.Serializable{% if variant.has_fields() && variant.fields().len() == 1 && variant.fields()[0].name()|var_name|unquote == "" %}({{ type_name }}{{ variant|variant_type_name(ci) }}Serializer::class) {% endif %}
+    {%- if !contains_object_references && config.generate_serializable_records() && self.is_variant_serializable(variant) %}
+    @kotlinx.serialization.Serializable{% if variant.has_fields() && variant.fields().len() == 1 && variant.fields()[0].name()|var_name|unquote == "" %}({{ type_name }}{{ variant|variant_type_name(ci) }}Serializer::class) {% endif %}
     {% endif %}
     data class {{ variant|variant_type_name(ci) }}(
         {%- for field in variant.fields() -%}

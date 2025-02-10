@@ -28,6 +28,7 @@ members = [
     "tests/uniffi/futures",
     "tests/uniffi/keywords",
     "tests/uniffi/proc-macro",
+    "tests/uniffi/serialization",
     "tests/uniffi/simple-fns",
     "tests/uniffi/simple-iface",
     "tests/uniffi/struct-default-values",

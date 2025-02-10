@@ -1851,6 +1851,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "uniffi-kmm-fixture-serialization"
+version = "0.1.0"
+dependencies = [
+ "uniffi",
+]
+
+[[package]]
 name = "uniffi-kmm-fixture-simple-fns"
 version = "0.1.0"
 dependencies = [
