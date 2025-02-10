@@ -1,7 +1,8 @@
-import io.gitlab.trixnity.gradle.rustlink.hostNativeTarget
 import org.gradle.accessors.dm.*
+import io.gitlab.trixnity.gradle.rust.dsl.hostNativeTarget
 
 plugins {
+    id("io.gitlab.trixnity.rust.kotlin.multiplatform")
     kotlin("multiplatform")
     kotlin("plugin.atomicfu")
 }

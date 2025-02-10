@@ -1,0 +1,11 @@
+[package]
+name = "uniffi-kmm-fixture-build-common"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+uniffi = { workspace = true, features = ["build"] }
+
+[features]
+scaffolding-ffi-buffer-fns = ["uniffi/scaffolding-ffi-buffer-fns"]

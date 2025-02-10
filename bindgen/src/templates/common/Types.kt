@@ -9,8 +9,9 @@
 //
 // The easiest way to ensure this method is called is to use the `.use`
 // helper method to execute a block and destroy the object at the end.
-interface Disposable {
+interface Disposable : AutoCloseable {
     fun destroy()
+    override fun close() = destroy()
     companion object {
         fun destroy(vararg args: Any?) {
             args.filterIsInstance<Disposable>()
@@ -52,45 +53,6 @@ object NoPointer
 
 {%- match type_ %}
 
-{%- when Type::Boolean %}
-{%- include "BooleanHelper.kt" %}
-
-{%- when Type::Int8 %}
-{%- include "Int8Helper.kt" %}
-
-{%- when Type::Int16 %}
-{%- include "Int16Helper.kt" %}
-
-{%- when Type::Int32 %}
-{%- include "Int32Helper.kt" %}
-
-{%- when Type::Int64 %}
-{%- include "Int64Helper.kt" %}
-
-{%- when Type::UInt8 %}
-{%- include "UInt8Helper.kt" %}
-
-{%- when Type::UInt16 %}
-{%- include "UInt16Helper.kt" %}
-
-{%- when Type::UInt32 %}
-{%- include "UInt32Helper.kt" %}
-
-{%- when Type::UInt64 %}
-{%- include "UInt64Helper.kt" %}
-
-{%- when Type::Float32 %}
-{%- include "Float32Helper.kt" %}
-
-{%- when Type::Float64 %}
-{%- include "Float64Helper.kt" %}
-
-{%- when Type::String %}
-{%- include "StringHelper.kt" %}
-
-{%- when Type::Bytes %}
-{%- include "ByteArrayHelper.kt" %}
-
 {%- when Type::Enum { name, module_path } %}
 {%- let e = ci.get_enum_definition(name).unwrap() %}
 {%- if !ci.is_name_used_as_error(name) %}
@@ -105,23 +67,8 @@ object NoPointer
 {%- when Type::Record { name, module_path } %}
 {% include "RecordTemplate.kt" %}
 
-{%- when Type::Optional { inner_type } %}
-{% include "OptionalTemplate.kt" %}
-
-{%- when Type::Sequence { inner_type } %}
-{% include "SequenceTemplate.kt" %}
-
-{%- when Type::Map { key_type, value_type } %}
-{% include "MapTemplate.kt" %}
-
 {%- when Type::CallbackInterface { module_path, name } %}
 {% include "CallbackInterfaceTemplate.kt" %}
-
-{%- when Type::Timestamp %}
-{% include "TimestampHelper.kt" %}
-
-{%- when Type::Duration %}
-{% include "DurationHelper.kt" %}
 
 {%- when Type::Custom { module_path, name, builtin } %}
 {% include "CustomTypeTemplate.kt" %}

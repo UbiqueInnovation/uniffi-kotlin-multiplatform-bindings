@@ -16,7 +16,9 @@ import io.gitlab.trixnity.gradle.cargo.rust.targets.RustAndroidTarget
 import io.gitlab.trixnity.gradle.cargo.rust.targets.RustJvmTarget
 import io.gitlab.trixnity.gradle.cargo.rust.targets.RustTarget
 import io.gitlab.trixnity.gradle.cargo.tasks.CargoCleanTask
+import io.gitlab.trixnity.gradle.cargo.tasks.CargoTask
 import io.gitlab.trixnity.gradle.cargo.tasks.RustUpTargetAddTask
+import io.gitlab.trixnity.gradle.cargo.tasks.RustUpTask
 import io.gitlab.trixnity.gradle.tasks.useGlobalLock
 import io.gitlab.trixnity.gradle.utils.DependencyUtils
 import io.gitlab.trixnity.gradle.utils.PluginUtils
@@ -66,6 +68,12 @@ class CargoPlugin : Plugin<Project> {
             jvmVariant.convention(cargoExtension.jvmVariant)
         }
         target.useGlobalLock()
+        target.tasks.withType<CargoTask>().configureEach {
+            it.additionalEnvironmentPath.add(cargoExtension.toolchainDirectory)
+        }
+        target.tasks.withType<RustUpTask>().configureEach {
+            it.additionalEnvironmentPath.add(cargoExtension.toolchainDirectory)
+        }
         target.watchPluginChanges()
         target.afterEvaluate {
             target.checkRequiredPlugins()
@@ -134,7 +142,7 @@ class CargoPlugin : Plugin<Project> {
 
     private fun KotlinTarget.requiredRustTargets(): List<RustTarget> {
         return when (this) {
-            is KotlinJvmTarget -> CargoHost.current.platform.supportedTargets.filterIsInstance<RustJvmTarget>()
+            is KotlinJvmTarget -> RustHost.current.platform.supportedTargets.filterIsInstance<RustJvmTarget>()
             is KotlinAndroidTarget -> RustAndroidTarget.entries
             is KotlinNativeTarget -> listOf(RustTarget(konanTarget))
             else -> listOf()

@@ -6,9 +6,11 @@
 
 package io.gitlab.trixnity.gradle.cargo.dsl
 
+import io.gitlab.trixnity.gradle.RustHost
 import io.gitlab.trixnity.gradle.Variant
 import io.gitlab.trixnity.gradle.cargo.CargoPackage
 import io.gitlab.trixnity.gradle.cargo.rust.targets.*
+import io.gitlab.trixnity.gradle.rust.dsl.RustExtension
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.internal.plugins.DslObject
@@ -28,10 +30,23 @@ abstract class CargoExtension(final override val project: Project) : HasProject,
         project.objects.directoryProperty().convention(project.layout.projectDirectory)
 
     /**
+     * The directory where `cargo` and `rustup` are installed. Defaults to `~/.cargo/bin`. If `RustExtension` is
+     * present, uses [RustExtension.toolchainDirectory].
+     */
+    internal val toolchainDirectory = project.provider {
+        project.extensions.findByType<RustExtension>()?.toolchainDirectory?.get()
+            ?: RustHost.current.platform.defaultToolchainDirectory
+    }
+
+    /**
      * The parsed metadata and manifest of the package.
      */
     internal val cargoPackage: Provider<CargoPackage> =
-        project.objects.property<CargoPackage>().value(packageDirectory.map { CargoPackage(project, it) }).apply {
+        project.objects.property<CargoPackage>().value(
+            packageDirectory.zip(toolchainDirectory) { pkg, toolchain ->
+                CargoPackage(project, pkg, toolchain)
+            },
+        ).apply {
             disallowChanges()
             finalizeValueOnRead()
         }
@@ -71,7 +86,8 @@ abstract class CargoExtension(final override val project: Project) : HasProject,
     val builds: CargoBuildCollection<CargoBuild<CargoBuildVariant<RustTarget>>> =
         CargoBuildCollectionImpl(buildContainer).apply {
             DslObject(this@CargoExtension).extensions.add(
-                object : TypeOf<CargoBuildCollection<CargoBuild<CargoBuildVariant<RustTarget>>>>() {},
+                object :
+                    TypeOf<CargoBuildCollection<CargoBuild<CargoBuildVariant<RustTarget>>>>() {},
                 "builds",
                 this,
             )
@@ -80,10 +96,12 @@ abstract class CargoExtension(final override val project: Project) : HasProject,
     /**
      * The list of Android targets filtered by defaultConfig.ndk.abiFilters.
      */
-    internal val androidTargetsToBuild: SetProperty<RustAndroidTarget> = project.objects.setProperty()
+    internal val androidTargetsToBuild: SetProperty<RustAndroidTarget> =
+        project.objects.setProperty()
 
     /**
      * The variant of a target specified by the parent process like Xcode.
      */
-    internal val nativeTargetVariantOverride: MapProperty<RustTarget, Variant> = project.objects.mapProperty()
+    internal val nativeTargetVariantOverride: MapProperty<RustTarget, Variant> =
+        project.objects.mapProperty()
 }

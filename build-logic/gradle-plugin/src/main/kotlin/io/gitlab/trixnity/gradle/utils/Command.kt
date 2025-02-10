@@ -6,10 +6,11 @@
 
 package io.gitlab.trixnity.gradle.utils
 
-import io.gitlab.trixnity.gradle.CargoHost
+import io.gitlab.trixnity.gradle.RustHost
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.logging.Logging
 import org.gradle.api.provider.*
@@ -102,7 +103,7 @@ internal class CommandSpec(
                 if (oldValue is PathList) {
                     val newPathList: PathList = when (value) {
                         is Iterable<*> -> oldValue + value.map { File(it.toString()) }
-                        is File -> oldValue + value
+                        is FileSystemLocation -> oldValue + value
                         else -> oldValue + value.toString()
                     }
                     newPathList
@@ -147,7 +148,7 @@ internal abstract class Command @Inject internal constructor(
             val oldPath = this["PATH"] as PathList
             // Append the PATH of the current Java process
             val newPath = oldPath + environmentPath + packageManagerInstallDirectories
-            if (parameters.suppressXcodeIosToolchains.get() && CargoHost.Platform.MacOS.isCurrent) {
+            if (parameters.suppressXcodeIosToolchains.get() && RustHost.Platform.MacOS.isCurrent) {
                 this["PATH"] = newPath.suppressPathsUnder(File("/Applications/Xcode.app"))
             } else {
                 this["PATH"] = newPath
@@ -197,7 +198,7 @@ internal abstract class Command @Inject internal constructor(
             path.resolve(command).run {
                 if (exists()) return@map absolutePath
             }
-            path.resolve(CargoHost.Platform.current.convertExeName(command)).run {
+            path.resolve(RustHost.Platform.current.convertExeName(command)).run {
                 if (exists()) return@map absolutePath
             }
         }
@@ -240,4 +241,4 @@ internal data class CommandResult(
 
 private val environmentPath = PathList(System.getenv("PATH")!!)
 
-private val packageManagerInstallDirectories = PathList(CargoHost.current.packageManagerInstallDirectories.map(::File))
+private val packageManagerInstallDirectories = PathList(RustHost.current.packageManagerInstallDirectories.map(::File))

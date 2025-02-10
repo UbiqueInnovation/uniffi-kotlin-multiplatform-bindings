@@ -1,0 +1,17 @@
+[package]
+name = "uniffi-kmm-example-custom-types"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "uniffi_kmm_example_custom_types"
+crate-type = ["lib", "cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[dependencies]
+uniffi = { workspace = true }
+url = { workspace = true }
+
+[build-dependencies]
+uniffi = { workspace = true, features = ["build"] }

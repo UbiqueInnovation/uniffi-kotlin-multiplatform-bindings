@@ -21,7 +21,7 @@ class ArithmeticTest {
     @Test
     fun testBasicOperations() {
         val test = "{\"ty\": \"ADD\", \"a\": 2, \"b\": 3}"
-        val operation = Json {}.decodeFromString<Operation>(test)
+        val operation = Json.decodeFromString<Operation>(test)
         applyOperation(operation) shouldBe 5uL
         add(2uL, 4uL) shouldBe 6uL
         sub(4uL, 2uL) shouldBe 2uL

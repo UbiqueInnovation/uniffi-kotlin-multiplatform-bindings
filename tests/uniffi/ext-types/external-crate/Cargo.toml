@@ -1,0 +1,5 @@
+[package]
+name = "uniffi-kmm-fixture-ext-types-external-crate"
+version = "0.1.0"
+edition = "2021"
+publish = false

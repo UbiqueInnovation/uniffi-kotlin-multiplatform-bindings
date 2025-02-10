@@ -30,6 +30,7 @@ impl CodeType for OptionalCodeType {
             super::KotlinCodeOracle.find(self.inner()).type_label(ci)
         )
     }
+
     fn is_optional(&self) -> bool {
         true
     }

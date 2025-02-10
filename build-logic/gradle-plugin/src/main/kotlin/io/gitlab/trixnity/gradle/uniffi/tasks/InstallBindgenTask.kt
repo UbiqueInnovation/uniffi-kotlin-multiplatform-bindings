@@ -6,6 +6,7 @@
 
 package io.gitlab.trixnity.gradle.uniffi.tasks
 
+import io.gitlab.trixnity.gradle.RustHost
 import io.gitlab.trixnity.gradle.cargo.tasks.CargoTask
 import io.gitlab.trixnity.gradle.uniffi.dsl.BindgenSource
 import io.gitlab.trixnity.uniffi.gradle.BuildConfig
@@ -29,7 +30,13 @@ abstract class InstallBindgenTask : CargoTask() {
     @get:OutputFile
     @Suppress("LeakingThis")
     val bindgen: RegularFileProperty = project.objects.fileProperty()
-        .convention(installDirectory.file("bin/${BuildConfig.BINDGEN_BIN}"))
+        .convention(
+            installDirectory.file(
+                RustHost.current.platform.convertExeName(
+                    "bin/${BuildConfig.BINDGEN_BIN}"
+                )
+            )
+        )
 
     @TaskAction
     fun buildBindings() {

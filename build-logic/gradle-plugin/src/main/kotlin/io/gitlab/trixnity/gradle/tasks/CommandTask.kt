@@ -38,18 +38,30 @@ abstract class CommandTask : DefaultTask() {
     internal abstract val providerFactory: ProviderFactory
 
     internal open fun configureFromProperties(spec: CommandSpec) = with(spec) {
+        additionalEnvironmentPath(additionalEnvironmentPath)
         for ((key, value) in additionalEnvironment.get()) {
             additionalEnvironment(key, value)
         }
-        additionalEnvironmentPath(additionalEnvironmentPath)
     }
 
     @JvmName("commandWithRegularFile")
     internal fun command(
         command: Provider<RegularFile>,
         action: CommandSpec.() -> Unit = {},
-    ): Provider<CommandResult> = command(command.map { it.asFile.name }) {
-        additionalEnvironmentPath(command.map { it.asFile.parentFile })
+    ) = command(command.map { it.asFile }, action)
+
+    internal fun command(
+        command: File,
+        action: CommandSpec.() -> Unit = {},
+    ) = command(providerFactory.provider { command }, action)
+
+    @JvmName("commandWithFile")
+    internal fun command(
+        command: Provider<File>,
+        action: CommandSpec.() -> Unit = {},
+    ) = commandImpl(command.map { it.name }) {
+        additionalEnvironmentPath(command.map { it.parentFile })
+        configureFromProperties(this)
         action()
     }
 
@@ -61,11 +73,16 @@ abstract class CommandTask : DefaultTask() {
     internal fun command(
         command: Provider<String>,
         action: CommandSpec.() -> Unit = {},
+    ) = commandImpl(command) {
+        configureFromProperties(this)
+        action()
+    }
+
+    private fun commandImpl(
+        command: Provider<String>,
+        action: CommandSpec.() -> Unit,
     ): Provider<CommandResult> = providerFactory.of(Command::class) {
         it.parameters.command.set(command)
-        CommandSpec(projectLayout, providerFactory, it.parameters).apply {
-            configureFromProperties(this)
-            action()
-        }
+        CommandSpec(projectLayout, providerFactory, it.parameters).apply(action)
     }
 }

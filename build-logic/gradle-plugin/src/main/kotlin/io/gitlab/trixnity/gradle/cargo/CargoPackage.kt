@@ -6,7 +6,6 @@
 
 package io.gitlab.trixnity.gradle.cargo
 
-import io.gitlab.trixnity.gradle.CargoHost
 import io.gitlab.trixnity.gradle.cargo.rust.CrateType
 import io.gitlab.trixnity.gradle.cargo.rust.profiles.BuiltInCargoProfile
 import io.gitlab.trixnity.gradle.cargo.rust.profiles.CargoProfile
@@ -21,13 +20,17 @@ import java.io.File
 /**
  * Represents a Cargo package.
  */
-class CargoPackage(project: Project, searchPath: Directory) {
+class CargoPackage(
+    project: Project,
+    searchPath: Directory,
+    toolchainDirectory: File,
+) {
     /**
      * The manifest file of the package.
      */
     val manifestFile: RegularFile = project.layout.projectDirectory.file(
         project.command("cargo") {
-            additionalEnvironmentPath(CargoHost.Platform.current.defaultCargoInstallationDir)
+            additionalEnvironmentPath(toolchainDirectory)
             arguments("locate-project", "--message-format", "plain")
             workingDirectory(searchPath)
             captureStandardOutput()
@@ -47,7 +50,7 @@ class CargoPackage(project: Project, searchPath: Directory) {
      */
     private val metadata: CargoMetadata = run {
         val result = project.command("cargo") {
-            additionalEnvironmentPath(CargoHost.Platform.current.defaultCargoInstallationDir)
+            additionalEnvironmentPath(toolchainDirectory)
             // TODO: support fine-grained feature selection
             arguments("metadata", "--format-version", "1", "--all-features")
             workingDirectory(root)
@@ -73,7 +76,7 @@ class CargoPackage(project: Project, searchPath: Directory) {
         // This must be called after `cargo metadata is invoked, since cargo pkgid does not work without Cargo.toml, and
         // cargo metadata generates it when it is not present.
         project.command("cargo") {
-            additionalEnvironmentPath(CargoHost.Platform.current.defaultCargoInstallationDir)
+            additionalEnvironmentPath(toolchainDirectory)
             arguments("pkgid")
             workingDirectory(root)
             captureStandardOutput()

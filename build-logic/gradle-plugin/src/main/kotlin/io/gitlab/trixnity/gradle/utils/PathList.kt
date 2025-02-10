@@ -6,7 +6,8 @@
 
 package io.gitlab.trixnity.gradle.utils
 
-import io.gitlab.trixnity.gradle.CargoHost
+import io.gitlab.trixnity.gradle.RustHost
+import org.gradle.api.file.FileSystemLocation
 import java.io.File
 import java.io.Serializable
 
@@ -17,6 +18,7 @@ data class PathList(val paths: List<File> = emptyList()) : Serializable {
     constructor(paths: String) : this(paths.split(separator).filter(String::isNotEmpty).map(::File))
 
     operator fun plus(other: File): PathList = PathList(paths + other)
+    operator fun plus(other: FileSystemLocation): PathList = plus(other.asFile)
     operator fun plus(other: Iterable<File>): PathList = PathList(paths + other)
     operator fun plus(other: PathList): PathList = plus(other.paths)
     operator fun plus(other: String): PathList = plus(PathList(other))
@@ -32,6 +34,6 @@ data class PathList(val paths: List<File> = emptyList()) : Serializable {
     override fun toString(): String = joinToString()
 
     companion object {
-        val separator: String = CargoHost.Platform.current.pathSeparator
+        val separator: String = RustHost.Platform.current.pathSeparator
     }
 }

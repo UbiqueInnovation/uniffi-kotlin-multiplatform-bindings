@@ -1,4 +1,4 @@
-import io.gitlab.trixnity.gradle.CargoHost
+import io.gitlab.trixnity.gradle.RustHost
 import io.gitlab.trixnity.gradle.cargo.dsl.jvm
 import io.gitlab.trixnity.gradle.cargo.dsl.native
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
@@ -11,7 +11,7 @@ plugins {
 
 cargo {
     builds.jvm {
-        jvm = (rustTarget == CargoHost.current.hostTarget)
+        jvm = (rustTarget == RustHost.current.rustTarget)
         resourcePrefix = "jvm"
     }
 }

@@ -1,32 +1,36 @@
+{% include "ffi/Helpers.kt" %}
 
- actual class UniffiRustCallStatus(val inner: CPointer<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>) {}
- actual var UniffiRustCallStatus.code: Byte
-    get() = inner.pointed.code
-    set(value) { inner.pointed.code = value }
- actual var UniffiRustCallStatus.error_buf: RustBufferByValue
-    get() = RustBufferByValue(inner.pointed.errorBuf.readValue())
-    set(value) { value.inner.place(inner.pointed.errorBuf.ptr) }
+internal typealias UniffiRustCallStatus = CPointer<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>
+internal var UniffiRustCallStatus.code: Byte
+    get() = pointed.code
+    set(value) { pointed.code = value }
+internal var UniffiRustCallStatus.errorBuf: RustBufferByValue
+    get() = pointed.errorBuf.readValue()
+    set(value) { value.place(pointed.errorBuf.ptr) }
 
- actual class UniffiRustCallStatusByValue(val inner: CValue<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>) {}
- actual var UniffiRustCallStatusByValue.code: Byte
-    get() = inner.useContents { code }
-    set(value) {
-        println("tried writing value")
+internal typealias UniffiRustCallStatusByValue = CValue<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>
+fun UniffiRustCallStatusByValue(
+    code: Byte,
+    errorBuf: RustBufferByValue
+): UniffiRustCallStatusByValue {
+    return cValue<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus> {
+        this.code = code
+        errorBuf.write(this.errorBuf.rawPtr)
     }
- actual var UniffiRustCallStatusByValue.error_buf: RustBufferByValue
-    get() = inner.useContents { RustBufferByValue(errorBuf.readValue()) }
-    set(value)  {
-        println("tried writing value")
-    }
+}
+internal val UniffiRustCallStatusByValue.code: Byte
+    get() = useContents { code }
+internal val UniffiRustCallStatusByValue.errorBuf: RustBufferByValue
+    get() = useContents { errorBuf.readValue() }
 
- actual object UniffiRustCallStatusHelper
- actual fun UniffiRustCallStatusHelper.allocValue(): UniffiRustCallStatusByValue
-    = UniffiRustCallStatusByValue(cValue<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>())
- actual fun <U> UniffiRustCallStatusHelper.withReference(
+internal object UniffiRustCallStatusHelper
+internal fun UniffiRustCallStatusHelper.allocValue(): UniffiRustCallStatusByValue
+    = cValue<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>()
+internal fun <U> UniffiRustCallStatusHelper.withReference(
     block: (UniffiRustCallStatus) -> U
 ): U {
     return memScoped {
         val status = alloc<{{ ci.namespace() }}.cinterop.UniffiRustCallStatus>()
-        block(UniffiRustCallStatus(status.ptr))
+        block(status.ptr)
     }
 }

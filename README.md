@@ -25,7 +25,7 @@ This project contains three Gradle plugins:
 
 - The Cargo plugin (`io.gitlab.trixnity.cargo.kotlin.multiplatform`)
 - The UniFFI plugin (`io.gitlab.trixnity.uniffi.kotlin.multiplatform`)
-- The helper plugin for linking (`io.gitlab.trixnity.rustlink.kotlin.multiplatform`)
+- The Rust plugin (`io.gitlab.trixnity.rust.kotlin.multiplatform`)
 
 ### The Cargo plugin
 
@@ -216,15 +216,15 @@ current system or not. The list of such targets by the build host is as follows.
 | Visual C++   | ✅       | ❌     | ❌     |
 
 To build for specific targets only, you can configure that using the `jvm` property. For example, to build a shared
-library for the current build host only, set this property to `rustTarget == CargoHost.current.hostTarget`.
+library for the current build host only, set this property to `rustTarget == RustHost.current.rustTarget`.
 
 ```kotlin
-import io.gitlab.trixnity.gradle.CargoHost
+import io.gitlab.trixnity.gradle.RustHost
 import io.gitlab.trixnity.gradle.cargo.dsl.*
 
 cargo {
     builds.jvm {
-        jvm = (rustTarget == CargoHost.current.hostTarget)
+        jvm = (rustTarget == RustHost.current.rustTarget)
     }
 }
 ```
@@ -376,9 +376,27 @@ uniffi {
 }
 ```
 
-### The helper plugin for linking
+### The Rust plugin
 
-The helper plugin exposes two extension functions `KotlinMultiplatformExtension.hostNativeTarget`
+The Rust plugin is for configuring the Rust toolchain you want to use or linking your Rust library to your Kotlin
+project. By default, the plugins think `cargo` and `rustup` are installed in `~/.cargo/bin` or a directory registered in
+the `PATH` environment variable, which is okay for almost everyone.
+
+However, if you have installed `cargo` or `rustup` in another directory, you can provide that information to the plugin
+via the `rust {}` block. The information in the `rust {}` block is automatically passed to the Cargo or the UniFFI
+plugins.
+
+```kotlin
+plugins {
+    id("io.gitlab.trixnity.rust.kotlin.multiplatform") version "0.1.0"
+}
+
+rust {
+    toolchainDirectory = File("/path/to/my/Rust/toolchain")
+}
+```
+
+The Rust plugin also defines two extension functions `KotlinMultiplatformExtension.hostNativeTarget`
 and `KotlinNativeCompilation.useRustUpLinker`.
 
 `hostNativeTarget` can be invoked in `kotlin {}` and adds the Kotlin Native target for the build host; it invokes
@@ -386,7 +404,7 @@ and `KotlinNativeCompilation.useRustUpLinker`.
 build host is not supported yet.
 
 ```kotlin
-import io.gitlab.trixnity.gradle.rustlink.hostNativeTarget
+import io.gitlab.trixnity.gradle.cargo.dsl.*
 
 kotlin {
     hostNativeTarget()
@@ -400,7 +418,7 @@ with `rustup`, so you can use this when your Rust project emits a linker flag th
 LLVM linker.
 
 ```kotlin
-import io.gitlab.trixnity.gradle.rustlink.useRustUpLinker
+import io.gitlab.trixnity.gradle.cargo.dsl.*
 
 kotlin {
     iosArm64().compilations.getByName("main") {

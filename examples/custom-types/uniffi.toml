@@ -1,0 +1,10 @@
+package_name = "io.gitlab.trixnity.uniffi.examples.customtypes"
+
+[custom_types.Url]
+# Name of the type in the Kotlin code
+type_name = "io.ktor.http.Url"
+# Classes that need to be imported
+imports = ["io.ktor.http.Url"]
+# Functions to convert between strings and URLs
+into_custom = "Url({})"
+from_custom = "{}.toString()"

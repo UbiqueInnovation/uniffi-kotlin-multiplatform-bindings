@@ -98,7 +98,7 @@ fn write_bindings_target(
     fs::write(&file_path, content).unwrap();
 
     if settings.try_format_code {
-        println!("Code generation complete, formatting with ktlint (use --no-format to disable)");
+        println!("Code generation complete, formatting with ktlint");
         if let Err(e) = Command::new("ktlint").arg("-F").arg(&file_path).output() {
             println!(
                 "Warning: Unable to auto-format {} using ktlint: {e:?}",

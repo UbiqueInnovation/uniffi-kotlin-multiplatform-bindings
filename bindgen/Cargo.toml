@@ -1,6 +1,6 @@
 [package]
-name = "uniffi_kotlin_multiplatform_bindgen"
-version = "0.5.8"
+name = "uniffi_bindgen_kotlin_multiplatform"
+version = "0.1.0"
 edition = "2021"
 authors = ["UniFFI Kotlin Multiplatform bindings team"]
 description = "a Kotlin Multiplatform bindings generator for rust (codegen and cli tooling)"
@@ -16,9 +16,9 @@ name = "uniffi-bindgen-kotlin-multiplatform"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = { workspace = true }
 askama = { version = "0.12.1", default-features = false, features = ["config"] }
-camino = "1.1.7"
+camino = { workspace = true }
 cargo_metadata = "0.15.0"
 clap = { version = "4.5.7", features = ["derive", "cargo", "std"] }
 fs-err = "2.11.0"
@@ -27,5 +27,5 @@ paste = "1.0.15"
 serde = "1.0.203"
 textwrap = "0.16.1"
 toml = "0.5"
-uniffi_bindgen = "0.28.3"
-uniffi_meta = "0.28.3"
+uniffi_bindgen = { workspace = true }
+uniffi_meta = { workspace = true }

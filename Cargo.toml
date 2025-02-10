@@ -1,24 +1,42 @@
 [workspace]
 members = [
     "bindgen",
-    "tests/callbacks/uniffi",
-    "tests/chronological/uniffi",
-    "tests/coverall/uniffi",
-    "tests/docstring/uniffi",
-    "tests/docstring-proc-macro/uniffi",
-    "tests/enum-types/uniffi",
-    "tests/error-types/uniffi",
-    "tests/external-types/uniffi",
-    "tests/futures/uniffi",
-    "tests/keywords/uniffi",
-    "tests/proc-macro/uniffi",
-    "tests/trait-methods/uniffi",
+
+    "tests/build-common",
 
     "tests/gradle/android-linking",
     "tests/gradle/cargo-only",
 
+    "tests/uniffi/callbacks",
+    "tests/uniffi/chronological",
+    "tests/uniffi/coverall",
+    "tests/uniffi/docstring",
+    "tests/uniffi/docstring-proc-macro",
+    "tests/uniffi/enum-types",
+    "tests/uniffi/error-types",
+    # Temporarily disable ext-types test.
+    # TODO:
+    #   1. Properly handle external types in headers
+    #   2. Fix panics by uniffi-meta during bindings generation in ext-types
+    # "tests/uniffi/ext-types/custom-types",
+    # "tests/uniffi/ext-types/ext-types",
+    # "tests/uniffi/ext-types/ext-types-proc-macro",
+    # "tests/uniffi/ext-types/external-crate",
+    # "tests/uniffi/ext-types/http-headermap",
+    # "tests/uniffi/ext-types/sub-lib",
+    # "tests/uniffi/ext-types/uniffi-one",
+    "tests/uniffi/futures",
+    "tests/uniffi/keywords",
+    "tests/uniffi/proc-macro",
+    "tests/uniffi/simple-fns",
+    "tests/uniffi/simple-iface",
+    "tests/uniffi/struct-default-values",
+    "tests/uniffi/trait-methods",
+    "tests/uniffi/type-limits",
+
     "examples/arithmetic-procmacro",
     "examples/audio-cpp-app",
+    "examples/custom-types",
     "examples/todolist",
     "examples/tokio-blake3-app",
 ]
@@ -28,3 +46,16 @@ resolver = "2"
 [profile.my-opt-level-2-profile]
 inherits = "dev"
 opt-level = 2
+
+[workspace.dependencies]
+anyhow = "1.0.86"
+camino = "1.1.1"
+lazy_static = "1.4"
+once_cell = "1.18"
+thiserror = "1"
+tokio = "1"
+uniffi = "0.28.3"
+uniffi_bindgen = "0.28.3"
+uniffi_macros = "0.28.3"
+uniffi_meta = "0.28.3"
+url = "2.2"

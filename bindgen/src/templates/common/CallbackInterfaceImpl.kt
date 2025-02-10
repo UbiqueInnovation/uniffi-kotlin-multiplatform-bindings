@@ -29,7 +29,7 @@ internal object {{ trait_impl }} {
 {%- endfor %}
 
 internal expect fun create{{ "CallbackInterfaceFree"|ffi_callback_name }}{{name}}Callback() : Any
-internal expect  open class Uniffi{{ vtable|ffi_type_name }}Factory {
+internal expect open class Uniffi{{ vtable|ffi_type_name }}Factory {
         companion object {
             fun create(
             {%- for (ffi_callback, meth) in vtable_methods.iter() %}

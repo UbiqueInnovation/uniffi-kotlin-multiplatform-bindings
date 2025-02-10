@@ -1,0 +1,20 @@
+[package]
+name = "uniffi-kmm-fixture-ext-types-proc-macro"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_ext_types_proc_macro"
+crate-type = ["cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[dependencies]
+uniffi = { workspace = true }
+uniffi-one = { path = "../../uniffi-one/uniffi", package = "uniffi-kmm-fixture-ext-types-uniffi-one" }
+custom = { path = "../../custom-types/uniffi", package = "uniffi-kmm-fixture-ext-types-custom-types" }
+custom-types = { path = "../../../../../examples/custom-types", package = "uniffi-kmm-example-custom-types" }
+url = { workspace = true }
+
+[build-dependencies]
+uniffi-kmm-fixture-build-common = { path = "../../../build-common" }

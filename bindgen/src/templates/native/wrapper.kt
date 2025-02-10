@@ -1,6 +1,6 @@
 {%- call kt::docstring_value(ci.namespace_docstring(), 0) %}
 
-@file:Suppress("NAME_SHADOWING", "ACTUAL_WITHOUT_EXPECT", "INCOMPATIBLE_MATCHING")
+@file:Suppress("NAME_SHADOWING","ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_USE_SITE_VARIANCE", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION", "ACTUAL_TYPE_ALIAS_TO_CLASS_WITH_DECLARATION_SITE_VARIANCE", "INCOMPATIBLE_MATCHING")
 @file:OptIn(ExperimentalForeignApi::class)
 
 
@@ -20,11 +20,7 @@ package {{ config.package_name() }}
 
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.COpaquePointerVar
-import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.CPointer
-import kotlinx.cinterop.CPointerVarOf
-import kotlinx.cinterop.interpretCPointer
-import kotlinx.cinterop.nativeNullPtr
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.DoubleVar
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -38,30 +34,37 @@ import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.set
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.useContents
+import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.cValue
 import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.plus
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.toCPointer
+import kotlinx.cinterop.usePinned
 import kotlin.experimental.ExperimentalNativeApi
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.value
+import kotlinx.cinterop.CFunction
+import kotlinx.cinterop.write
 import kotlin.coroutines.resume
+import platform.posix.memcpy
 
 {%- for req in self.imports() %}
 {{ req.render() }}
 {%- endfor %}
 
-{% if  !config.has_import_helpers() %}
+{% if !config.has_import_helpers() %}
 
 {% include "PointerHelper.kt" %}
 
+{% include "ByteBuffer.kt" %}
 {% include "RustBufferTemplate.kt" %}
+{% include "ffi/FfiConverterTemplate.kt" %}
 {% include "Helpers.kt" %}
+{% include "ffi/HandleMap.kt" %}
 {% include "ReferenceHelper.kt" %}
-
-
 
 // Async support
 {%- if ci.has_async_fns() %}
@@ -76,7 +79,11 @@ import {{ config.import_helper_namespace() }}.*
 {{ type_helper_code }}
 
 // Contains loading, initialization code,
-// and the FFI Function declarations in a com.sun.jna.Library.
+// and the FFI Function declarations.
 {% include "NamespaceLibraryTemplate.kt" %}
 
 {% import "macros.kt" as kt %}
+
+{%- for func in ci.function_definitions() %}
+{%- include "ffi/TopLevelFunctionTemplate.kt" %}
+{%- endfor %}

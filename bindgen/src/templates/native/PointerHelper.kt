@@ -1,4 +1,7 @@
-actual class Pointer(val inner: CPointer<out kotlinx.cinterop.CPointed>) {
+internal typealias GenericPointer = CPointer<out kotlinx.cinterop.CPointed>
+
+actual class Pointer (val inner: GenericPointer) {
+    actual constructor(value: Long) : this(requireNotNull(value.toCPointer()))
 }
 
 actual val NullPointer: Pointer? = null
