@@ -26,12 +26,16 @@ import kotlin.coroutines.resume
 {{ req.render() }}
 {%- endfor %}
 
+{% if  !config.has_import_helpers() %}
 {% include "PointerHelper.kt" %}
+{% include "Helpers.kt" %}
+{% else %}
+import {{ config.import_helper_namespace() }}.*
+{% endif %}
 
 {% include "ByteBuffer.kt" %}
 {% include "RustBufferTemplate.kt" %}
 {% include "ffi/FfiConverterTemplate.kt" %}
-{% include "Helpers.kt" %}
 {% include "ffi/HandleMap.kt" %}
 {% include "ReferenceHelper.kt" %}
 
