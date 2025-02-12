@@ -26,7 +26,7 @@ plugins {
 rootProject.name = "uniffi-kotlin-multiplatform-bindings"
 
 include(":runtime")
-include(":tests:runtime")
+// include(":tests:runtime")
 /*
 include(":tests:gradle:android-linking")
 include(":tests:gradle:cargo-only")

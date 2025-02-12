@@ -1,12 +1,7 @@
 
 // Define FFI callback types
 
-{%- for type_ in ci.iter_types() %}
-{%- let ffi_converter_name = type_|ffi_converter_name %}
-   // {{ ffi_converter_name }} TEST
-{% endfor %}
-
-{%- for def in ci.ffi_definitions() %}
+{%- for def in self.ffi_definitions_no_builtins() %}
 {%- match def %}
 {%- when FfiDefinition::CallbackFunction(callback) %}
 internal typealias {{ callback.name()|ffi_callback_name }} = {{ ci.namespace() }}.cinterop.{{ callback.name()|ffi_callback_name }}

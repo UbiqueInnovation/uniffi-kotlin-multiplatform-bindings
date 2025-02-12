@@ -18,6 +18,8 @@ package {{ config.package_name() }}
 // compile the Rust component. The easiest way to ensure this is to bundle the Kotlin
 // helpers directly inline like we're doing here.
 
+import uniffi.runtime.*
+
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.COpaquePointerVar
 import kotlinx.cinterop.CPointer
@@ -55,8 +57,11 @@ import platform.posix.memcpy
 {{ req.render() }}
 {%- endfor %}
 
-{% if !config.has_import_helpers() %}
+{% if config.has_import_helpers() %}
+import {{ config.import_helper_namespace() }}.*
+{% endif %}
 
+/*
 {% include "PointerHelper.kt" %}
 
 {% include "ByteBuffer.kt" %}
@@ -70,20 +75,19 @@ import platform.posix.memcpy
 {%- if ci.has_async_fns() %}
 {% include "Async.kt" %}
 {%- endif %}
+*/
 
-{% else %}
-import {{ config.import_helper_namespace() }}.*
-{% endif %}
 
-// Public interface members begin here.
-{{ type_helper_code }}
 
 // Contains loading, initialization code,
 // and the FFI Function declarations.
 {% include "NamespaceLibraryTemplate.kt" %}
 
-{% import "macros.kt" as kt %}
+// Public interface members begin here.
+{{ type_helper_code }}
 
 {%- for func in ci.function_definitions() %}
 {%- include "ffi/TopLevelFunctionTemplate.kt" %}
 {%- endfor %}
+
+{% import "macros.kt" as kt %}

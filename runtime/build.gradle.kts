@@ -1,9 +1,13 @@
+import io.gitlab.trixnity.gradle.rust.dsl.hostNativeTarget
+import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
+
 plugins {
     kotlin("multiplatform")
     id("com.android.library")
 
     id("io.gitlab.trixnity.uniffi.kotlin.multiplatform")
     id("io.gitlab.trixnity.cargo.kotlin.multiplatform")
+    id("io.gitlab.trixnity.rust.kotlin.multiplatform")
     alias(libs.plugins.kotlin.atomicfu)
 }
 
@@ -19,10 +23,8 @@ kotlin {
     jvm()
     
     androidTarget()
-    
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+
+    hostNativeTarget()
 
     sourceSets {
         androidMain.dependencies {
