@@ -1,7 +1,8 @@
 
 // Define FFI callback types
+{% let ffi_definitions = self.ffi_definitions_no_builtins() %}
 
-{%- for def in ci.ffi_definitions() %}
+{%- for def in ffi_definitions %}
 {%- match def %}
 {%- when FfiDefinition::CallbackFunction(callback) %}
 internal interface {{ callback.name()|ffi_callback_name }}: com.sun.jna.Callback {

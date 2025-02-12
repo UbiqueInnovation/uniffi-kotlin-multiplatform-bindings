@@ -262,6 +262,39 @@ impl ImportRequirement {
     }
 }
 
+const FFI_BUILTINS: &'static [&'static str] = &[
+    "RustFutureContinuationCallback",
+    "ForeignFutureFree",
+    "CallbackInterfaceFree",
+    "ForeignFuture",
+    "ForeignFutureStructU8",
+    "ForeignFutureStructI8",
+    "ForeignFutureStructU16",
+    "ForeignFutureStructI16",
+    "ForeignFutureStructU32",
+    "ForeignFutureStructI32",
+    "ForeignFutureStructU64",
+    "ForeignFutureStructI64",
+    "ForeignFutureStructF32",
+    "ForeignFutureStructF64",
+    "ForeignFutureStructPointer",
+    "ForeignFutureStructRustBuffer",
+    "ForeignFutureStructVoid",
+    "ForeignFutureCompleteU8",
+    "ForeignFutureCompleteI8",
+    "ForeignFutureCompleteU16",
+    "ForeignFutureCompleteI16",
+    "ForeignFutureCompleteU32",
+    "ForeignFutureCompleteI32",
+    "ForeignFutureCompleteU64",
+    "ForeignFutureCompleteI64",
+    "ForeignFutureCompleteF32",
+    "ForeignFutureCompleteF64",
+    "ForeignFutureCompletePointer",
+    "ForeignFutureCompleteRustBuffer",
+    "ForeignFutureCompleteVoid",
+];
+
 macro_rules! kotlin_type_renderer {
     ($TypeRenderer:ident, $source_file:literal) => {
         /// Renders Kotlin helper code for all types
@@ -414,6 +447,12 @@ macro_rules! kotlin_wrapper {
 
             pub fn imports(&self) -> Vec<ImportRequirement> {
                 self.type_imports.iter().cloned().collect()
+            }
+
+            pub fn ffi_definitions_no_builtins(&self) -> impl Iterator<Item = FfiDefinition> + '_ {
+                self.ci
+                    .ffi_definitions()
+                    .filter(|d| !FFI_BUILTINS.contains(&d.name()))
             }
         }
     };

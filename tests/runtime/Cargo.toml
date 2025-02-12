@@ -10,4 +10,5 @@ crate-type = ["cdylib", "staticlib"]
 path = "src/commonMain/rust/lib.rs"
 
 [dependencies]
-uniffi = { workspace = true }
+uniffi = { workspace = true, features = ["tokio"] }
+async-trait = "0.1"

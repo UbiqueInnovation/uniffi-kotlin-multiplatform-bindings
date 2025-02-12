@@ -22,7 +22,7 @@ object UniffiRustFutureContinuationCallbackCallback: UniffiRustFutureContinuatio
 }
 
 // FFI type for Rust future continuations
-internal suspend fun<T, F, E: Exception> uniffiRustCallAsync(
+suspend fun<T, F, E: Exception> uniffiRustCallAsync(
     rustFuture: Long,
     pollFunc: (Long, Any, Long) -> Unit,
     completeFunc: (Long, UniffiRustCallStatus) -> F,
@@ -65,7 +65,7 @@ object UniffiForeignFutureFreeImpl: UniffiForeignFutureFree {
     }
 }
 
-internal inline fun<T> uniffiTraitInterfaceCallAsync(
+inline fun<T> uniffiTraitInterfaceCallAsync(
     crossinline makeCall: suspend () -> T,
     crossinline handleSuccess: (T) -> Unit,
     crossinline handleError: (UniffiRustCallStatusByValue) -> Unit,
@@ -122,4 +122,4 @@ internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallAsyncWithEr
     return UniffiForeignFutureUniffiByValue(handle, UniffiForeignFutureFreeImpl)
 }
 
-internal val uniffiForeignFutureHandleMap = UniffiHandleMap<Job>()
+val uniffiForeignFutureHandleMap = UniffiHandleMap<Job>()

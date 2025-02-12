@@ -28,24 +28,9 @@ import kotlin.coroutines.resume
 {{ req.render() }}
 {%- endfor %}
 
-{% if  !config.has_import_helpers() %}
-/*
-{% include "PointerHelper.kt" %}
-*/
-/*
-{% include "Helpers.kt" %}
-*/
-{% else %}
+{% if config.has_import_helpers() %}
 import {{ config.import_helper_namespace() }}.*
 {% endif %}
-
-/*
-{% include "ByteBuffer.kt" %}
-{% include "RustBufferTemplate.kt" %}
-{% include "ffi/FfiConverterTemplate.kt" %}
-{% include "ffi/HandleMap.kt" %}
-{% include "ReferenceHelper.kt" %}
-*/
 
 // Contains loading, initialization code,
 // and the FFI Function declarations in a com.sun.jna.Library.
@@ -59,10 +44,3 @@ import {{ config.import_helper_namespace() }}.*
 {%- for func in ci.function_definitions() %}
 {%- include "ffi/TopLevelFunctionTemplate.kt" %}
 {%- endfor %}
-
-// Async support
-/*
-{%- if ci.has_async_fns() %}
-{% include "Async.kt" %}
-{%- endif %}
-*/

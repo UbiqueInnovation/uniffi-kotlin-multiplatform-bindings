@@ -12,6 +12,8 @@ uniffi {
     bindgenFromPath(layout.projectDirectory.dir("../../bindgen"))
 
     generateFromLibrary()
+
+    formatCode = true
 }
 
 kotlin {

@@ -17,46 +17,6 @@
  #   - To keep things manageable, let's try to limit ourselves to these 2 mega-matches
  #}
 {%- match type_ %}
-
-{%- when Type::Boolean %}
-{%- include "ffi/BooleanHelper.kt" %}
-
-{%- when Type::Int8 %}
-{%- include "ffi/Int8Helper.kt" %}
-
-{%- when Type::Int16 %}
-{%- include "ffi/Int16Helper.kt" %}
-
-{%- when Type::Int32 %}
-{%- include "ffi/Int32Helper.kt" %}
-
-{%- when Type::Int64 %}
-{%- include "ffi/Int64Helper.kt" %}
-
-{%- when Type::UInt8 %}
-{%- include "ffi/UInt8Helper.kt" %}
-
-{%- when Type::UInt16 %}
-{%- include "ffi/UInt16Helper.kt" %}
-
-{%- when Type::UInt32 %}
-{%- include "ffi/UInt32Helper.kt" %}
-
-{%- when Type::UInt64 %}
-{%- include "ffi/UInt64Helper.kt" %}
-
-{%- when Type::Float32 %}
-{%- include "ffi/Float32Helper.kt" %}
-
-{%- when Type::Float64 %}
-{%- include "ffi/Float64Helper.kt" %}
-
-{%- when Type::String %}
-{%- include "ffi/StringHelper.kt" %}
-
-{%- when Type::Bytes %}
-{%- include "ffi/ByteArrayHelper.kt" %}
-
 {%- when Type::Enum { name, module_path } %}
 {%- let e = ci.get_enum_definition(name).unwrap() %}
 {%- if !ci.is_name_used_as_error(name) %}
@@ -74,9 +34,6 @@
 {%- let ffi_init_callback = obj.ffi_init_callback() %}
 {% include "CallbackInterfaceImpl.kt" %}
 {%- endif %}
-{%- if self.include_once_check("interface-support") %}
-    {%- include "ObjectCleanerHelper.kt" %}
-{%- endif %}
 
 {%- when Type::Record { name, module_path } %}
 {% include "ffi/RecordTemplate.kt" %}
@@ -92,12 +49,6 @@
 
 {%- when Type::CallbackInterface { module_path, name } %}
 {% include "CallbackInterfaceTemplate.kt" %}
-
-{%- when Type::Timestamp %}
-{% include "ffi/TimestampHelper.kt" %}
-
-{%- when Type::Duration %}
-{% include "ffi/DurationHelper.kt" %}
 
 {%- when Type::Custom { module_path, name, builtin } %}
 {% include "ffi/CustomTypeTemplate.kt" %}
