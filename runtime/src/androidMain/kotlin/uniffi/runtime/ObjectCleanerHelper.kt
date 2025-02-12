@@ -36,7 +36,7 @@ private class AndroidSystemCleanable(
     override fun clean() = cleanable.clean()
 }
 
-private fun UniffiCleaner.Companion.create(): UniffiCleaner =
+fun UniffiCleaner.Companion.create(): UniffiCleaner =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
         AndroidSystemCleaner()
     } else {

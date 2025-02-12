@@ -1,10 +1,8 @@
-@file:Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "CanBePrimaryConstructorProperty")
+@file:Suppress("CanBePrimaryConstructorProperty", "UnusedReceiverParameter")
 
 package uniffi.runtime
 
 import com.sun.jna.Callback
-import com.sun.jna.Library
-import com.sun.jna.Native
 import com.sun.jna.Structure
 
 actual fun foo() = "JVM"
@@ -13,7 +11,7 @@ actual fun foo() = "JVM"
 actual typealias Pointer = com.sun.jna.Pointer
 actual val NullPointer: Pointer? = com.sun.jna.Pointer.NULL
 actual fun getPointerNativeValue(ptr: Pointer): Long = Pointer.nativeValue(ptr)
-actual fun kotlin.Long.toPointer() = com.sun.jna.Pointer(this)
+actual fun Long.toPointer() = com.sun.jna.Pointer(this)
 
 //////// HELPERS ////////
 @Structure.FieldOrder("code", "errorBuf")
@@ -41,18 +39,7 @@ open class UniffiRustCallStatusStruct(
 }
 
 typealias UniffiRustCallStatus = UniffiRustCallStatusStruct.ByReference
-var UniffiRustCallStatus.code: Byte
-    get() = this.code
-    set(value) { this.code = value }
-var UniffiRustCallStatus.errorBuf: RustBufferByValue
-    get() = this.errorBuf
-    set(value) { this.errorBuf = value }
-
 typealias UniffiRustCallStatusByValue = UniffiRustCallStatusStruct.ByValue
-val UniffiRustCallStatusByValue.code: Byte
-    get() = this.code
-val UniffiRustCallStatusByValue.errorBuf: RustBufferByValue
-    get() = this.errorBuf
 
 object UniffiRustCallStatusHelper
 fun UniffiRustCallStatusHelper.allocValue(): UniffiRustCallStatusByValue
@@ -67,11 +54,11 @@ fun <U> UniffiRustCallStatusHelper.withReference(
 /////// CALLBACKS ////////
 // Define FFI callback types
 interface UniffiRustFutureContinuationCallback: Callback {
-    fun callback(handle: Long, pollResult: Byte,)
+    fun callback(handle: Long, pollResult: Byte)
 }
 interface UniffiForeignFutureFree: Callback {
-    fun callback(handle: Long,)
+    fun callback(handle: Long)
 }
 interface UniffiCallbackInterfaceFree: Callback {
-    fun callback(handle: Long,)
+    fun callback(handle: Long)
 }
