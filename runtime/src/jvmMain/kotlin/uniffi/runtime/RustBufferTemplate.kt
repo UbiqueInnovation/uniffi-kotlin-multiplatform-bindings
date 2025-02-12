@@ -12,9 +12,9 @@ open class RustBufferStruct(
 ) : Structure() {
     // Note: `capacity` and `len` are actually `ULong` values, but JVM only supports signed values.
     // When dealing with these fields, make sure to call `toULong()`.
-    @JvmField internal var capacity: Long = capacity
-    @JvmField internal var len: Long = len
-    @JvmField internal var data: Pointer? = data
+    @JvmField var capacity: Long = capacity
+    @JvmField var len: Long = len
+    @JvmField var data: Pointer? = data
 
     constructor(): this(0.toLong(), 0.toLong(), null)
 
@@ -42,16 +42,7 @@ open class RustBufferStruct(
 }
 
 typealias RustBuffer = RustBufferStruct
-internal var RustBuffer.capacity: Long
-    get() = this.capacity
-    set(value) { this.capacity = value }
-internal var RustBuffer.len: Long
-    get() = this.len
-    set(value) { this.len = value }
-internal var RustBuffer.data: Pointer?
-    get() = this.data
-    set(value) { this.data = value }
-internal fun RustBuffer.asByteBuffer(): ByteBuffer? {
+fun RustBuffer.asByteBuffer(): ByteBuffer? {
     require(this.len <= Int.MAX_VALUE) {
         "cannot handle RustBuffer longer than Int.MAX_VALUE bytes: length is ${this.len}"
     }
@@ -59,13 +50,7 @@ internal fun RustBuffer.asByteBuffer(): ByteBuffer? {
 }
 
 typealias RustBufferByValue = RustBufferStruct.ByValue
-internal val RustBufferByValue.capacity: Long
-    get() = this.capacity
-internal val RustBufferByValue.len: Long
-    get() = this.len
-internal val RustBufferByValue.data: Pointer?
-    get() = this.data
-internal fun RustBufferByValue.asByteBuffer(): ByteBuffer? {
+fun RustBufferByValue.asByteBuffer(): ByteBuffer? {
     require(this.len <= Int.MAX_VALUE) {
         "cannot handle RustBuffer longer than Int.MAX_VALUE bytes: length is ${this.len}"
     }
@@ -75,13 +60,11 @@ internal fun RustBufferByValue.asByteBuffer(): ByteBuffer? {
 internal class RustBufferByReference : com.sun.jna.ptr.ByReference(16)
 internal fun RustBufferByReference.setValue(value: RustBufferByValue) {
     // NOTE: The offsets are as they are in the C-like struct.
-    val pointer = getPointer()
     pointer.setLong(0, value.capacity)
     pointer.setLong(8, value.len)
     pointer.setPointer(16, value.data)
 }
 internal fun RustBufferByReference.getValue(): RustBufferByValue {
-    val pointer = getPointer()
     val value = RustBufferByValue()
     value.writeField("capacity", pointer.getLong(0))
     value.writeField("len", pointer.getLong(8))
@@ -98,26 +81,16 @@ internal fun RustBufferByReference.getValue(): RustBufferByValue {
 // completeness.
 
 @Structure.FieldOrder("len", "data")
-internal open class ForeignBytesStruct : Structure() {
-    @JvmField internal var len: Int = 0
-    @JvmField internal var data: Pointer? = null
+open class ForeignBytesStruct : Structure() {
+    @JvmField var len: Int = 0
+    @JvmField var data: Pointer? = null
 
-    internal class ByValue : ForeignBytes(), Structure.ByValue
+    class ByValue : ForeignBytes(), Structure.ByValue
 }
 
-internal typealias ForeignBytes = ForeignBytesStruct
-internal var ForeignBytes.len: Int
-    get() = this.len
-    set(value) { this.len = value }
-internal var ForeignBytes.data: Pointer?
-    get() = this.data
-    set(value) { this.data = value }
+typealias ForeignBytes = ForeignBytesStruct
 
-internal typealias ForeignBytesByValue = ForeignBytesStruct.ByValue
-internal val ForeignBytesByValue.len: Int
-    get() = this.len
-internal val ForeignBytesByValue.data: Pointer?
-    get() = this.data
+typealias ForeignBytesByValue = ForeignBytesStruct.ByValue
 
 
 fun RustBuffer.setValue(array: RustBufferByValue) {
@@ -126,8 +99,17 @@ fun RustBuffer.setValue(array: RustBufferByValue) {
     this.capacity = array.capacity
 }
 
-internal object RustBufferHelper {
-    fun allocValue(size: ULong = 0UL): RustBufferByValue = RUNTIME.allocRustBuffer(size)
+object RustBufferHelper {
+    fun allocValue(size: ULong = 0UL): RustBufferByValue = uniffiRustCall() { status ->
+        // Note: need to convert the size to a `Long` value to make this work with JVM.
+        UniffiLib.INSTANCE.ffi_uniffi_runtime_rustbuffer_alloc(size.toLong(), status)
+    }.also {
+        if(it.data == null) {
+            throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=${size})")
+        }
+    }
 
-    fun free(buf: RustBufferByValue) = RUNTIME.freeRustBuffer(buf)
+    fun free(buf: RustBufferByValue) = uniffiRustCall() { status ->
+        UniffiLib.INSTANCE.ffi_uniffi_runtime_rustbuffer_free(buf, status)
+    }
 }

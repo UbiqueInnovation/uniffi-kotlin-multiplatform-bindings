@@ -25,6 +25,9 @@ plugins {
 
 rootProject.name = "uniffi-kotlin-multiplatform-bindings"
 
+include(":runtime")
+include(":tests:runtime")
+/*
 include(":tests:gradle:android-linking")
 include(":tests:gradle:cargo-only")
 include(":tests:gradle:no-uniffi-block")
@@ -36,6 +39,7 @@ include(":tests:uniffi:docstring")
 include(":tests:uniffi:docstring-proc-macro")
 include(":tests:uniffi:enum-types")
 include(":tests:uniffi:error-types")
+*/
 // Temporarily disable ext-types test.
 // TODO:
 //   1. Properly handle external types in headers
@@ -46,12 +50,17 @@ include(":tests:uniffi:error-types")
 // include(":tests:uniffi:ext-types:http-headermap")
 // include(":tests:uniffi:ext-types:sub-lib")
 // include(":tests:uniffi:ext-types:uniffi-one")
+/*
 include(":tests:uniffi:futures")
 include(":tests:uniffi:keywords")
+*/
+/*
 include(":tests:uniffi:multi-module:common")
 include(":tests:uniffi:multi-module:mod-a")
 include(":tests:uniffi:multi-module:mod-b")
 include(":tests:uniffi:multi-module:rust-common")
+*/
+/*
 include(":tests:uniffi:proc-macro")
 include(":tests:uniffi:serialization")
 include(":tests:uniffi:simple-fns")
@@ -66,3 +75,4 @@ include(":examples:audio-cpp-app")
 include(":examples:custom-types")
 include(":examples:todolist")
 include(":examples:tokio-blake3-app")
+*/

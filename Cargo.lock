@@ -1873,6 +1873,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "uniffi-kmm-fixture-runtime"
+version = "0.1.0"
+dependencies = [
+ "uniffi",
+]
+
+[[package]]
 name = "uniffi-kmm-fixture-serialization"
 version = "0.1.0"
 dependencies = [
@@ -1920,6 +1927,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "uniffi-runtime"
+version = "0.1.0"
+dependencies = [
+ "uniffi",
+]
+
+[[package]]
 name = "uniffi_bindgen"
 version = "0.28.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1944,6 +1958,25 @@ dependencies = [
 
 [[package]]
 name = "uniffi_bindgen_kotlin_multiplatform"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "askama",
+ "camino",
+ "cargo_metadata",
+ "clap 4.5.17",
+ "fs-err",
+ "heck 0.5.0",
+ "paste",
+ "serde",
+ "textwrap",
+ "toml",
+ "uniffi_bindgen",
+ "uniffi_meta",
+]
+
+[[package]]
+name = "uniffi_bindgen_kotlin_multiplatform_bootstrap"
 version = "0.1.0"
 dependencies = [
  "anyhow",

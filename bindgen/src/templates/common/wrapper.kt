@@ -19,8 +19,9 @@ package {{ config.package_name() }}
 
 import kotlin.jvm.JvmField
 {% if  !config.has_import_helpers() %}
-
+/*
 {% include "PointerHelper.kt" %}
+*/
 {% include "Helpers.kt" %}
 {% else %}
 import {{ config.import_helper_namespace() }}.*

@@ -1,11 +1,16 @@
 [workspace]
 members = [
     "bindgen",
+    "bindgen-bootstrap",
+
+    "runtime",
 
     "tests/build-common",
 
     "tests/gradle/android-linking",
     "tests/gradle/cargo-only",
+
+    "tests/runtime",
 
     "tests/uniffi/callbacks",
     "tests/uniffi/chronological",

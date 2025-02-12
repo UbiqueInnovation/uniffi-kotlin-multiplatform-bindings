@@ -3,35 +3,11 @@
 package uniffi.runtime
 
 import com.sun.jna.Callback
+import com.sun.jna.Library
+import com.sun.jna.Native
 import com.sun.jna.Structure
 
 actual fun foo() = "JVM"
-
-//////// RUNTIME ////////
-interface RuntimeInt {
-    fun allocRustBuffer(
-        size: ULong,
-    ): RustBufferByValue
-
-    fun freeRustBuffer(
-        buf: RustBufferByValue
-    ): Unit
-}
-
-object DummyRuntime : RuntimeInt {
-    override fun allocRustBuffer(
-        size: ULong,
-    ): RustBufferByValue = TODO()
-
-    override fun freeRustBuffer(
-        buf: RustBufferByValue,
-    ) = TODO()
-}
-
-// NOTE: Don't think this will work with multiple stuff, how to do it?
-//       Maybe should have it's own library that can handle this stuff
-//       but is the memory shared then?
-var RUNTIME: RuntimeInt = DummyRuntime
 
 //////// POINTER ////////
 actual typealias Pointer = com.sun.jna.Pointer

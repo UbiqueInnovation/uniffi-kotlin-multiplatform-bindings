@@ -34,7 +34,7 @@ interface UniffiRustCallStatusErrorHandler<E> {
 // synchronize itself
 
 // Call a rust function that returns a Result<>.  Pass in the Error class companion that corresponds to the Err
-internal inline fun <U, E: kotlin.Exception> uniffiRustCallWithError(errorHandler: UniffiRustCallStatusErrorHandler<E>, crossinline callback: (UniffiRustCallStatus) -> U): U {
+inline fun <U, E: kotlin.Exception> uniffiRustCallWithError(errorHandler: UniffiRustCallStatusErrorHandler<E>, crossinline callback: (UniffiRustCallStatus) -> U): U {
     return UniffiRustCallStatusHelper.withReference() { status ->
         val returnValue = callback(status)
         uniffiCheckCallStatus(errorHandler, status)
@@ -43,7 +43,7 @@ internal inline fun <U, E: kotlin.Exception> uniffiRustCallWithError(errorHandle
 }
 
 // Check `status` and throw an error if the call wasn't successful
-internal fun<E: kotlin.Exception> uniffiCheckCallStatus(errorHandler: UniffiRustCallStatusErrorHandler<E>, status: UniffiRustCallStatus) {
+fun<E: kotlin.Exception> uniffiCheckCallStatus(errorHandler: UniffiRustCallStatusErrorHandler<E>, status: UniffiRustCallStatus) {
     if (status.isSuccess()) {
         return
     } else if (status.isError()) {
@@ -71,7 +71,7 @@ object UniffiNullRustCallStatusErrorHandler: UniffiRustCallStatusErrorHandler<In
 }
 
 // Call a rust function that returns a plain value
-internal inline fun <U> uniffiRustCall(crossinline callback: (UniffiRustCallStatus) -> U): U {
+inline fun <U> uniffiRustCall(crossinline callback: (UniffiRustCallStatus) -> U): U {
     return uniffiRustCallWithError(UniffiNullRustCallStatusErrorHandler, callback)
 }
 
