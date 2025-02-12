@@ -54,12 +54,10 @@ include(":tests:uniffi:error-types")
 include(":tests:uniffi:futures")
 include(":tests:uniffi:keywords")
 */
-/*
 include(":tests:uniffi:multi-module:common")
 include(":tests:uniffi:multi-module:mod-a")
-include(":tests:uniffi:multi-module:mod-b")
+// include(":tests:uniffi:multi-module:mod-b")
 include(":tests:uniffi:multi-module:rust-common")
-*/
 /*
 include(":tests:uniffi:proc-macro")
 include(":tests:uniffi:serialization")

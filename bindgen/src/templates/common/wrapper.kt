@@ -17,6 +17,8 @@ package {{ config.package_name() }}
 // compile the Rust component. The easiest way to ensure this is to bundle the Kotlin
 // helpers directly inline like we're doing here.
 
+import uniffi.runtime.*
+
 import kotlin.jvm.JvmField
 {% if  !config.has_import_helpers() %}
 /*

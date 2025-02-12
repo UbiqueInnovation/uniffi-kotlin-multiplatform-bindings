@@ -1,3 +1,4 @@
+/*
 import com.example.moda.testModA
 import com.example.modb.testModB
 import io.kotest.matchers.*
@@ -5,9 +6,16 @@ import module_a.createVec
 import module_a.testGetInt
 import module_b.vecLength
 import rust_common.TestRecord
+*/
+import rust_common.TestRecord
 import kotlin.test.*
 
 class MultiModuleTest {
+    @Test
+    fun testRecord() {
+        val r = TestRecord(1, "asdf", listOf(1, 2, 3))
+    }
+    /*
     @Test
     fun testCallFunctions() {
         testModA() shouldBe testModB()
@@ -24,4 +32,5 @@ class MultiModuleTest {
         val rec = TestRecord(1337, "abc", listOf(1, 2, 3))
         testGetInt(rec) shouldBe 1337
     }
+    */
 }

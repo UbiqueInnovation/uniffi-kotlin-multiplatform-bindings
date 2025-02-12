@@ -3,7 +3,7 @@ package uniffi.runtime
 
 internal const val UNIFFI_CALL_SUCCESS = 0.toByte()
 internal const val UNIFFI_CALL_ERROR = 1.toByte()
-internal const val UNIFFI_CALL_UNEXPECTED_ERROR = 2.toByte()
+const val UNIFFI_CALL_UNEXPECTED_ERROR = 2.toByte()
 
 // Default Implementations
 internal fun UniffiRustCallStatus.isSuccess(): Boolean
@@ -75,7 +75,7 @@ inline fun <U> uniffiRustCall(crossinline callback: (UniffiRustCallStatus) -> U)
     return uniffiRustCallWithError(UniffiNullRustCallStatusErrorHandler, callback)
 }
 
-internal inline fun<T> uniffiTraitInterfaceCall(
+inline fun<T> uniffiTraitInterfaceCall(
     callStatus: UniffiRustCallStatus,
     makeCall: () -> T,
     writeReturn: (T) -> Unit,

@@ -15,8 +15,9 @@ kotlin {
         val libs = project.extensions.getByName("libs") as org.gradle.accessors.dm.LibrariesForLibs
 
         commonTest.dependencies {
-            api(project(":tests:uniffi:multi-module:mod-a"))
-            api(project(":tests:uniffi:multi-module:mod-b"))
+            implementation(project(":tests:uniffi:multi-module:rust-common"))
+            // api(project(":tests:uniffi:multi-module:mod-a"))
+            // api(project(":tests:uniffi:multi-module:mod-b"))
 
             implementation(kotlin("test"))
             implementation(libs.kotest.assertions.core)
