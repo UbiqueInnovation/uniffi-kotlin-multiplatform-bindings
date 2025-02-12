@@ -61,4 +61,4 @@ pub async fn call_async_callback(c: &dyn MyAsyncCallback) -> String {
     c.callback().await
 }
 
-setup_scaffolding!();
+setup_scaffolding!("runtime_test");
