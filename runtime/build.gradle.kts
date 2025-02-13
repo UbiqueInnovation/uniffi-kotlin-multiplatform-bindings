@@ -5,6 +5,7 @@ import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
 plugins {
     kotlin("multiplatform")
     id("com.android.library")
+    id("maven-publish")
 
     id("io.gitlab.trixnity.uniffi.kotlin.multiplatform")
     id("io.gitlab.trixnity.cargo.kotlin.multiplatform")
@@ -31,7 +32,9 @@ kotlin {
         }
     }
 
-    androidTarget()
+    androidTarget {
+        publishLibraryVariants("release")
+    }
 
     hostNativeTarget()
 
@@ -71,5 +74,18 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+apply(from = "../gradle/artifactory.gradle")
+
+group = "ch.ubique.uniffi"
+version = "0.1.0"
+
+publishing {
+    repositories {
+        maven {
+            mavenLocal()
+        }
     }
 }

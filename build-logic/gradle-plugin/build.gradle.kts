@@ -94,7 +94,7 @@ gradlePlugin {
     }
 }
 
-apply(from = "artifactory.gradle")
+apply(from = "../../gradle/artifactory.gradle")
 
 tasks.publish {
     dependsOn(tasks.publishPlugins)
