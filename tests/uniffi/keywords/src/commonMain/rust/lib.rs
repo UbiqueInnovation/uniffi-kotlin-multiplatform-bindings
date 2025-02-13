@@ -14,7 +14,7 @@ impl r#break {
     pub fn object(&self, _class: Option<u8>) {}
 }
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, unused)]
 trait r#continue {
     fn r#return(&self, v: r#return) -> r#return;
     fn r#continue(&self) -> Option<Box<dyn r#continue>>;
