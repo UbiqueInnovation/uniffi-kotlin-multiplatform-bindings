@@ -1,16 +1,3 @@
-plugins {
-    id("uniffi-tests-from-library")
-}
-
-uniffi {
-    bindgenFromPath(layout.projectDirectory.dir("../bindgen-bootstrap"))
-
-    generateFromLibrary {
-        namespace = "uniffi_runtime"
-    }
-}
-
-/*
 import io.gitlab.trixnity.gradle.rust.dsl.hostNativeTarget
 import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
 
@@ -25,7 +12,7 @@ plugins {
 }
 
 uniffi {
-    bindgenFromPath(layout.projectDirectory.dir("../bindgen-bootstrap"))
+    bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen-bootstrap"))
 
     generateFromLibrary()
 }
@@ -37,7 +24,11 @@ kotlin {
     
     androidTarget()
 
-    // hostNativeTarget()
+    hostNativeTarget()
+
+    linuxX64()
+    linuxArm64()
+
     listOf(
         iosX64(),
         iosArm64(),
@@ -48,33 +39,15 @@ kotlin {
             isStatic = true
         }
 
-        iosTarget.binaries.all {
-            freeCompilerArgs += "-Xallocator=mimalloc"
-        }
-
         iosTarget.compilations.getByName("main") {
             useRustUpLinker()
         }
     }
 
     sourceSets {
-        androidMain.dependencies {
-        }
-
-        commonMain.dependencies {
-
-        }
-
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotest.assertions.core)
-        }
-
-        jvmMain.dependencies {
-        }
-
-        nativeMain.dependencies {
-
         }
     }
 }
@@ -90,4 +63,3 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
-*/

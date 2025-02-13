@@ -209,6 +209,10 @@ class UniFfiPlugin : Plugin<Project> {
                 )
             }
         }
+
+        kotlinMultiplatformExtension.sourceSets.register("nativeMain") { target ->
+            target.kotlin.srcDir(nativeBindingsDirectory)
+        }
     }
 
     private fun Project.configureKotlinMetadataTarget(kotlinMetadataTarget: KotlinMetadataTarget) {
@@ -280,7 +284,7 @@ class UniFfiPlugin : Plugin<Project> {
                 }
             }
             compilation.defaultSourceSet {
-                kotlin.srcDir(nativeBindingsDirectory)
+                // kotlin.srcDir(nativeBindingsDirectory)
             }
             compilation.compilerOptions.configure {
                 optIn.add("kotlinx.cinterop.ExperimentalForeignApi")

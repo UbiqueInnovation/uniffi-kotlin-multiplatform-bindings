@@ -1,5 +1,8 @@
+import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
+
 plugins {
     id("uniffi-tests-from-library")
+    id("com.android.library")
 }
 
 uniffi {
@@ -11,11 +14,35 @@ uniffi {
 }
 
 kotlin {
+    androidTarget()
+
+    iosSimulatorArm64 {
+        binaries.framework {
+            baseName = "uniffi-runtime"
+            isStatic = true
+        }
+
+        compilations.getByName("main") {
+            useRustUpLinker()
+        }
+    }
     sourceSets {
         commonMain {
             dependencies {
                 implementation(project(":runtime"))
             }
         }
+    }
+}
+
+android {
+    namespace = "runtime_test"
+    compileSdk = 34
+    defaultConfig {
+        minSdk = 29
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
