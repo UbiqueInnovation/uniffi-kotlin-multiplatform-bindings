@@ -39,6 +39,8 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
+                implementation(project(":runtime"))
+
                 implementation(libs.ktor.http)
             }
         }

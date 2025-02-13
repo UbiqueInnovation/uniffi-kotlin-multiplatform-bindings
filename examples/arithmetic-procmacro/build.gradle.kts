@@ -37,6 +37,12 @@ kotlin {
     }
 
     sourceSets {
+        commonMain {
+            dependencies {
+                implementation(project(":runtime"))
+            }
+        }
+
         commonTest {
             dependencies {
                 implementation(libs.kotlinx.serialization.json)

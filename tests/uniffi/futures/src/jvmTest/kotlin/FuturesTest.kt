@@ -4,7 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-import futures.*
+import uniffi.runtime.uniffiForeignFutureHandleMap
 
 actual fun uniffiForeignFutureHandleMapSize(): Int {
     return uniffiForeignFutureHandleMap.size
