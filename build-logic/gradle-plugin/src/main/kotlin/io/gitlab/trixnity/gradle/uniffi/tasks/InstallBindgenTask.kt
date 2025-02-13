@@ -63,6 +63,7 @@ abstract class InstallBindgenTask : CargoTask() {
                         is BindgenSource.Git.Commit.Revision -> arguments("--rev", source.commit.revision)
                         else -> {}
                     }
+                    arguments(BuildConfig.BINDGEN_CRATE)
                 }
             }
             suppressXcodeIosToolchains()
