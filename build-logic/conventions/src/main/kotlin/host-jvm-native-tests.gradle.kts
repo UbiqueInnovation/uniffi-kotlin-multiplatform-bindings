@@ -15,6 +15,12 @@ kotlin {
         // https://github.com/gradle/gradle/issues/15383 and https://github.com/gradle/gradle/issues/19813
         val libs = project.extensions.getByName("libs") as org.gradle.accessors.dm.LibrariesForLibs
         
+        commonMain {
+            dependencies {
+                implementation(project(":runtime"))
+            }
+        }
+
         commonTest {
             dependencies {
                 implementation(kotlin("test"))

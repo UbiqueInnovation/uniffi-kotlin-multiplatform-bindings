@@ -61,24 +61,6 @@ import platform.posix.memcpy
 import {{ config.import_helper_namespace() }}.*
 {% endif %}
 
-/*
-{% include "PointerHelper.kt" %}
-
-{% include "ByteBuffer.kt" %}
-{% include "RustBufferTemplate.kt" %}
-{% include "ffi/FfiConverterTemplate.kt" %}
-{% include "Helpers.kt" %}
-{% include "ffi/HandleMap.kt" %}
-{% include "ReferenceHelper.kt" %}
-
-// Async support
-{%- if ci.has_async_fns() %}
-{% include "Async.kt" %}
-{%- endif %}
-*/
-
-
-
 // Contains loading, initialization code,
 // and the FFI Function declarations.
 {% include "NamespaceLibraryTemplate.kt" %}

@@ -1,1 +1,1 @@
-class InternalException(message: String) : kotlin.Exception(message)
+typealias InternalException = uniffi.runtime.InternalException

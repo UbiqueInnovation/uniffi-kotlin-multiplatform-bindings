@@ -26,13 +26,6 @@ kotlin {
             useRustUpLinker()
         }
     }
-    sourceSets {
-        commonMain {
-            dependencies {
-                implementation(project(":runtime"))
-            }
-        }
-    }
 }
 
 android {

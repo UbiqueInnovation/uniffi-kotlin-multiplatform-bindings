@@ -26,11 +26,9 @@ plugins {
 rootProject.name = "uniffi-kotlin-multiplatform-bindings"
 
 include(":runtime")
+
 include(":tests:runtime")
-// include(":tests:uniffi:multi-module:common")
-// include(":tests:uniffi:multi-module:mod-a")
-// include(":tests:uniffi:multi-module:rust-common")
-/*
+
 include(":tests:gradle:android-linking")
 include(":tests:gradle:cargo-only")
 include(":tests:gradle:no-uniffi-block")
@@ -42,7 +40,6 @@ include(":tests:uniffi:docstring")
 include(":tests:uniffi:docstring-proc-macro")
 include(":tests:uniffi:enum-types")
 include(":tests:uniffi:error-types")
-*/
 // Temporarily disable ext-types test.
 // TODO:
 //   1. Properly handle external types in headers

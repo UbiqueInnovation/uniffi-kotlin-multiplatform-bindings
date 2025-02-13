@@ -1,3 +1,18 @@
+@file:OptIn(ExperimentalForeignApi::class)
+
+package uniffi.runtime
+
+import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.COpaquePointerVar
+import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.DoubleVar
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.FloatVar
+import kotlinx.cinterop.IntVar
+import kotlinx.cinterop.LongVar
+import kotlinx.cinterop.ShortVar
+import kotlinx.cinterop.pointed
+import kotlinx.cinterop.value
 
 typealias ByteByReference = CPointer<ByteVar>
 fun ByteByReference.setValue(value: Byte) {
