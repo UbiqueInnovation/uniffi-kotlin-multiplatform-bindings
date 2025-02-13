@@ -25,4 +25,4 @@ fn different_crate_call_callback(c: &dyn TestCallback) -> String {
     c.callback()
 }
 
-uniffi::setup_scaffolding!("mod_a");
+uniffi::setup_scaffolding!("module_a");

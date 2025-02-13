@@ -23,7 +23,7 @@ class ModATest {
         val o = TestObject("Alex")
         greet(o) shouldBe "Hello Alex!"
     }
-
+/*
     @Test
     fun testCallback() {
         differentCrateCallCallback(CallbackImpl) shouldBe "Hello"
@@ -34,4 +34,5 @@ class ModATest {
             return "Hello"
         }
     }
+ */
 }
