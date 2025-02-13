@@ -484,6 +484,12 @@ impl<'ci> HeaderKotlinWrapper<'ci> {
     pub fn new(config: Config, ci: &'ci ComponentInterface) -> Self {
         Self { config, ci }
     }
+
+    pub fn ffi_definitions_no_builtins(&self) -> impl Iterator<Item = FfiDefinition> + '_ {
+        self.ci
+            .ffi_definitions()
+            .filter(|d| !FFI_BUILTINS.contains(&d.name()))
+    }
 }
 
 #[derive(Clone)]
@@ -548,10 +554,6 @@ impl KotlinCodeOracle {
         format!("Uniffi{}", nm.to_upper_camel_case())
     }
 
-    fn wrapped_ffi_struct_name(&self, ns: &str, nm: &str) -> String {
-        format!("CPointer<{ns}.cinterop.Uniffi{}>", nm.to_upper_camel_case())
-    }
-
     fn ffi_struct_name_header(&self, nm: &str) -> String {
         format!("Uniffi{}", nm.to_upper_camel_case())
     }
@@ -602,17 +604,6 @@ impl KotlinCodeOracle {
             FfiType::Reference(inner) => self.ffi_type_label_by_reference(inner),
             FfiType::VoidPointer => "Pointer".to_string(),
             _ => panic!("Not a wrapper type!"),
-        }
-    }
-
-    fn wrapped_ffi_type_label_by_value(&self, ns: &str, ffi_type: &FfiType) -> String {
-        match ffi_type {
-            FfiType::RustBuffer(_) => {
-                format!("CValue<{ns}.cinterop.{}>", self.ffi_type_label(ffi_type))
-            }
-            FfiType::Struct(name) => format!("{}UniffiByValue", self.ffi_struct_name(name)),
-            // FfiType::Callback(name) => format!("{}", self.ffi_callback_name(name)),
-            _ => self.wrapped_ffi_type_label(ns, ffi_type),
         }
     }
 
@@ -681,26 +672,6 @@ impl KotlinCodeOracle {
         }
     }
 
-    fn wrapped_ffi_type_label_by_reference(&self, ns: &str, ffi_type: &FfiType) -> String {
-        match ffi_type {
-            FfiType::Int8
-            | FfiType::UInt8
-            | FfiType::Int16
-            | FfiType::UInt16
-            | FfiType::Int32
-            | FfiType::UInt32
-            | FfiType::Int64
-            | FfiType::UInt64
-            | FfiType::Float32
-            | FfiType::Float64 => format!("CPointer<{}Var>", self.ffi_type_label(ffi_type)),
-            FfiType::RustArcPtr(_) => "CPointerVarOf<CPointer<out CPointed>>".to_owned(),
-            // JNA structs default to ByReference
-            FfiType::RustBuffer(_) => format!("CPointer<{ns}.cinterop.RustBuffer>"),
-            FfiType::Struct(_) => self.ffi_type_label(ffi_type),
-            _ => panic!("{ffi_type:?} by reference is not implemented"),
-        }
-    }
-
     fn ffi_type_label_by_reference_header(&self, ffi_type: &FfiType) -> String {
         match ffi_type {
             FfiType::Int8
@@ -745,32 +716,6 @@ impl KotlinCodeOracle {
             FfiType::Struct(name) => self.ffi_struct_name(name),
             FfiType::Reference(inner) => self.ffi_type_label_by_reference(inner),
             FfiType::VoidPointer => "Pointer".to_string(),
-        }
-    }
-
-    fn wrapped_ffi_type_label(&self, ns: &str, ffi_type: &FfiType) -> String {
-        match ffi_type {
-            // Note that unsigned integers in Kotlin are currently experimental, but java.nio.ByteBuffer does not
-            // support them yet. Thus, we use the signed variants to represent both signed and unsigned
-            // types from the component API.
-            FfiType::Int8 | FfiType::UInt8 => "Byte".to_string(),
-            FfiType::Int16 | FfiType::UInt16 => "Short".to_string(),
-            FfiType::Int32 | FfiType::UInt32 => "Int".to_string(),
-            FfiType::Int64 | FfiType::UInt64 => "Long".to_string(),
-            FfiType::Float32 => "Float".to_string(),
-            FfiType::Float64 => "Double".to_string(),
-            FfiType::Handle => "Long".to_string(),
-            FfiType::RustArcPtr(_) => "CPointer<out kotlinx.cinterop.CPointed>?".to_string(),
-            FfiType::RustBuffer(maybe_external) => match maybe_external {
-                Some(external_meta) => format!("RustBuffer{}", external_meta.name),
-                None => "RustBuffer".to_string(),
-            },
-            FfiType::RustCallStatus => "UniffiRustCallStatusByValue".to_string(),
-            FfiType::ForeignBytes => "ForeignBytesByValue".to_string(),
-            FfiType::Callback(_) => "Any".to_string(),
-            FfiType::Struct(name) => self.wrapped_ffi_struct_name(ns, name),
-            FfiType::Reference(inner) => self.wrapped_ffi_type_label_by_reference(ns, inner),
-            FfiType::VoidPointer => "CPointer<out kotlinx.cinterop.CPointed>".to_string(),
         }
     }
 
@@ -978,23 +923,24 @@ mod filters {
         Ok(KotlinCodeOracle.ffi_type_label_for_ffi_function(type_))
     }
 
-    pub fn get_wrapper_type(type_: &FfiType) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.get_wrapper_type(type_))
-    }
-
-    pub fn wrapped_ffi_type_name_by_value(
-        type_: &FfiType,
-        ns: &str,
-    ) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.wrapped_ffi_type_label_by_value(ns, type_))
-    }
-
     pub fn ffi_type_name(type_: &FfiType) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.ffi_type_label(type_))
     }
 
     pub fn is_callback(type_: &FfiType) -> Result<bool, askama::Error> {
         Ok(matches!(type_, FfiType::Callback(_)))
+    }
+
+    pub fn is_rustbuffer(type_: &FfiType) -> Result<bool, askama::Error> {
+        Ok(matches!(type_, FfiType::RustBuffer(_)))
+    }
+
+    pub fn is_foreignbytes(type_: &FfiType) -> Result<bool, askama::Error> {
+        Ok(matches!(type_, FfiType::ForeignBytes))
+    }
+
+    pub fn debug_type_name(type_: &FfiType) -> Result<String, askama::Error> {
+        Ok(format!("{type_:#?}"))
     }
 
     pub fn is_reference(type_: &FfiType) -> Result<bool, askama::Error> {

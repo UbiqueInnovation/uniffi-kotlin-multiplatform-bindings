@@ -41,7 +41,7 @@ internal object {{ trait_impl }} {
 
         {%- else %}
         val uniffiHandleSuccess = { {% if meth.return_type().is_some() %}returnValue{% else %}_{% endif %}: {% match meth.return_type() %}{%- when Some(return_type) %}{{ return_type|type_name(ci) }}{%- when None %}Unit{% endmatch %} ->
-            val uniffiResult = cValue<{{ ci.namespace() }}.cinterop.{{ meth.foreign_future_ffi_result_struct().name()|ffi_struct_name }}> {
+            val uniffiResult = cValue<uniffi_runtime.cinterop.{{ meth.foreign_future_ffi_result_struct().name()|ffi_struct_name }}> {
                 {%- if let Some(return_type) = meth.return_type() %}
                 {%- match return_type.into() %}
                 {%- when FfiType::RustBuffer(_) %}
@@ -57,7 +57,7 @@ internal object {{ trait_impl }} {
             uniffiFutureCallback.invoke(uniffiCallbackData, uniffiResult)
         }
         val uniffiHandleError = { callStatus: UniffiRustCallStatusByValue ->
-            val uniffiResult = cValue<{{ ci.namespace() }}.cinterop.{{ meth.foreign_future_ffi_result_struct().name()|ffi_struct_name }}> {
+            val uniffiResult = cValue<uniffi_runtime.cinterop.{{ meth.foreign_future_ffi_result_struct().name()|ffi_struct_name }}> {
                 {%- if let Some(return_type) = meth.return_type() %}
                 {%- match return_type.into() %}
                 {%- when FfiType::RustBuffer(_) %}

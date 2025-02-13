@@ -125,6 +125,11 @@ internal class UniffiLibInstance: UniffiLib {
             ?.let { Pointer(it) }
           {%- endif -%}
           {%- when None -%}
+          {%- endmatch -%}
+          {%- match func.return_type() -%}
+          {%- when Some with (return_type) -%}
+          as {{ return_type.borrow()|ffi_type_name_for_ffi_function }}
+          {%- when None -%}
           {%- endmatch %}
     
     {% endfor %}

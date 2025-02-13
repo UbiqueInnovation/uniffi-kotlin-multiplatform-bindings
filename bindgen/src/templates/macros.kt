@@ -167,6 +167,10 @@
     {%- for arg in func.arguments() %}
         {%- if arg.type_().borrow()|is_callback -%}
         {{ arg.name()|var_name }} as {{ci.namespace()}}.cinterop.{{ arg.type_().borrow()|ffi_type_name_for_ffi_callback }}
+        {%- else if arg.type_().borrow()|is_rustbuffer -%}
+        {{- arg.name()|var_name }} as CValue<{{ci.namespace()}}.cinterop.RustBuffer>
+        {%- else if arg.type_().borrow()|is_foreignbytes -%}
+        {{- arg.name()|var_name }} as CValue<{{ci.namespace()}}.cinterop.ForeignBytes>
         {%- else -%}
         {{- arg.name()|var_name }}
         {%- endif -%}
@@ -174,7 +178,7 @@
         ?.inner
         {%- endif -%},
     {%- endfor %}
-    {%- if func.has_rust_call_status_arg() %}uniffiCallStatus, {% endif %}
+    {%- if func.has_rust_call_status_arg() %}uniffiCallStatus.reinterpret(), {% endif %}
 {%- endmacro -%}
 
 {% macro field_name(field, field_num) %}
