@@ -10,10 +10,10 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
-internal const val UNIFFI_RUST_FUTURE_POLL_READY = 0.toByte()
-internal const val UNIFFI_RUST_FUTURE_POLL_MAYBE_READY = 1.toByte()
+const val UNIFFI_RUST_FUTURE_POLL_READY = 0.toByte()
+const val UNIFFI_RUST_FUTURE_POLL_MAYBE_READY = 1.toByte()
 
-internal val uniffiContinuationHandleMap = UniffiHandleMap<CancellableContinuation<Byte>>()
+val uniffiContinuationHandleMap = UniffiHandleMap<CancellableContinuation<Byte>>()
 
 object UniffiRustFutureContinuationCallbackCallback: UniffiRustFutureContinuationCallback {
     override fun callback(handle: Long, pollResult: Byte) {
@@ -91,7 +91,7 @@ inline fun<T> uniffiTraitInterfaceCallAsync(
     return UniffiForeignFutureUniffiByValue(handle, UniffiForeignFutureFreeImpl)
 }
 
-internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallAsyncWithError(
+inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallAsyncWithError(
     crossinline makeCall: suspend () -> T,
     crossinline handleSuccess: (T) -> Unit,
     crossinline handleError: (UniffiRustCallStatusByValue) -> Unit,

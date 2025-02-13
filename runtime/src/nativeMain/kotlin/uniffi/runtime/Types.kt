@@ -628,3 +628,5 @@ fun UniffiForeignFutureStructVoidUniffiByValue(callStatus: UniffiRustCallStatusB
 
 val UniffiForeignFutureStructVoidUniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
+
+typealias UniffiForeignFutureCompleteVoid = uniffi_runtime.cinterop.UniffiForeignFutureCompleteVoid

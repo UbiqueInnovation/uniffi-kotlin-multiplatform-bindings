@@ -1,3 +1,4 @@
+import io.gitlab.trixnity.gradle.RustHost
 import io.gitlab.trixnity.gradle.rust.dsl.hostNativeTarget
 import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
 
@@ -21,7 +22,15 @@ kotlin {
     jvmToolchain(17)
 
     jvm()
-    
+
+    arrayOf(
+        mingwX64(),
+    ).forEach { nativeTarget ->
+        nativeTarget.compilations.getByName("test") {
+            useRustUpLinker()
+        }
+    }
+
     androidTarget()
 
     hostNativeTarget()
@@ -29,18 +38,22 @@ kotlin {
     linuxX64()
     linuxArm64()
 
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "uniffi-runtime"
-            isStatic = true
-        }
+    if (RustHost.Platform.MacOS.isCurrent) {
+        listOf(
+            iosArm64(),
+            iosSimulatorArm64(),
+            iosX64(),
+            macosArm64(),
+            macosX64(),
+        ).forEach { iosTarget ->
+            iosTarget.binaries.framework {
+                baseName = "uniffi-runtime"
+                isStatic = true
+            }
 
-        iosTarget.compilations.getByName("main") {
-            useRustUpLinker()
+            iosTarget.compilations.getByName("main") {
+                useRustUpLinker()
+            }
         }
     }
 
@@ -55,9 +68,6 @@ kotlin {
 android {
     namespace = "uniffi.runtime"
     compileSdk = 34
-    defaultConfig {
-        minSdk = 29
-    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

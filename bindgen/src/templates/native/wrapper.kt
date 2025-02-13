@@ -68,8 +68,8 @@ import {{ config.import_helper_namespace() }}.*
 // Public interface members begin here.
 {{ type_helper_code }}
 
-{%- for func in ci.function_definitions() %}
-{%- include "ffi/TopLevelFunctionTemplate.kt" %}
-{%- endfor %}
+{% for func in ci.function_definitions() %}
+{% include "ffi/TopLevelFunctionTemplate.kt" %}
+{% endfor %}
 
 {% import "macros.kt" as kt %}

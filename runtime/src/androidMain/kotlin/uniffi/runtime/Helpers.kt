@@ -1,27 +1,27 @@
 package uniffi.runtime
 
 
-internal const val UNIFFI_CALL_SUCCESS = 0.toByte()
-internal const val UNIFFI_CALL_ERROR = 1.toByte()
+const val UNIFFI_CALL_SUCCESS = 0.toByte()
+const val UNIFFI_CALL_ERROR = 1.toByte()
 const val UNIFFI_CALL_UNEXPECTED_ERROR = 2.toByte()
 
 // Default Implementations
-internal fun UniffiRustCallStatus.isSuccess(): Boolean
+fun UniffiRustCallStatus.isSuccess(): Boolean
         = code == UNIFFI_CALL_SUCCESS
 
-internal fun UniffiRustCallStatus.isError(): Boolean
+fun UniffiRustCallStatus.isError(): Boolean
         = code == UNIFFI_CALL_ERROR
 
-internal fun UniffiRustCallStatus.isPanic(): Boolean
+fun UniffiRustCallStatus.isPanic(): Boolean
         = code == UNIFFI_CALL_UNEXPECTED_ERROR
 
-internal fun UniffiRustCallStatusByValue.isSuccess(): Boolean
+fun UniffiRustCallStatusByValue.isSuccess(): Boolean
         = code == UNIFFI_CALL_SUCCESS
 
-internal fun UniffiRustCallStatusByValue.isError(): Boolean
+fun UniffiRustCallStatusByValue.isError(): Boolean
         = code == UNIFFI_CALL_ERROR
 
-internal fun UniffiRustCallStatusByValue.isPanic(): Boolean
+fun UniffiRustCallStatusByValue.isPanic(): Boolean
         = code == UNIFFI_CALL_UNEXPECTED_ERROR
 
 // Each top-level error class has a companion object that can lift the error from the call status's rust buffer
@@ -88,7 +88,7 @@ inline fun<T> uniffiTraitInterfaceCall(
     }
 }
 
-internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallWithError(
+inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallWithError(
     callStatus: UniffiRustCallStatus,
     makeCall: () -> T,
     writeReturn: (T) -> Unit,

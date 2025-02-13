@@ -57,14 +57,14 @@ fun RustBufferByValue.asByteBuffer(): ByteBuffer? {
     return ByteBuffer(data?.getByteBuffer(0L, this.len) ?: return null)
 }
 
-internal class RustBufferByReference : com.sun.jna.ptr.ByReference(16)
-internal fun RustBufferByReference.setValue(value: RustBufferByValue) {
+class RustBufferByReference : com.sun.jna.ptr.ByReference(16)
+fun RustBufferByReference.setValue(value: RustBufferByValue) {
     // NOTE: The offsets are as they are in the C-like struct.
     pointer.setLong(0, value.capacity)
     pointer.setLong(8, value.len)
     pointer.setPointer(16, value.data)
 }
-internal fun RustBufferByReference.getValue(): RustBufferByValue {
+fun RustBufferByReference.getValue(): RustBufferByValue {
     val value = RustBufferByValue()
     value.writeField("capacity", pointer.getLong(0))
     value.writeField("len", pointer.getLong(8))

@@ -10,8 +10,8 @@ open class UniffiForeignFutureStruct(
     handle: Long,
     free: Any?,
 ) : Structure() {
-    @JvmField internal var handle: Long = handle
-    @JvmField internal var free: UniffiForeignFutureFree? = free as UniffiForeignFutureFree?
+    @JvmField var handle: Long = handle
+    @JvmField var free: UniffiForeignFutureFree? = free as UniffiForeignFutureFree?
 
     constructor() : this(
         handle = 0.toLong(),
@@ -562,3 +562,7 @@ fun UniffiForeignFutureStructVoid.uniffiSetValue(other: UniffiForeignFutureStruc
 }
 
 typealias UniffiForeignFutureStructVoidUniffiByValue = UniffiForeignFutureStructVoidStruct.UniffiByValue
+
+interface UniffiForeignFutureCompleteVoid: Callback {
+    fun callback(callbackData: Long, result: UniffiForeignFutureStructVoidUniffiByValue,)
+}
