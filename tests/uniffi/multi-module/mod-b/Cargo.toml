@@ -11,3 +11,4 @@ path = "src/commonMain/rust/lib.rs"
 
 [dependencies]
 uniffi = { workspace = true }
+uniffi-kmm-fixture-multi-rust-common = { path = "../rust-common" }

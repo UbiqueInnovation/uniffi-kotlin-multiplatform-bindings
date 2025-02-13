@@ -12,14 +12,8 @@ uniffi {
 
 kotlin {
     sourceSets {
-        commonTest.dependencies {
-            implementation(kotlin("test"))
-            implementation(libs.kotest.assertions.core)
-        }
-
         commonMain {
             dependencies {
-                implementation(project(":runtime"))
                 implementation(project(":tests:uniffi:multi-module:rust-common"))
             }
         }

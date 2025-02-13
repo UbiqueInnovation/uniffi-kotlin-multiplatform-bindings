@@ -16,11 +16,5 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.kotest.assertions.core)
         }
-
-        commonMain {
-            dependencies {
-                implementation(project(":runtime"))
-            }
-        }
     }
 }

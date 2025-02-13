@@ -23,16 +23,16 @@ class ModATest {
         val o = TestObject("Alex")
         greet(o) shouldBe "Hello Alex!"
     }
-/*
-    @Test
-    fun testCallback() {
-        differentCrateCallCallback(CallbackImpl) shouldBe "Hello"
-    }
 
-    object CallbackImpl : TestCallback {
-        override fun callback(): String {
-            return "Hello"
-        }
-    }
- */
+//     @Test
+//     fun testCallback() {
+//         differentCrateCallCallback(CallbackImpl) shouldBe "Hello"
+//     }
+// 
+//     object CallbackImpl : TestCallback {
+//         override fun callback(): String {
+//             return "Hello"
+//         }
+//     }
+
 }

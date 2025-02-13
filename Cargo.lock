@@ -1854,6 +1854,7 @@ name = "uniffi-kmm-fixture-multi-module-b"
 version = "0.1.0"
 dependencies = [
  "uniffi",
+ "uniffi-kmm-fixture-multi-rust-common",
 ]
 
 [[package]]
