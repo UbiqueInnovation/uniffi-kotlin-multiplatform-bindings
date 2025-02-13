@@ -484,12 +484,6 @@ impl<'ci> HeaderKotlinWrapper<'ci> {
     pub fn new(config: Config, ci: &'ci ComponentInterface) -> Self {
         Self { config, ci }
     }
-
-    pub fn ffi_definitions_no_builtins(&self) -> impl Iterator<Item = FfiDefinition> + '_ {
-        self.ci
-            .ffi_definitions()
-            .filter(|d| !FFI_BUILTINS.contains(&d.name()))
-    }
 }
 
 #[derive(Clone)]
@@ -587,23 +581,6 @@ impl KotlinCodeOracle {
             // NOTE: Type any used here, as native and jvm types differ.
             FfiType::Callback(_name) => "Any?".into(), // format!("{}?", self.ffi_callback_name(name)),
             _ => self.ffi_type_label_by_value(ffi_type),
-        }
-    }
-
-    fn get_wrapper_type(&self, ffi_type: &FfiType) -> String {
-        match ffi_type {
-            FfiType::RustBuffer(_) => format!("{}ByValue", self.ffi_type_label(ffi_type)),
-            FfiType::Struct(name) => format!("{}UniffiByValue", self.ffi_struct_name(name)),
-            // FfiType::Callback(name) => format!("{}", self.ffi_callback_name(name)),
-            // Note that unsigned integers in Kotlin are currently experimental, but java.nio.ByteBuffer does not
-            // support them yet. Thus, we use the signed variants to represent both signed and unsigned
-            // types from the component API.
-            FfiType::RustArcPtr(_) => "Pointer".to_string(),
-            FfiType::RustCallStatus => "UniffiRustCallStatusByValue".to_string(),
-            FfiType::ForeignBytes => "ForeignBytesByValue".to_string(),
-            FfiType::Reference(inner) => self.ffi_type_label_by_reference(inner),
-            FfiType::VoidPointer => "Pointer".to_string(),
-            _ => panic!("Not a wrapper type!"),
         }
     }
 
@@ -939,20 +916,6 @@ mod filters {
         Ok(matches!(type_, FfiType::ForeignBytes))
     }
 
-    pub fn debug_type_name(type_: &FfiType) -> Result<String, askama::Error> {
-        Ok(format!("{type_:#?}"))
-    }
-
-    pub fn is_reference(type_: &FfiType) -> Result<bool, askama::Error> {
-        Ok(match type_ {
-            FfiType::Reference(_)
-            | FfiType::RustBuffer(_)
-            | FfiType::VoidPointer
-            | FfiType::RustArcPtr(_) => true,
-            _ => false,
-        })
-    }
-
     /// Append a `_` if the name is a valid c/c++ keyword
     pub fn header_escape_name(nm: &str) -> Result<String, askama::Error> {
         if CPP_KEYWORDS.contains(&nm) {
@@ -984,22 +947,6 @@ mod filters {
             FfiType::RustArcPtr(_) | FfiType::VoidPointer => true,
             _ => false,
         })
-    }
-
-    pub fn is_internal_type(type_: &FfiType) -> Result<bool, askama::Error> {
-        match type_ {
-            FfiType::RustCallStatus
-            | FfiType::RustBuffer(_)
-            | FfiType::Struct(_)
-            | FfiType::Callback(_)
-            | FfiType::ForeignBytes => Ok(true),
-            FfiType::Reference(t) => is_internal_type(t),
-            _ => Ok(false),
-        }
-    }
-
-    pub fn type_string(type_: &FfiType) -> Result<String, askama::Error> {
-        Ok(format!("{type_:?}"))
     }
 
     pub fn ffi_type_name_for_ffi_callback(type_: &FfiType) -> Result<String, askama::Error> {
