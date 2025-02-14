@@ -19,6 +19,57 @@ If you follow their [tutorial](https://mozilla.github.io/uniffi-rs/Getting_start
 then you can use the Kotlin Multiplatform bindings as explained bellow during the
 ["Generating foreign-language bindings" part](https://mozilla.github.io/uniffi-rs/tutorial/foreign_language_bindings.html).
 
+## Quickstart
+
+For instructions on how to install the plugin and runtime please refer to [the instructions here](#build-and-use-locally).
+
+### Configuration
+
+Add the following lines to the `build.gradle.kts` file of your project:
+
+```kotlin
+plugins {
+    kotlin("multiplatform")
+
+    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform") version "0.6.0"
+    id("io.gitlab.trixnity.cargo.kotlin.multiplatform") version "0.6.0"
+
+    // ...
+}
+
+// ...
+
+cargo {
+    // the directory where your rust crate is located
+    packageDirectory = layout.projectDirectory.dir("rust")
+}
+
+// ...
+
+uniffi {
+    bindgenFromGitTag("https://gitlab.com/trixnity/uniffi-kotlin-multiplatform-bindings", "v0.6.0")
+
+    generateFromLibrary()
+}
+
+// ...
+
+kotlin {
+    // ...
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                // Currently necessairy to add the runtime manually
+                implementation("ch.ubique.uniffi.runtime:0.1.0")
+            }
+        }
+    }
+}
+```
+
+Now you're good to go!
+
 ## Using the Gradle plugin
 
 This project contains three Gradle plugins:
@@ -36,7 +87,7 @@ when you are not using UniFFI. If the `Cargo.toml` is located in the project roo
 ```kotlin
 plugins {
     kotlin("multiplatform")
-    id("io.gitlab.trixnity.cargo.kotlin.multiplatform") version "0.1.0"
+    id("io.gitlab.trixnity.cargo.kotlin.multiplatform") version "0.6.0"
 }
 ```
 
@@ -467,6 +518,7 @@ Here is how `uniffi_bindgen_kotlin_multiplatform` versions are tied to `uniffi-r
 | uniffi_bindgen_kotlin_multiplatform version | uniffi-rs version |
 |---------------------------------------------|-------------------|
 | v0.1.0                                      | v0.25.2           |
+| v0.6.0                                      | v0.28.3           |
 
 # Build and use locally
 
@@ -494,8 +546,19 @@ includeBuild("../uniffi-kotlin-multiplatform-bindings/build-logic") {
     dependencySubstitution {
         substitute(module("io.gitlab.trixnity.uniffi.kotlin.multiplatform:gradle-plugin"))
             .using(project(":gradle-plugin"))
+        
+        substitute(module("ch.ubique.uniffi.runtime"))
+            .using(project(":runtime"))
     }
 }
+
+includeBuild("../uniffi-kotlin-multiplatform-bindings/runtime") {
+    dependencySubstitution {
+        substitute(module("ch.ubique.uniffi.runtime"))
+            .using(project(":runtime"))
+    }
+}
+
 ```
 
 Add the Gradle plugin to the Gradle build file.
@@ -522,7 +585,11 @@ uniffi {
 
 Clone the repository and build it.
 
-Then invoke `./gradlew :build-logic:gradle-plugin:publishToMavenLocal`.
+Then invoke:
+```bash
+./gradlew :build-logic:gradle-plugin:publishToMavenLocal
+./gradlew :runtime:publishToMavenLocal
+```
 
 Add the local repository in your project's `settings.gradle.kts`:
 
@@ -549,6 +616,6 @@ this repository on your computer.
 
 ```kotlin
 uniffi {
-    bindgenFromGitTag("https://gitlab.com/trixnity/uniffi-kotlin-multiplatform-bindings", "v0.1.0")
+    bindgenFromGitTag("https://gitlab.com/trixnity/uniffi-kotlin-multiplatform-bindings", "v0.6.0")
 }
 ```

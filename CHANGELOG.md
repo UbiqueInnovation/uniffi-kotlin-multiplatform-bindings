@@ -46,3 +46,16 @@
 
 - Update uniffi-rs to `v0.28.3`
 - Added `Uniffi` prefix to callback factories
+
+## 0.6.0 - 2025-02-14
+
+### Added
+
+- Support for async traits (see [futures test](tests/uniffi/futures/))
+- Support for sharing rust code & bindings between modules (see [multi-module test](tests/uniffi/multi-module/))
+
+### Changed
+
+- Renamed `CargoHost.current.hostTarget` to `RustHost.current.rustTarget`
+- Renamed `io.gitlab.trixnity.gradle.rustlink.useRustUpLinker` to `io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker`
+- `Uniffi Runtime` is now required as a depencecy (needs to be added manually as of right now)
