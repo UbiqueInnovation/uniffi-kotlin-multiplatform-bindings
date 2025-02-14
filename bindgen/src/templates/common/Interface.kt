@@ -1,6 +1,6 @@
 
 {%- call kt::docstring_value(interface_docstring, 0) %}
-public interface {{ interface_name }} {
+interface {{ interface_name }} {
     {% for meth in methods.iter() -%}
     {%- call kt::docstring(meth, 4) %}
     {%- match meth.throws_type() -%}

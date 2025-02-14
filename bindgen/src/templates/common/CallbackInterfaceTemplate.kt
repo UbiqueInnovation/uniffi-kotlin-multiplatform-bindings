@@ -8,7 +8,3 @@
 {%- let vtable_methods = cbi.vtable_methods() %}
 
 {% include "Interface.kt" %}
-{% include "CallbackInterfaceImpl.kt" %}
-
-// The ffiConverter which transforms the Callbacks in to handles to pass to Rust.
-public object {{ ffi_converter_name }}: FfiConverterCallbackInterface<{{ interface_name }}>()

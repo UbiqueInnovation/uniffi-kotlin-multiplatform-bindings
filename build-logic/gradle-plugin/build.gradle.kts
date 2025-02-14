@@ -60,6 +60,7 @@ buildConfig {
         buildConfigField("String", "ANDROID_APPLICATION", "\"${libs.plugins.android.application.get().pluginId}\"")
         buildConfigField("String", "ANDROID_LIBRARY", "\"${libs.plugins.android.library.get().pluginId}\"")
         buildConfigField("String", "CARGO_KOTLIN_MULTIPLATFORM", "\"io.gitlab.trixnity.cargo.kotlin.multiplatform\"")
+        buildConfigField("String", "RUST_KOTLIN_MULTIPLATFORM", "\"io.gitlab.trixnity.rust.kotlin.multiplatform\"")
     }
 }
 
@@ -76,13 +77,6 @@ gradlePlugin {
             description = "A plugin for building Rust libraries and link them to Kotlin projects."
             tags.addAll("rust", "kotlin", "kotlin-multiplatform")
         }
-        create("rustlink-kotlin-multiplatform") {
-            id = "io.gitlab.trixnity.rustlink.kotlin.multiplatform"
-            displayName = name
-            implementationClass = "io.gitlab.trixnity.gradle.rustlink.RustLinkPlugin"
-            description = "A plugin providing helper functions for linking Rust libraries to Kotlin projects."
-            tags.addAll("rust", "kotlin", "kotlin-multiplatform")
-        }
         create("uniffi-kotlin-multiplatform") {
             id = "io.gitlab.trixnity.uniffi.kotlin.multiplatform"
             displayName = name
@@ -90,10 +84,17 @@ gradlePlugin {
             description = "A plugin for generating UniFFI Kotlin Multiplatform bindings for Rust libraries."
             tags.addAll("uniffi", "rust", "kotlin", "kotlin-multiplatform")
         }
+        create("rust-kotlin-multiplatform") {
+            id = "io.gitlab.trixnity.rust.kotlin.multiplatform"
+            displayName = name
+            implementationClass = "io.gitlab.trixnity.gradle.rust.RustPlugin"
+            description = "A plugin for configuring Rust toolchain and linking Rust libraries to Kotlin projects."
+            tags.addAll("rust", "kotlin", "kotlin-multiplatform")
+        }
     }
 }
 
-apply(from = "artifactory.gradle")
+apply(from = "../../gradle/artifactory.gradle")
 
 tasks.publish {
     dependsOn(tasks.publishPlugins)

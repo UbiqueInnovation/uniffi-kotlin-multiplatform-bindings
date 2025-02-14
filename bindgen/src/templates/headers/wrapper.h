@@ -8,5 +8,7 @@
 
 {% include "Helpers.h" %}
 
+{% include "Types.h" %}
+
 {% include "NamespaceLibraryTemplate.h" %}
 

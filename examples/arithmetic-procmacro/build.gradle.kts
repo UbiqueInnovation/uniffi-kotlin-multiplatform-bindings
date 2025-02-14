@@ -1,10 +1,10 @@
-import io.gitlab.trixnity.gradle.CargoHost
-import io.gitlab.trixnity.gradle.rustlink.useRustUpLinker
+import io.gitlab.trixnity.gradle.RustHost
+import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
 
 plugins {
     kotlin("multiplatform")
     id("io.gitlab.trixnity.cargo.kotlin.multiplatform")
-    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform") version "0.4.7"
+    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform")
     alias(libs.plugins.kotlin.atomicfu)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
@@ -28,7 +28,7 @@ kotlin {
 
     linuxX64()
     linuxArm64()
-    if (CargoHost.Platform.MacOS.isCurrent) {
+    if (RustHost.Platform.MacOS.isCurrent) {
         iosArm64()
         iosSimulatorArm64()
         iosX64()
@@ -37,6 +37,12 @@ kotlin {
     }
 
     sourceSets {
+        commonMain {
+            dependencies {
+                implementation(project(":runtime"))
+            }
+        }
+
         commonTest {
             dependencies {
                 implementation(libs.kotlinx.serialization.json)

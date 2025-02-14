@@ -1,0 +1,17 @@
+[package]
+name = "uniffi-kmm-fixture-keywords"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_keywords"
+crate-type = ["cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[dependencies]
+uniffi = { workspace = true }
+thiserror = { workspace = true }
+
+[build-dependencies]
+uniffi-kmm-fixture-build-common = { path = "../../build-common" }

@@ -1,5 +1,5 @@
 import com.android.build.gradle.internal.tasks.factory.dependsOn
-import io.gitlab.trixnity.gradle.CargoHost
+import io.gitlab.trixnity.gradle.RustHost
 import io.gitlab.trixnity.gradle.cargo.dsl.android
 import io.gitlab.trixnity.gradle.cargo.rust.targets.RustAndroidTarget
 
@@ -23,8 +23,8 @@ val androidSdkCMakeDirectory = android.sdkDirectory
     .listFiles()
     .first { file -> file.name.startsWith("3.") }
     .resolve("bin")
-val androidSdkCMake = androidSdkCMakeDirectory.resolve(CargoHost.Platform.current.convertExeName("cmake"))
-val androidSdkNinja = androidSdkCMakeDirectory.resolve(CargoHost.Platform.current.convertExeName("ninja"))
+val androidSdkCMake = androidSdkCMakeDirectory.resolve(RustHost.Platform.current.convertExeName("cmake"))
+val androidSdkNinja = androidSdkCMakeDirectory.resolve(RustHost.Platform.current.convertExeName("ninja"))
 val anotherCustomCppLibraryBuildTasks = androidTargets.associateWith {
     val cmakeOutputDirectory = anotherCustomCppLibraryCmakeOutputDirectories[it]!!
     val libraryLocation = anotherCustomCppLibraryLocations[it]!!

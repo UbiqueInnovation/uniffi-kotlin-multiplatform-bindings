@@ -23,7 +23,7 @@ RUN apt update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Use Zig as cross-compilation linker for Arm64 Linux
-ENV ZIG_VERSION=0.12.1
+ENV ZIG_VERSION=0.13.0
 ENV ZIG_BUILD=zig-linux-x86_64-$ZIG_VERSION
 RUN mkdir -p /zig
 WORKDIR /zig

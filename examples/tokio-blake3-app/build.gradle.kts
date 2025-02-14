@@ -1,5 +1,4 @@
-import io.gitlab.trixnity.gradle.CargoHost
-import java.net.URL
+import io.gitlab.trixnity.gradle.RustHost
 
 plugins {
     kotlin("multiplatform")
@@ -19,7 +18,7 @@ uniffi {
 kotlin {
     androidTarget()
 
-    if (CargoHost.Platform.MacOS.isCurrent) {
+    if (RustHost.Platform.MacOS.isCurrent) {
         arrayOf(
             iosArm64(),
             iosSimulatorArm64(),
@@ -36,6 +35,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation(project(":runtime"))
+
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)

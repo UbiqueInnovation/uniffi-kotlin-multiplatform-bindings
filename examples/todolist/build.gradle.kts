@@ -1,5 +1,5 @@
-import io.gitlab.trixnity.gradle.CargoHost
-import io.gitlab.trixnity.gradle.rustlink.useRustUpLinker
+import io.gitlab.trixnity.gradle.RustHost
+import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
 
 plugins {
     kotlin("multiplatform")
@@ -31,7 +31,7 @@ kotlin {
 
     linuxX64()
     linuxArm64()
-    if (CargoHost.Platform.MacOS.isCurrent) {
+    if (RustHost.Platform.MacOS.isCurrent) {
         iosArm64()
         iosSimulatorArm64()
         iosX64()
@@ -40,6 +40,12 @@ kotlin {
     }
 
     sourceSets {
+        commonMain {
+            dependencies {
+                implementation(project(":runtime"))
+            }
+        }
+
         commonTest {
             dependencies {
                 implementation(kotlin("test"))

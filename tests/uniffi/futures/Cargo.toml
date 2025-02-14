@@ -1,0 +1,29 @@
+[package]
+name = "uniffi-kmm-fixture-futures"
+version = "0.21.0"
+authors = ["Ivan Enderlin <ivan@mnt.io>"]
+edition = "2021"
+license = "MPL-2.0"
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_futures"
+crate-type = ["cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[dependencies]
+async-trait = "0.1"
+futures = "0.3"
+# Add the "scaffolding-ffi-buffer-fns" feature to make sure things can build correctly
+uniffi = { workspace = true, features = [
+    "tokio",
+    "scaffolding-ffi-buffer-fns",
+] }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["time", "sync"] }
+once_cell = { workspace = true }
+
+[build-dependencies]
+uniffi-kmm-fixture-build-common = { path = "../../build-common", features = [
+    "scaffolding-ffi-buffer-fns",
+] }

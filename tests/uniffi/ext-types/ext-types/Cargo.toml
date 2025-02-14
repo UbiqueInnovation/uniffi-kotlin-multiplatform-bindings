@@ -1,0 +1,22 @@
+[package]
+name = "uniffi-kmm-fixture-ext-types"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_ext_types"
+crate-type = ["cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[dependencies]
+uniffi = { workspace = true }
+external-crate = { path = "../../external-crate", package = "uniffi-kmm-fixture-ext-types-external-crate" }
+uniffi-one = { path = "../../uniffi-one/uniffi", package = "uniffi-kmm-fixture-ext-types-uniffi-one" }
+custom = { path = "../../custom-types/uniffi", package = "uniffi-kmm-fixture-ext-types-custom-types" }
+sub-lib = { path = "../../sub-lib/uniffi", package = "uniffi-kmm-fixture-ext-types-sub-lib" }
+custom-types = { path = "../../../../../examples/custom-types", package = "uniffi-kmm-example-custom-types" }
+url = { workspace = true }
+
+[build-dependencies]
+uniffi-kmm-fixture-build-common = { path = "../../../build-common" }

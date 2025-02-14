@@ -1,0 +1,13 @@
+[package]
+name = "uniffi-kmm-fixture-serialization"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_serializaion"
+crate-type = ["cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[dependencies]
+uniffi = { workspace = true }

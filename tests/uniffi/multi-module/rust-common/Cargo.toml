@@ -1,0 +1,13 @@
+[package]
+name = "uniffi-kmm-fixture-multi-rust-common"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_multi_rust_common"
+crate-type = ["lib", "cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[dependencies]
+uniffi = { workspace = true }

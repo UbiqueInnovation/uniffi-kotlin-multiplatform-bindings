@@ -10,8 +10,6 @@ crate-type = ["cdylib", "staticlib"]
 path = "src/commonMain/rust/lib.rs"
 
 [dependencies]
-uniffi = { version = "0.28.3", features = ["tokio"] }
-thiserror = "1.0"
-tokio = { version = "1", features = ["full"] }
+uniffi = { workspace = true, features = ["tokio"] }
 reqwest = { version = "0.11", features = ["native-tls-vendored"] }
 blake3 = "1"

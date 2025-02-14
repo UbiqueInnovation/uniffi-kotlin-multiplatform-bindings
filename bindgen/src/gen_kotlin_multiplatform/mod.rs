@@ -105,6 +105,8 @@ pub struct Config {
     pub(super) external_packages: HashMap<String, String>,
     #[serde(default)]
     kotlin_target_version: Option<String>,
+    #[serde(default)]
+    disable_java_cleaner: bool,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -143,8 +145,11 @@ impl Config {
     pub fn has_import_helpers(&self) -> bool {
         self.import_pointer_from.is_some()
     }
-    pub fn import_helper_namespace(&self) ->String {
-        self.import_pointer_from.as_ref().unwrap_or(&String::from("<ARG>")).to_string()
+    pub fn import_helper_namespace(&self) -> String {
+        self.import_pointer_from
+            .as_ref()
+            .unwrap_or(&String::from("<ARG>"))
+            .to_string()
     }
 
     pub(crate) fn use_enum_entries(&self) -> bool {
@@ -207,25 +212,25 @@ pub fn generate_bindings(
     config: &Config,
     ci: &ComponentInterface,
 ) -> Result<MultiplatformBindings> {
-    let common = CommonKotlinWrapper::new(config.clone(), ci)
+    let common = CommonKotlinWrapper::new("common", config.clone(), ci)
         .render()
-        .context("failed to render kotlin/common bindings")?;
+        .context("failed to render common Kotlin bindings")?;
 
-    let jvm = JvmKotlinWrapper::new(config.clone(), ci)
+    let jvm = AndroidJvmKotlinWrapper::new("jvm", config.clone(), ci)
         .render()
-        .context("failed to render kotlin/jvm bindings")?;
+        .context("failed to render Kotlin/JVM bindings")?;
 
-    let android = AndroidKotlinWrapper::new(config.clone(), ci)
+    let android = AndroidJvmKotlinWrapper::new("android", config.clone(), ci)
         .render()
-        .context("failed to render kotlin/android bindings")?;
+        .context("failed to render Android Kotlin/JVM bindings")?;
 
-    let native = NativeKotlinWrapper::new(config.clone(), ci)
+    let native = NativeKotlinWrapper::new("native", config.clone(), ci)
         .render()
-        .context("failed to render kotlin/native bindings")?;
+        .context("failed to render Kotlin/Native bindings")?;
 
     let header = HeaderKotlinWrapper::new(config.clone(), ci)
         .render()
-        .context("failed to render kotlin/native header")?;
+        .context("failed to render Kotlin/Native header")?;
 
     Ok(MultiplatformBindings {
         common,
@@ -257,6 +262,39 @@ impl ImportRequirement {
     }
 }
 
+const FFI_BUILTINS: &'static [&'static str] = &[
+    "RustFutureContinuationCallback",
+    "ForeignFutureFree",
+    "CallbackInterfaceFree",
+    "ForeignFuture",
+    "ForeignFutureStructU8",
+    "ForeignFutureStructI8",
+    "ForeignFutureStructU16",
+    "ForeignFutureStructI16",
+    "ForeignFutureStructU32",
+    "ForeignFutureStructI32",
+    "ForeignFutureStructU64",
+    "ForeignFutureStructI64",
+    "ForeignFutureStructF32",
+    "ForeignFutureStructF64",
+    "ForeignFutureStructPointer",
+    "ForeignFutureStructRustBuffer",
+    "ForeignFutureStructVoid",
+    "ForeignFutureCompleteU8",
+    "ForeignFutureCompleteI8",
+    "ForeignFutureCompleteU16",
+    "ForeignFutureCompleteI16",
+    "ForeignFutureCompleteU32",
+    "ForeignFutureCompleteI32",
+    "ForeignFutureCompleteU64",
+    "ForeignFutureCompleteI64",
+    "ForeignFutureCompleteF32",
+    "ForeignFutureCompleteF64",
+    "ForeignFutureCompletePointer",
+    "ForeignFutureCompleteRustBuffer",
+    "ForeignFutureCompleteVoid",
+];
+
 macro_rules! kotlin_type_renderer {
     ($TypeRenderer:ident, $source_file:literal) => {
         /// Renders Kotlin helper code for all types
@@ -267,6 +305,7 @@ macro_rules! kotlin_type_renderer {
         #[template(syntax = "kt", escape = "none", path = $source_file)]
         #[allow(dead_code)]
         pub struct $TypeRenderer<'a> {
+            module_name: &'a str,
             config: &'a Config,
             ci: &'a ComponentInterface,
             // Track included modules for the `include_once()` macro
@@ -277,8 +316,9 @@ macro_rules! kotlin_type_renderer {
 
         #[allow(dead_code)]
         impl<'a> $TypeRenderer<'a> {
-            fn new(config: &'a Config, ci: &'a ComponentInterface) -> Self {
+            fn new(module_name: &'a str, config: &'a Config, ci: &'a ComponentInterface) -> Self {
                 Self {
+                    module_name,
                     config,
                     ci,
                     include_once_names: RefCell::new(HashSet::new()),
@@ -375,6 +415,7 @@ macro_rules! kotlin_wrapper {
         #[template(syntax = "kt", escape = "none", path = $source_file)]
         #[allow(dead_code)]
         pub struct $KotlinWrapper<'a> {
+            module_name: &'a str,
             config: Config,
             ci: &'a ComponentInterface,
             type_helper_code: String,
@@ -383,11 +424,12 @@ macro_rules! kotlin_wrapper {
 
         #[allow(dead_code)]
         impl<'a> $KotlinWrapper<'a> {
-            pub fn new(config: Config, ci: &'a ComponentInterface) -> Self {
-                let type_renderer = $TypeRenderer::new(&config, ci);
+            pub fn new(module_name: &'a str, config: Config, ci: &'a ComponentInterface) -> Self {
+                let type_renderer = $TypeRenderer::new(module_name, &config, ci);
                 let type_helper_code = type_renderer.render().unwrap();
                 let type_imports = type_renderer.imports.into_inner();
                 Self {
+                    module_name,
                     config,
                     ci,
                     type_helper_code,
@@ -406,6 +448,12 @@ macro_rules! kotlin_wrapper {
             pub fn imports(&self) -> Vec<ImportRequirement> {
                 self.type_imports.iter().cloned().collect()
             }
+
+            pub fn ffi_definitions_no_builtins(&self) -> impl Iterator<Item = FfiDefinition> + '_ {
+                self.ci
+                    .ffi_definitions()
+                    .filter(|d| !FFI_BUILTINS.contains(&d.name()))
+            }
         }
     };
 }
@@ -413,14 +461,11 @@ macro_rules! kotlin_wrapper {
 kotlin_type_renderer!(CommonTypeRenderer, "common/Types.kt");
 kotlin_wrapper!(CommonKotlinWrapper, CommonTypeRenderer, "common/wrapper.kt");
 
-kotlin_type_renderer!(JvmTypeRenderer, "jvm/Types.kt");
-kotlin_wrapper!(JvmKotlinWrapper, JvmTypeRenderer, "jvm/wrapper.kt");
-
-kotlin_type_renderer!(AndroidTypeRenderer, "android/Types.kt");
+kotlin_type_renderer!(AndroidJvmTypeRenderer, "android+jvm/Types.kt");
 kotlin_wrapper!(
-    AndroidKotlinWrapper,
-    AndroidTypeRenderer,
-    "android/wrapper.kt"
+    AndroidJvmKotlinWrapper,
+    AndroidJvmTypeRenderer,
+    "android+jvm/wrapper.kt"
 );
 
 kotlin_type_renderer!(NativeTypeRenderer, "native/Types.kt");
@@ -479,6 +524,7 @@ impl KotlinCodeOracle {
     pub fn var_name_raw(&self, nm: &str) -> String {
         header_escape_name(&nm.to_lower_camel_case()).unwrap()
     }
+
     pub fn var_name_raw_noescape(&self, nm: &str) -> String {
         header_noescape_name(&nm.to_lower_camel_case()).unwrap()
     }
@@ -502,10 +548,6 @@ impl KotlinCodeOracle {
         format!("Uniffi{}", nm.to_upper_camel_case())
     }
 
-    fn wrapped_ffi_struct_name(&self, ns: &str, nm: &str) -> String {
-        format!("CPointer<{ns}.cinterop.Uniffi{}>", nm.to_upper_camel_case())
-    }
-
     fn ffi_struct_name_header(&self, nm: &str) -> String {
         format!("Uniffi{}", nm.to_upper_camel_case())
     }
@@ -514,36 +556,17 @@ impl KotlinCodeOracle {
         match ffi_type {
             FfiType::RustBuffer(_) => format!("{}ByValue", self.ffi_type_label(ffi_type)),
             FfiType::Struct(name) => format!("{}UniffiByValue", self.ffi_struct_name(name)),
-            // FfiType::Callback(name) => format!("{}", self.ffi_callback_name(name)),
+            FfiType::Callback(name) => self.ffi_callback_name(name).to_string(),
             _ => self.ffi_type_label(ffi_type),
         }
     }
 
-    fn get_wrapper_type(&self, ffi_type: &FfiType) -> String {
+    fn ffi_type_label_for_ffi_function(&self, ffi_type: &FfiType) -> String {
         match ffi_type {
             FfiType::RustBuffer(_) => format!("{}ByValue", self.ffi_type_label(ffi_type)),
             FfiType::Struct(name) => format!("{}UniffiByValue", self.ffi_struct_name(name)),
-            // FfiType::Callback(name) => format!("{}", self.ffi_callback_name(name)),
-            // Note that unsigned integers in Kotlin are currently experimental, but java.nio.ByteBuffer does not
-            // support them yet. Thus, we use the signed variants to represent both signed and unsigned
-            // types from the component API.
-            FfiType::RustArcPtr(_) => "Pointer".to_string(),
-            FfiType::RustCallStatus => "UniffiRustCallStatusByValue".to_string(),
-            FfiType::ForeignBytes => "ForeignBytesByValue".to_string(),
-            FfiType::Reference(inner) => self.ffi_type_label_by_reference(inner),
-            FfiType::VoidPointer => "Pointer".to_string(),
-            _ => panic!("Not a wrapper type!"),
-        }
-    }
-
-    fn wrapped_ffi_type_label_by_value(&self, ns: &str, ffi_type: &FfiType) -> String {
-        match ffi_type {
-            FfiType::RustBuffer(_) => {
-                format!("CValue<{ns}.cinterop.{}>", self.ffi_type_label(ffi_type))
-            }
-            FfiType::Struct(name) => format!("{}UniffiByValue", self.ffi_struct_name(name)),
-            // FfiType::Callback(name) => format!("{}", self.ffi_callback_name(name)),
-            _ => self.wrapped_ffi_type_label(ns, ffi_type),
+            // FfiType::Callback(name) => self.ffi_callback_name(name).to_string(),
+            _ => self.ffi_type_label(ffi_type),
         }
     }
 
@@ -557,6 +580,20 @@ impl KotlinCodeOracle {
             // function pointer better and allows for `null` as a default value.
             // NOTE: Type any used here, as native and jvm types differ.
             FfiType::Callback(_name) => "Any?".into(), // format!("{}?", self.ffi_callback_name(name)),
+            _ => self.ffi_type_label_by_value(ffi_type),
+        }
+    }
+
+    /// FFI type name to use inside structs
+    ///
+    /// The main requirement here is that all types must have default values or else the struct
+    /// won't work in some JNA contexts.
+    fn ffi_type_label_for_ffi_struct_inner(&self, ffi_type: &FfiType) -> String {
+        match ffi_type {
+            // Make callbacks function pointers nullable. This matches the semantics of a C
+            // function pointer better and allows for `null` as a default value.
+            // NOTE: Type any used here, as native and jvm types differ.
+            FfiType::Callback(name) => format!("{}?", self.ffi_callback_name(name)),
             _ => self.ffi_type_label_by_value(ffi_type),
         }
     }
@@ -612,26 +649,6 @@ impl KotlinCodeOracle {
         }
     }
 
-    fn wrapped_ffi_type_label_by_reference(&self, ns: &str, ffi_type: &FfiType) -> String {
-        match ffi_type {
-            FfiType::Int8
-            | FfiType::UInt8
-            | FfiType::Int16
-            | FfiType::UInt16
-            | FfiType::Int32
-            | FfiType::UInt32
-            | FfiType::Int64
-            | FfiType::UInt64
-            | FfiType::Float32
-            | FfiType::Float64 => format!("CPointer<{}Var>", self.ffi_type_label(ffi_type)),
-            FfiType::RustArcPtr(_) => "CPointerVarOf<CPointer<out CPointed>>".to_owned(),
-            // JNA structs default to ByReference
-            FfiType::RustBuffer(_) => format!("CPointer<{ns}.cinterop.RustBuffer>"),
-            FfiType::Struct(_) => self.ffi_type_label(ffi_type),
-            _ => panic!("{ffi_type:?} by reference is not implemented"),
-        }
-    }
-
     fn ffi_type_label_by_reference_header(&self, ffi_type: &FfiType) -> String {
         match ffi_type {
             FfiType::Int8
@@ -676,32 +693,6 @@ impl KotlinCodeOracle {
             FfiType::Struct(name) => self.ffi_struct_name(name),
             FfiType::Reference(inner) => self.ffi_type_label_by_reference(inner),
             FfiType::VoidPointer => "Pointer".to_string(),
-        }
-    }
-
-    fn wrapped_ffi_type_label(&self, ns: &str, ffi_type: &FfiType) -> String {
-        match ffi_type {
-            // Note that unsigned integers in Kotlin are currently experimental, but java.nio.ByteBuffer does not
-            // support them yet. Thus, we use the signed variants to represent both signed and unsigned
-            // types from the component API.
-            FfiType::Int8 | FfiType::UInt8 => "Byte".to_string(),
-            FfiType::Int16 | FfiType::UInt16 => "Short".to_string(),
-            FfiType::Int32 | FfiType::UInt32 => "Int".to_string(),
-            FfiType::Int64 | FfiType::UInt64 => "Long".to_string(),
-            FfiType::Float32 => "Float".to_string(),
-            FfiType::Float64 => "Double".to_string(),
-            FfiType::Handle => "Long".to_string(),
-            FfiType::RustArcPtr(_) => "CPointer<out kotlinx.cinterop.CPointed>?".to_string(),
-            FfiType::RustBuffer(maybe_external) => match maybe_external {
-                Some(external_meta) => format!("RustBuffer{}", external_meta.name),
-                None => "RustBuffer".to_string(),
-            },
-            FfiType::RustCallStatus => "UniffiRustCallStatusByValue".to_string(),
-            FfiType::ForeignBytes => "ForeignBytesByValue".to_string(),
-            FfiType::Callback(_) => "Any".to_string(),
-            FfiType::Struct(name) => self.wrapped_ffi_struct_name(ns, name),
-            FfiType::Reference(inner) => self.wrapped_ffi_type_label_by_reference(ns, inner),
-            FfiType::VoidPointer => "CPointer<out kotlinx.cinterop.CPointed>".to_string(),
         }
     }
 
@@ -905,15 +896,8 @@ mod filters {
         Ok(KotlinCodeOracle.ffi_type_label_by_value(type_))
     }
 
-    pub fn get_wrapper_type(type_: &FfiType) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.get_wrapper_type(type_))
-    }
-
-    pub fn wrapped_ffi_type_name_by_value(
-        type_: &FfiType,
-        ns: &str,
-    ) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.wrapped_ffi_type_label_by_value(ns, type_))
+    pub fn ffi_type_name_for_ffi_function(type_: &FfiType) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_function(type_))
     }
 
     pub fn ffi_type_name(type_: &FfiType) -> Result<String, askama::Error> {
@@ -921,20 +905,15 @@ mod filters {
     }
 
     pub fn is_callback(type_: &FfiType) -> Result<bool, askama::Error> {
-        Ok(match type_ {
-            FfiType::Callback(_) => true,
-            _ => false,
-        })
+        Ok(matches!(type_, FfiType::Callback(_)))
     }
 
-    pub fn is_reference(type_: &FfiType) -> Result<bool, askama::Error> {
-        Ok(match type_ {
-            FfiType::Reference(_)
-            | FfiType::RustBuffer(_)
-            | FfiType::VoidPointer
-            | FfiType::RustArcPtr(_) => true,
-            _ => false,
-        })
+    pub fn is_rustbuffer(type_: &FfiType) -> Result<bool, askama::Error> {
+        Ok(matches!(type_, FfiType::RustBuffer(_)))
+    }
+
+    pub fn is_foreignbytes(type_: &FfiType) -> Result<bool, askama::Error> {
+        Ok(matches!(type_, FfiType::ForeignBytes))
     }
 
     /// Append a `_` if the name is a valid c/c++ keyword
@@ -945,6 +924,7 @@ mod filters {
             Ok(nm.to_owned())
         }
     }
+
     /// Append a `_` if the name is a valid c/c++ keyword
     pub fn header_noescape_name(nm: &str) -> Result<String, askama::Error> {
         Ok(nm.to_owned())
@@ -954,31 +934,19 @@ mod filters {
         Ok(KotlinCodeOracle.ffi_type_label_header(type_))
     }
 
+    pub fn ffi_type_name_for_ffi_struct(type_: &FfiType) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct(type_))
+    }
+
+    pub fn ffi_type_name_for_ffi_struct_inner(type_: &FfiType) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct_inner(type_))
+    }
+
     pub fn is_pointer_type(type_: &FfiType) -> Result<bool, askama::Error> {
         Ok(match type_ {
             FfiType::RustArcPtr(_) | FfiType::VoidPointer => true,
             _ => false,
         })
-    }
-
-    pub fn is_internal_type(type_: &FfiType) -> Result<bool, askama::Error> {
-        match type_ {
-            FfiType::RustCallStatus
-            | FfiType::RustBuffer(_)
-            | FfiType::Struct(_)
-            | FfiType::Callback(_)
-            | FfiType::ForeignBytes => Ok(true),
-            FfiType::Reference(t) => is_internal_type(t),
-            _ => Ok(false),
-        }
-    }
-
-    pub fn type_string(type_: &FfiType) -> Result<String, askama::Error> {
-        Ok(format!("{type_:?}"))
-    }
-
-    pub fn ffi_type_name_for_ffi_struct(type_: &FfiType) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct(type_))
     }
 
     pub fn ffi_type_name_for_ffi_callback(type_: &FfiType) -> Result<String, askama::Error> {
@@ -1003,10 +971,12 @@ mod filters {
     pub fn var_name(nm: &str) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.var_name(nm))
     }
+
     /// Check if type is Option
     pub fn is_optional(as_ct: &impl AsCodeType) -> Result<bool, askama::Error> {
         Ok(as_ct.as_codetype().is_optional())
     }
+
     /// Get the idiomatic Kotlin rendering of a variable name.
     pub fn var_name_raw_noescape(nm: &str) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.var_name_raw_noescape(nm))
@@ -1068,7 +1038,7 @@ mod filters {
             }) => {
                 // Need to convert the RustBuffer from our package to the RustBuffer of the external package
                 let suffix = KotlinCodeOracle.class_name(ci, &name);
-                format!("{call}.let {{ RustBuffer{suffix}.create(it.capacity.toULong(), it.len.toULong(), it.data) }}")
+                format!("{call}.let {{ RustBuffer{suffix}ByValue(it.capacity, it.len, it.data) }}")
             }
             _ => call,
         };

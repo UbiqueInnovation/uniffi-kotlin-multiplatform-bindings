@@ -6,7 +6,6 @@
 
 package io.gitlab.trixnity.gradle.cargo.tasks
 
-import io.gitlab.trixnity.gradle.CargoHost
 import io.gitlab.trixnity.gradle.tasks.CommandTask
 import io.gitlab.trixnity.gradle.utils.CommandSpec
 import org.gradle.api.provider.Property
@@ -16,25 +15,26 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import java.io.File
 
-@Suppress("LeakingThis")
 abstract class CargoTask : CommandTask() {
     @get:InputFile
     @get:Optional
     @get:PathSensitive(PathSensitivity.ABSOLUTE)
     abstract val cargo: Property<File>
 
-    init {
-        if (cargo.isPresent) {
-            additionalEnvironmentPath.add(cargo.map { it.parentFile })
-        }
-        additionalEnvironmentPath.add(CargoHost.Platform.current.defaultCargoInstallationDir)
-    }
-
     internal fun cargo(
         vararg argument: String,
         action: CommandSpec.() -> Unit = {},
-    ) = command("cargo") {
-        arguments(*argument)
-        action()
+    ) = cargo.map { it as Any }.orElse("cargo").flatMap { cargo ->
+        if (cargo is File) {
+            command(cargo) {
+                arguments(*argument)
+                action()
+            }
+        } else {
+            command("cargo") {
+                arguments(*argument)
+                action()
+            }
+        }
     }
 }

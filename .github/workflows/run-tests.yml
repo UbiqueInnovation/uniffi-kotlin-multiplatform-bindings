@@ -10,8 +10,9 @@ on:
 jobs:
   build-and-test:
     name: Build and run tests
-    runs-on: ubuntu-22.04
-
+    runs-on: [ 'k8s-runner' ]
+    container:
+      image: ubuntu:22.04
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

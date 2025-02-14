@@ -1,9 +1,9 @@
-import io.gitlab.trixnity.gradle.CargoHost
-import io.gitlab.trixnity.gradle.rustlink.useRustUpLinker
+import io.gitlab.trixnity.gradle.RustHost
+import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
 
 plugins {
     kotlin("multiplatform")
-    id("io.gitlab.trixnity.rustlink.kotlin.multiplatform")
+    id("io.gitlab.trixnity.rust.kotlin.multiplatform")
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.compose.compiler)
@@ -19,8 +19,8 @@ kotlin {
         it.binaries.executable {
             entryPoint = "io.gitlab.trixnity.uniffi.examples.app.main"
         }
-        for (compilation in it.compilations) {
-            compilation.useRustUpLinker()
+        it.compilations.configureEach {
+            useRustUpLinker()
         }
     }
 
@@ -48,7 +48,7 @@ kotlin {
     //     }
     // }
 
-    if (CargoHost.Platform.MacOS.isCurrent) {
+    if (RustHost.Platform.MacOS.isCurrent) {
         arrayOf(
             macosArm64(),
             macosX64(),

@@ -17,28 +17,14 @@ package {{ config.package_name() }}
 // compile the Rust component. The easiest way to ensure this is to bundle the Kotlin
 // helpers directly inline like we're doing here.
 
+import uniffi.runtime.*
+
 import kotlin.jvm.JvmField
-
-{%- for req in self.imports() %}
-{{ req.render() }}
-{%- endfor %}
-
 {% if  !config.has_import_helpers() %}
-
+/*
 {% include "PointerHelper.kt" %}
-
-{% include "ByteBuffer.kt" %}
-{% include "RustBufferTemplate.kt" %}
-{% include "FfiConverterTemplate.kt" %}
+*/
 {% include "Helpers.kt" %}
-{% include "HandleMap.kt" %}
-{% include "ReferenceHelper.kt" %}
-
-// Async support
-{%- if ci.has_async_fns() %}
-{% include "Async.kt" %}
-{%- endif %}
-
 {% else %}
 import {{ config.import_helper_namespace() }}.*
 {% endif %}
@@ -47,11 +33,7 @@ import {{ config.import_helper_namespace() }}.*
 {{ type_helper_code }}
 
 {%- for func in ci.function_definitions() %}
-{%- include "TopLevelFunctionTemplate.kt" %}
+{% include "TopLevelFunctionTemplate.kt" %}
 {%- endfor %}
 
 {% import "macros.kt" as kt %}
-
-// Contains loading, initialization code,
-// and the FFI Function declarations in a com.sun.jna.Library.
-{% include "NamespaceLibraryTemplate.kt" %}

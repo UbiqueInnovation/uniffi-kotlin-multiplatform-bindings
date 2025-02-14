@@ -1,0 +1,33 @@
+namespace struct_default_values {
+    Bookmark create_bookmark(
+        optional string? guid = null,
+        i32 position,
+        optional i32? last_modified = null,
+        string url,
+        optional string? title = null
+    );
+    Bookmark2 create_bookmark2(
+        string? guid,
+        optional i32 position = 26,
+        i32? last_modified,
+        optional string url = "https://mozilla.github.io/uniffi-rs",
+        string? title
+    );
+};
+
+dictionary Bookmark {
+    string? guid = null;
+    i32 position;
+    i32? last_modified = null;
+    string url;
+    string? title = null;
+};
+
+// Test more default values
+dictionary Bookmark2 {
+    string? guid;
+    i32 position = 26;
+    i32? last_modified;
+    string url = "https://mozilla.github.io/uniffi-rs";
+    string? title;
+};

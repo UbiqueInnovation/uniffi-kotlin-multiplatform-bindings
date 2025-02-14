@@ -1,0 +1,21 @@
+[package]
+name = "uniffi-kmm-fixture-chronological"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_chronological"
+crate-type = ["cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[dependencies]
+uniffi = { workspace = true }
+thiserror = { workspace = true }
+chrono = { version = "0.4.23", default-features = false, features = [
+    "alloc",
+    "std",
+] }
+
+[build-dependencies]
+uniffi-kmm-fixture-build-common = { path = "../../build-common" }

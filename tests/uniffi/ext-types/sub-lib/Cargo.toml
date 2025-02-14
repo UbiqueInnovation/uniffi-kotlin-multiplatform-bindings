@@ -1,0 +1,19 @@
+[package]
+name = "uniffi-kmm-fixture-ext-types-sub-lib"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_ext_types_sub_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[dependencies]
+uniffi = { workspace = true }
+once_cell = { workspace = true }
+thiserror = { workspace = true }
+uniffi-kmm-fixture-ext-types-uniffi-one = { path = "../../uniffi-one/uniffi" }
+
+[build-dependencies]
+uniffi-kmm-fixture-build-common = { path = "../../../build-common" }

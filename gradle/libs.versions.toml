@@ -14,8 +14,9 @@ kotlinx-datetime = "0.6.0"
 androidx-activity-compose = "1.9.3"
 androidx-annotation = "1.8.2"
 
-okio = "3.9.1"
 jna = "5.13.0"
+ktor = "3.0.3"
+okio = "3.9.1"
 compose = "1.7.6"
 compose-runtime = "1.7.6"
 compose-multiplatform = "1.7.1"
@@ -46,8 +47,9 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
 
-okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+ktor-http = { module = "io.ktor:ktor-http", version.ref = "ktor" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "compose" }

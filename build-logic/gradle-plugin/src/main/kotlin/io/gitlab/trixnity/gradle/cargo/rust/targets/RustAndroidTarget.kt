@@ -6,7 +6,7 @@
 
 package io.gitlab.trixnity.gradle.cargo.rust.targets
 
-import io.gitlab.trixnity.gradle.CargoHost
+import io.gitlab.trixnity.gradle.RustHost
 import io.gitlab.trixnity.gradle.cargo.rust.CrateType
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import java.io.File
@@ -74,7 +74,7 @@ enum class RustAndroidTarget(
     ): Map<String, Any> {
         val actualNdkRoot = tryRetrieveNdkRoot(sdkRoot, ndkVersion, ndkRoot)!!
         val toolchainBinaryDir = ndkToolchainDir(sdkRoot, ndkVersion, ndkRoot)!!.resolve("bin")
-        val currentPlatform = CargoHost.current.platform
+        val currentPlatform = RustHost.current.platform
         val clang =
             toolchainBinaryDir.resolve(currentPlatform.convertExeName("${ndkLlvmTriple}$apiLevel-clang"))
         val clangCpp =
@@ -129,11 +129,11 @@ enum class RustAndroidTarget(
             ndkRoot: File? = null,
         ): File? = ndkRoot ?: ndkRootFromSdkRoot(sdkRoot, ndkVersion) ?: ndkRootFromAndroidNdkRoot()
 
-        private val CargoHost.Platform.ndkHostTag: String
+        private val RustHost.Platform.ndkHostTag: String
             get() = when (this) {
-                CargoHost.Platform.Windows -> "windows-x86_64"
-                CargoHost.Platform.MacOS -> "darwin-x86_64"
-                CargoHost.Platform.Linux -> "linux-x86_64"
+                RustHost.Platform.Windows -> "windows-x86_64"
+                RustHost.Platform.MacOS -> "darwin-x86_64"
+                RustHost.Platform.Linux -> "linux-x86_64"
             }
 
         private fun ndkToolchainDir(
@@ -141,7 +141,7 @@ enum class RustAndroidTarget(
             ndkVersion: String? = null,
             ndkRoot: File? = null,
         ) = tryRetrieveNdkRoot(sdkRoot, ndkVersion, ndkRoot)?.run {
-            resolve("toolchains/llvm/prebuilt").resolve(CargoHost.current.platform.ndkHostTag)
+            resolve("toolchains/llvm/prebuilt").resolve(RustHost.current.platform.ndkHostTag)
         }
     }
 }

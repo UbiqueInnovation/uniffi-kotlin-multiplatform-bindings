@@ -1,4 +1,4 @@
-import io.gitlab.trixnity.gradle.CargoHost
+import io.gitlab.trixnity.gradle.RustHost
 import io.gitlab.trixnity.gradle.cargo.dsl.jvm
 import io.gitlab.trixnity.gradle.uniffi.tasks.InstallBindgenTask
 
@@ -9,9 +9,8 @@ plugins {
 }
 
 cargo {
-    packageDirectory = layout.projectDirectory.dir("uniffi")
     builds.jvm {
-        jvm.set(rustTarget == CargoHost.current.hostTarget)
+        jvm.set(rustTarget == RustHost.current.rustTarget)
     }
 }
 
