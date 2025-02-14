@@ -141,7 +141,7 @@ sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% e
         @kotlinx.serialization.SerialName("{{ field.name() }}")
         {%- endif %}
         {% endif %}
-        val {% call kt::field_name(field, loop.index) %}: {{ field|type_name(ci) }}{% if loop.last %}{% else %}, {% endif %}
+        val {% call kt::field_name(field, loop.index) %}: {{ field|type_name(ci) }} {% if field|is_optional %} = null {% endif %} {% if loop.last %}{% else %}, {% endif %}
         {%- endfor -%}
     ) : {{ type_name }}() {
         {% if contains_object_references %}

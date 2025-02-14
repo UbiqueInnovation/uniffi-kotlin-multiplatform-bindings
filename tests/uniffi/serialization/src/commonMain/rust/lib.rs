@@ -15,6 +15,12 @@ pub struct Values {
     b: i64,
 }
 
+#[derive(uniffi::Record)]
+pub struct ValuesOptional {
+    a: Option<i64>,
+    b: Option<i64>,
+}
+
 // TODO: Figure out how to serialize/deserialize something like this
 //       tagged vs untagged, should "Add" be represented as an array
 //       how would you represent a null value, ...

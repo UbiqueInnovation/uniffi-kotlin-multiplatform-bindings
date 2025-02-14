@@ -30,4 +30,9 @@ class SerializationTest {
     fun testDeserializeStructSimple() {
         Json.decodeFromString<Values>("{\"a\":13,\"b\":37}") shouldBe Values(13, 37)
     }
+
+    @Test
+    fun testDeserializeImplicitNull() {
+        Json.decodeFromString<ValuesOptional>("{\"a\":13}") shouldBe ValuesOptional(13, null)
+    }
 }
