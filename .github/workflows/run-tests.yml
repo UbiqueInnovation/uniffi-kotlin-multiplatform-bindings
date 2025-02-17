@@ -24,7 +24,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update && sudo apt install -y \
-            build-essential binutils android-sdk \
+            build-essential binutils \
             gcc-mingw-w64 mingw-w64-x86-64-dev \
             libgtk-4-dev wget perl libssl-dev && \
           sudo rm -rf /var/lib/apt/lists/*
@@ -44,8 +44,12 @@ jobs:
       
       - name: Install Android SDK
         run: |
-          mkdir -p $HOME/android-sdk
+          mkdir -p $HOME/android-sdk/cmdline-tools
           export ANDROID_HOME=$HOME/android-sdk
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdline-tools.zip
+          unzip /tmp/cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools
+          mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
           yes | sdkmanager --install "build-tools;34.0.0" "platforms;android-34" "ndk;26.1.10909125"
           yes | sdkmanager --licenses
       
