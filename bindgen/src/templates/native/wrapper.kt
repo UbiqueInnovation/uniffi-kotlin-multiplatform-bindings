@@ -58,7 +58,9 @@ import platform.posix.memcpy
 {%- endfor %}
 
 {% if config.has_import_helpers() %}
-import {{ config.import_helper_namespace() }}.*
+{%- for ns in config.import_helper_namespace() -%}
+import {{ ns }}.*
+{% endfor -%}
 {% endif %}
 
 // Contains loading, initialization code,

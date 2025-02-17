@@ -98,7 +98,7 @@ pub struct Config {
     pub(super) cdylib_name: Option<String>,
     generate_immutable_records: Option<bool>,
     generate_serializable_records: Option<bool>,
-    import_pointer_from: Option<String>,
+    import_pointer_from: Option<Vec<String>>,
     #[serde(default)]
     custom_types: HashMap<String, CustomTypeConfig>,
     #[serde(default)]
@@ -145,11 +145,10 @@ impl Config {
     pub fn has_import_helpers(&self) -> bool {
         self.import_pointer_from.is_some()
     }
-    pub fn import_helper_namespace(&self) -> String {
+    pub fn import_helper_namespace(&self) -> Vec<String> {
         self.import_pointer_from
             .as_ref()
-            .unwrap_or(&String::from("<ARG>"))
-            .to_string()
+            .cloned().unwrap_or_default()
     }
 
     pub(crate) fn use_enum_entries(&self) -> bool {

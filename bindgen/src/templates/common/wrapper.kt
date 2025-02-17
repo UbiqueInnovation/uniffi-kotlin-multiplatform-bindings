@@ -26,7 +26,9 @@ import kotlin.jvm.JvmField
 */
 {% include "Helpers.kt" %}
 {% else %}
-import {{ config.import_helper_namespace() }}.*
+{%- for ns in config.import_helper_namespace() -%}
+import {{ ns }}.*
+{% endfor -%}
 {% endif %}
 
 // Public interface members begin here.
