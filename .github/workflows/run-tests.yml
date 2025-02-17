@@ -26,19 +26,19 @@ jobs:
           sudo apt update && sudo apt install -y \
             build-essential binutils \
             gcc-mingw-w64 mingw-w64-x86-64-dev \
-            libgtk-4-dev wget perl libssl-dev && \
+            libgtk-4-dev wget perl libssl-dev
           sudo rm -rf /var/lib/apt/lists/*
       
       - name: Install Zig
         run: |
-          export ZIG_VERSION=0.12.1 && \
-          export ZIG_BUILD=zig-linux-x86_64-$ZIG_VERSION && \
-          mkdir -p $HOME/zig && cd $HOME/zig && \
-          wget -c https://ziglang.org/download/$ZIG_VERSION/$ZIG_BUILD.tar.xz && \
-          tar -xf $ZIG_BUILD.tar.xz && \
-          printf "#! /bin/sh\n$HOME/zig/$ZIG_BUILD/zig cc -target aarch64-linux-gnu \"\$@\"" > aarch64-unknown-linux-gnu-cc.sh && \
-          chmod 777 aarch64-unknown-linux-gnu-cc.sh && \
-          mkdir -p $HOME/.cargo && \
+          export ZIG_VERSION=0.13.0
+          export ZIG_BUILD=zig-linux-x86_64-$ZIG_VERSION
+          mkdir -p $HOME/zig && cd $HOME/zig
+          wget -c https://ziglang.org/download/$ZIG_VERSION/$ZIG_BUILD.tar.xz
+          tar -xf $ZIG_BUILD.tar.xz
+          printf "#! /bin/sh\n$HOME/zig/$ZIG_BUILD/zig cc -target aarch64-linux-gnu \"\$@\"" > aarch64-unknown-linux-gnu-cc.sh
+          chmod 777 aarch64-unknown-linux-gnu-cc.sh
+          mkdir -p $HOME/.cargo
           echo "[target.aarch64-unknown-linux-gnu]
           linker = \"$HOME/zig/aarch64-unknown-linux-gnu-cc.sh\"" > $HOME/.cargo/config.toml
       
@@ -55,9 +55,9 @@ jobs:
       
       - name: Build and Test
         run: |
-          cargo build && \
-          cargo test && \
-          ./gradlew :build-logic:gradle-plugin:test && \
+          cargo build
+          cargo test
+          ./gradlew :build-logic:gradle-plugin:test
           ./gradlew build
       
       - name: Upload Test Results
