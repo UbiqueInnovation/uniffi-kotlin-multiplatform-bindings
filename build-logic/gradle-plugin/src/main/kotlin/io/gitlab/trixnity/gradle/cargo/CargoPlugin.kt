@@ -219,6 +219,9 @@ class CargoPlugin : Plugin<Project> {
             for (kotlinTarget in cargoBuild.kotlinTargets) {
                 when (kotlinTarget) {
                     is KotlinJvmTarget -> {
+                        if(gradle.startParameter.taskNames.isEmpty()) {
+                            continue
+                        }
                         cargoBuild as CargoJvmBuild<*>
                         cargoBuild.variants {
                             configureJvmPostBuildTasks(
@@ -232,13 +235,21 @@ class CargoPlugin : Plugin<Project> {
                     }
 
                     is KotlinAndroidTarget -> {
-                        cargoBuild as CargoAndroidBuild
-                        Variant.entries.forEach {
-                            configureAndroidPostBuildTasks(cargoBuild.variant(it))
+                        if(gradle.startParameter.taskNames.isEmpty()) {
+                            cargoBuild as CargoAndroidBuild
+                            configureAndroidPostBuildTasks(cargoBuild.variant(Variant.Debug))
+                        } else {
+                            cargoBuild as CargoAndroidBuild
+                            Variant.entries.forEach {
+                                configureAndroidPostBuildTasks(cargoBuild.variant(it))
+                            }
                         }
                     }
 
                     is KotlinNativeTarget -> {
+                        if(gradle.startParameter.taskNames.isEmpty()) {
+                            continue
+                        }
                         cargoBuild as CargoNativeBuild<*>
                         configureNativeCompilation(
                             kotlinTarget,
