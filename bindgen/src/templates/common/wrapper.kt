@@ -1,6 +1,15 @@
 {%- call kt::docstring_value(ci.namespace_docstring(), 0) %}
 
-@file:Suppress("NAME_SHADOWING", "ACTUAL_WITHOUT_EXPECT", "INCOMPATIBLE_MATCHING")
+@file:Suppress(
+    "NAME_SHADOWING",
+    "INCOMPATIBLE_MATCHING",
+    "RemoveRedundantBackticks",
+    "KotlinRedundantDiagnosticSuppress",
+    "UnusedImport",
+    "unused",
+    "RemoveRedundantQualifierName",
+    "UnnecessaryOptInAnnotation"
+)
 @file:OptIn(ExperimentalStdlibApi::class)
 
 package {{ config.package_name() }}
@@ -21,14 +30,15 @@ import uniffi.runtime.*
 
 import kotlin.jvm.JvmField
 {% if  !config.has_import_helpers() %}
-/*
-{% include "PointerHelper.kt" %}
-*/
+
 {% include "Helpers.kt" %}
+
 {% else %}
+
 {%- for ns in config.import_helper_namespace() -%}
 import {{ ns }}.*
 {% endfor -%}
+
 {% endif %}
 
 // Public interface members begin here.

@@ -41,8 +41,8 @@ actual open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
     {%- when None %}
     {%- endmatch %}
 
-    actual protected val pointer: Pointer?
-    actual protected val cleanable: UniffiCleaner.Cleanable
+    protected val pointer: Pointer?
+    protected val cleanable: UniffiCleaner.Cleanable
 
     private val wasDestroyed: kotlinx.atomicfu.AtomicBoolean = kotlinx.atomicfu.atomic(false)
     private val callCounter: kotlinx.atomicfu.AtomicLong = kotlinx.atomicfu.atomic(1L)

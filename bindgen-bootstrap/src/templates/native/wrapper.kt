@@ -1,7 +1,15 @@
 {%- call kt::docstring_value(ci.namespace_docstring(), 0) %}
 
-@file:Suppress("NAME_SHADOWING","ACTUAL_WITHOUT_EXPECT", "ACTUAL_TYPE_ALIAS_WITH_USE_SITE_VARIANCE", "ACTUAL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION", "ACTUAL_TYPE_ALIAS_TO_CLASS_WITH_DECLARATION_SITE_VARIANCE", "INCOMPATIBLE_MATCHING")
-@file:OptIn(ExperimentalForeignApi::class)
+@file:Suppress(
+    "NAME_SHADOWING",
+    "INCOMPATIBLE_MATCHING",
+    "RemoveRedundantBackticks",
+    "KotlinRedundantDiagnosticSuppress",
+    "UnusedImport",
+    "unused",
+    "RemoveRedundantQualifierName",
+    "UnnecessaryOptInAnnotation"
+)@file:OptIn(ExperimentalForeignApi::class)
 
 
 package {{ config.package_name() }}
