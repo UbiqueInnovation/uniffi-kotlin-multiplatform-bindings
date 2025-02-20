@@ -1960,7 +1960,7 @@ dependencies = [
 
 [[package]]
 name = "uniffi_bindgen_kotlin_multiplatform"
-version = "0.6.13"
+version = "0.6.14"
 dependencies = [
  "anyhow",
  "askama",
