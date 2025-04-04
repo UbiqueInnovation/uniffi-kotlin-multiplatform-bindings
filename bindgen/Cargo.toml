@@ -1,6 +1,6 @@
 [package]
 name = "uniffi_bindgen_kotlin_multiplatform"
-version = "0.6.14"
+version = "0.6.15"
 edition = "2021"
 authors = ["UniFFI Kotlin Multiplatform bindings team"]
 description = "a Kotlin Multiplatform bindings generator for rust (codegen and cli tooling)"

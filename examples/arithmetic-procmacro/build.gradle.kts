@@ -1,4 +1,7 @@
 import io.gitlab.trixnity.gradle.RustHost
+import io.gitlab.trixnity.gradle.cargo.dsl.jvm
+import io.gitlab.trixnity.gradle.cargo.dsl.linux
+import io.gitlab.trixnity.gradle.cargo.dsl.posix
 import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
 
 plugins {
@@ -13,6 +16,11 @@ plugins {
 uniffi {
     bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen"))
     generateFromLibrary()
+}
+cargo {
+   builds.linux {
+       usesCross = true
+   }
 }
 
 kotlin {
@@ -69,7 +77,7 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_22
+        targetCompatibility = JavaVersion.VERSION_22
     }
 }

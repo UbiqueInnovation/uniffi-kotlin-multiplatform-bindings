@@ -37,5 +37,6 @@ abstract class DefaultCargoBuildVariant<out RustTargetT : RustTarget, out CargoB
         profile.set(this@DefaultCargoBuildVariant.profile)
         target.set(this@DefaultCargoBuildVariant.rustTarget)
         features.set(this@DefaultCargoBuildVariant.features)
+        useCross.set(build.usesCross.getOrElse(extension.usesCross.getOrElse(this@DefaultCargoBuildVariant.build.usesCross.getOrElse(false))))
     }
 }

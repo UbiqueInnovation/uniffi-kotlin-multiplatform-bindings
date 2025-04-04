@@ -32,7 +32,10 @@ abstract class CargoTask : CommandTask() {
                 action()
             }
         } else {
-            val c = if (usesCross) { "cross" } else { "cargo" }
+            val c = if (usesCross) {
+                println("Use cross for building")
+                "cross"
+            } else { "cargo" }
             command(c) {
                 arguments(*argument)
                 action()
