@@ -247,9 +247,6 @@ class CargoPlugin : Plugin<Project> {
                     }
 
                     is KotlinNativeTarget -> {
-                        if(gradle.startParameter.taskNames.isEmpty()) {
-                            continue
-                        }
                         cargoBuild as CargoNativeBuild<*>
                         configureNativeCompilation(
                             kotlinTarget,
