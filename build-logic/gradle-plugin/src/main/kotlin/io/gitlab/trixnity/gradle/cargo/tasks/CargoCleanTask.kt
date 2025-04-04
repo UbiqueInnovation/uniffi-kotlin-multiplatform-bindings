@@ -24,7 +24,7 @@ abstract class CargoCleanTask : CargoPackageTask(), GloballyLockedTask {
             else -> "cargoClean/$relativePath"
         }
         globalLock(identifier) {
-            cargo("clean").get().assertNormalExitValue()
+            cargo(false, "clean").get().assertNormalExitValue()
         }
     }
 }

@@ -16,7 +16,7 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
  * Contains settings for Rust builds.
  */
 interface CargoBuild<out CargoBuildVariantT : CargoBuildVariant<RustTarget>>
-    : Named, HasProject, HasFeatures, HasVariants<CargoBuildVariantT> {
+    : Named, HasProject, HasFeatures, HasVariants<CargoBuildVariantT>, UsesCross {
     /**
      * The Rust target triple to use to build the current target. The name of the `CargoBuild` is
      * `rustTarget.friendlyName`.

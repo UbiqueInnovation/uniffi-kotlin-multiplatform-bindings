@@ -22,6 +22,7 @@ abstract class CargoTask : CommandTask() {
     abstract val cargo: Property<File>
 
     internal fun cargo(
+        usesCross: Boolean = false,
         vararg argument: String,
         action: CommandSpec.() -> Unit = {},
     ) = cargo.map { it as Any }.orElse("cargo").flatMap { cargo ->
@@ -31,7 +32,8 @@ abstract class CargoTask : CommandTask() {
                 action()
             }
         } else {
-            command("cargo") {
+            val c = if (usesCross) { "cross" } else { "cargo" }
+            command(c) {
                 arguments(*argument)
                 action()
             }

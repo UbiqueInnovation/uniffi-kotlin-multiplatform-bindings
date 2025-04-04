@@ -29,6 +29,9 @@ abstract class CargoBuildTask : CargoPackageTask() {
     @get:Input
     abstract val features: SetProperty<String>
 
+    @get:Input
+    abstract val useCross: Property<Boolean>
+
     @OutputFiles
     val libraryFileByCrateType: Provider<Map<CrateType, RegularFile>> =
         profile.zip(target, ::Pair).zip(cargoPackage) { (profile, target), cargoPackage ->
@@ -47,7 +50,7 @@ abstract class CargoBuildTask : CargoPackageTask() {
     fun buildBindings() {
         val profile = profile.get()
         val target = target.get()
-        val result = cargo("rustc") {
+        val result = cargo(useCross.get(),"rustc") {
             arguments("--profile", profile.profileName)
             arguments("--target", target.rustTriple)
             if (features.isPresent) {

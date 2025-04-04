@@ -22,7 +22,7 @@ import org.gradle.kotlin.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.HasProject
 
 abstract class CargoExtension(final override val project: Project) : HasProject, HasFeatures,
-    HasVariants<CargoExtensionVariant>, HasJvmVariant, HasNativeVariant {
+    HasVariants<CargoExtensionVariant>, HasJvmVariant, HasNativeVariant, UsesCross {
     /**
      * The package directory.
      */

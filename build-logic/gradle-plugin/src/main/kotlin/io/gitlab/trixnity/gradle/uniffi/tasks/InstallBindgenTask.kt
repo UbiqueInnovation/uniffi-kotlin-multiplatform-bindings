@@ -40,9 +40,10 @@ abstract class InstallBindgenTask : CargoTask() {
 
     @TaskAction
     fun buildBindings() {
-        cargo("install") {
+        cargo(false, "install") {
             arguments("--root", installDirectory)
             arguments("--bin", BuildConfig.BINDGEN_BIN)
+            arguments("--force")
             if (quiet.get()) {
                 arguments("--quiet")
             }
