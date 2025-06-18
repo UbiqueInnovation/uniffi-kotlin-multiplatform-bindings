@@ -2,18 +2,33 @@ package ch.ubique.uniffi.plugin.tasks
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileTree
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.mapProperty
 import kotlin.String
 
 abstract class CargoBuildTask : DefaultTask() {
 
-    @get:InputDirectory
+    @get:Internal
     abstract val packageDirectory: DirectoryProperty
+
+    @get:Input
+    val packageDirectoryPath: String
+        get() = packageDirectory.get().asFile.absolutePath
+
+    @get:InputFiles
+    val rustSources: FileTree
+        get() = packageDirectory.get().asFileTree.matching {
+            exclude("build")
+            include("**/*.rs")
+            include("Cargo.toml", "Cargo.lock")
+        }
 
     @get:Input
     abstract val triple: Property<String>

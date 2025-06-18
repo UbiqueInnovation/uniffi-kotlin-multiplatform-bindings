@@ -1,35 +1,49 @@
 package ch.ubique.uniffi.plugin.tasks
 
 import ch.ubique.uniffi.plugin.model.CargoMetadata
-import ch.ubique.uniffi.plugin.services.CargoMetadataService
 import ch.ubique.uniffi.plugin.utils.targetPackage
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileTree
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 
 abstract class BuildBindingsTask : DefaultTask() {
-    @get:InputDirectory
+
+    @get:Internal
     abstract val packageDirectory: DirectoryProperty
+
+    @get:Input
+    val packageDirectoryPath: String
+        get() = packageDirectory.get().asFile.absolutePath
+
+    @get:InputFiles
+    val rustSources: FileTree
+        get() = packageDirectory.get().asFileTree.matching {
+            exclude("build")
+            include("**/*.rs")
+            include("Cargo.toml", "Cargo.lock")
+        }
 
     @get:InputFile
     abstract val bindgen: RegularFileProperty
 
-    @get:Internal
-    abstract val cargoMetadataService: Property<CargoMetadataService>
+    @get:Input
+    abstract val cargoMetadata: Property<String>
 
     @OutputDirectory
     val bindingsDirectory = project.layout.buildDirectory.dir("generated/uniffi")
 
     @TaskAction
     fun action() {
-        val metadata = cargoMetadataService.get().getMetadata(packageDirectory.get().asFile)
+        val metadata = CargoMetadata.fromJsonString(cargoMetadata.get())
 
         val targetPackage = metadata.targetPackage
 

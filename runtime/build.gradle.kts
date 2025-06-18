@@ -1,22 +1,25 @@
-import io.gitlab.trixnity.gradle.RustHost
-import io.gitlab.trixnity.gradle.rust.dsl.hostNativeTarget
-import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
+import ch.ubique.uniffi.plugin.extensions.useRustUpLinker
+import ch.ubique.uniffi.plugin.model.RustHost
 
 plugins {
-    kotlin("multiplatform")
-    id("com.android.library")
-    id("maven-publish")
-
-    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform")
-    id("io.gitlab.trixnity.cargo.kotlin.multiplatform")
-    id("io.gitlab.trixnity.rust.kotlin.multiplatform")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.atomicfu)
+    id("ch.ubique.uniffi-plugin")
+
+    `maven-publish`
+}
+
+cargo {
+    packageDirectory = project.layout.projectDirectory
 }
 
 uniffi {
     bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen-bootstrap"))
 
-    generateFromLibrary()
+    addRuntime = false
+
+    // generateFromLibrary()
 }
 
 kotlin {
@@ -36,7 +39,7 @@ kotlin {
         publishLibraryVariants("release")
     }
 
-    hostNativeTarget()
+    // hostNativeTarget()
 
     linuxX64()
     linuxArm64()
@@ -61,9 +64,31 @@ kotlin {
     }
 
     sourceSets {
+        commonMain.dependencies {
+            implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.datetime)
+        }
+
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotest.assertions.core)
+        }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.annotation)
+        }
+
+        listOf(
+            mingwX64Main.get(),
+            linuxX64Main.get(),
+            linuxArm64Main.get(),
+            macosArm64Main.get(),
+            macosX64Main.get(),
+            iosArm64Main.get(),
+            iosSimulatorArm64Main.get(),
+            iosX64Main.get(),
+        ).forEach {
+            it.kotlin.srcDir(project.layout.projectDirectory.dir("src/unifiedNativeMain"))
         }
     }
 }

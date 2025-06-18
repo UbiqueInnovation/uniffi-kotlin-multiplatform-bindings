@@ -7,7 +7,7 @@ object Constants {
         BindgenSource.Git("https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings.git")
 
     const val BINDGEN_BIN_NAME = "uniffi-bindgen-kotlin-multiplatform"
-    const val BINDGEN_PACKAGE_NAME = "uniffi_bindgen_kotlin_multiplatform"
+    const val BINDGEN_PACKAGE_NAME = "uniffi_bindgen_kotlin_multiplatform_bootstrap"
 
     const val RUNTIME_VERSION = "0.1.0"
     const val JNA_VERSION = "5.17.0"

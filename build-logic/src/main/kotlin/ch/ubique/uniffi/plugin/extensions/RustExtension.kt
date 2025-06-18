@@ -1,12 +1,14 @@
 package ch.ubique.uniffi.plugin.extensions
 
 import ch.ubique.uniffi.plugin.model.BuildTarget
+import org.gradle.api.Project
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCompilation
 import java.io.File
+import kotlin.text.trim
 
 fun KotlinNativeCompilation.useRustUpLinker() {
-    val rustUpHome = getRustUpHome()
-    val toolchain = getActiveToolchain()
+    val rustUpHome = getRustUpHome(project)
+    val toolchain = getActiveToolchain(project)
 
     val currentTarget = BuildTarget.RustTarget.forCurrentPlatform
 
@@ -20,32 +22,16 @@ fun KotlinNativeCompilation.useRustUpLinker() {
     )
 }
 
-private fun getRustUpHome(): String {
-    val process = ProcessBuilder("rustup", "show", "home")
-        .start()
-
-    val output = process.inputStream.bufferedReader().readText()
-    val exitCode = process.waitFor()
-
-    check(exitCode == 0) {
-        println(output)
-        "Failed to get rustup home with exit code $exitCode"
-    }
-
-    return output.trim()
+private fun getRustUpHome(project: Project): String {
+    return project.providers.exec {
+        commandLine("rustup", "show", "home")
+    }.standardOutput.asText.get().trim()
 }
 
-private fun getActiveToolchain(): String {
-    val process = ProcessBuilder("rustup", "show", "active-toolchain")
-        .start()
-
-    val output = process.inputStream.bufferedReader().readText()
-    val exitCode = process.waitFor()
-
-    check(exitCode == 0) {
-        println(output)
-        "Failed to get rustup active toolchain with exit code $exitCode"
-    }
+private fun getActiveToolchain(project: Project): String {
+    val output = project.providers.exec {
+        commandLine("rustup", "show", "active-toolchain")
+    }.standardOutput.asText.get().trim()
 
     val activeToolchains = output.trim().split("\n")
     val toolchain = activeToolchains.firstNotNullOf {

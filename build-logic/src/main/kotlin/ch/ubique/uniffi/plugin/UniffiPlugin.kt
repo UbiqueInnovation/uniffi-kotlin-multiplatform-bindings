@@ -61,29 +61,15 @@ class UniffiPlugin : Plugin<Project> {
         val uniffiExtension = project.extensions.create<UniffiExtension>("uniffi")
         val cargoExtension = project.extensions.create<CargoExtension>("cargo")
 
-        // Register services
-        val cargoMetadataServiceProvider = project.gradle.sharedServices
-            .registerIfAbsent(CARGO_METADATA_SERVICE_NAME, CargoMetadataService::class.java)
-
         // Register tasks
-        project.tasks.register<InstallBindgenTask>(INSTALL_BINDGEN_TASK_NAME) {
-            source.set(uniffiExtension.bindgenSource)
-        }
-
-        project.tasks.register<BuildBindingsTask>(BUILD_BINDINGS_TASK_NAME) {
-            packageDirectory.set(cargoExtension.packageDirectory)
-            cargoMetadataService.set(cargoMetadataServiceProvider)
-            bindgen.set(project.layout.buildDirectory.file("bindgen-install/bin/${Constants.BINDGEN_BIN_NAME}"))
-
-            dependsOn(INSTALL_BINDGEN_TASK_NAME)
-        }
+        registerBindgenTasks(project)
 
         registerBuildTasks(project)
 
         registerGenerateDefFileTask(project)
 
         // Configure tasks after evaluation
-        project.afterEvaluate { afterEvaluate(this, cargoExtension, cargoMetadataServiceProvider) }
+        project.afterEvaluate { afterEvaluate(this, uniffiExtension, cargoExtension) }
     }
 
     /**
@@ -92,8 +78,8 @@ class UniffiPlugin : Plugin<Project> {
      */
     private fun afterEvaluate(
         project: Project,
+        uniffiExtension: UniffiExtension,
         cargoExtension: CargoExtension,
-        cargoMetadataServiceProvider: Provider<CargoMetadataService>
     ) {
         // Check if the KMP Plugin is applied
         if (!project.plugins.hasPlugin(KOTLIN_MULTIPLATFORM_PLUGIN_ID)) {
@@ -105,9 +91,13 @@ class UniffiPlugin : Plugin<Project> {
             throw GradleException("Please set 'kotlin.mpp.enableCInteropCommonization=true' in gradle.properties")
         }
 
-        cargoMetadata = cargoMetadataServiceProvider
-            .get()
-            .getMetadata(cargoExtension.packageDirectory.get().asFile)
+        val cargoMetadataService = project.providers.of(CargoMetadataService::class.java) {
+            parameters.packageDirectory.set(cargoExtension.packageDirectory)
+        }
+
+        cargoMetadata = CargoMetadata.fromJsonString(cargoMetadataService.get())
+
+        configureBindgenTasks(project, uniffiExtension, cargoExtension, cargoMetadataService)
 
         configureBuildTasks(
             project,
@@ -134,7 +124,7 @@ class UniffiPlugin : Plugin<Project> {
         project.plugins.withId(KOTLIN_MULTIPLATFORM_PLUGIN_ID) {
             val kotlinExt = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
 
-            configureTargets(project, kotlinExt)
+            configureTargets(project, kotlinExt, addRuntime = uniffiExtension.addRuntime.get())
         }
 
         // Make sure the bindings are built before kotlin code is compiled
@@ -150,11 +140,43 @@ class UniffiPlugin : Plugin<Project> {
     }
 
     /**
+     * Registers the InstallBindgen and BuildBindings Task
+     */
+    private fun registerBindgenTasks(project: Project) {
+        project.tasks.register<InstallBindgenTask>(INSTALL_BINDGEN_TASK_NAME)
+
+        project.tasks.register<BuildBindingsTask>(BUILD_BINDINGS_TASK_NAME)
+    }
+
+    /**
+     * Configures the InstallBindgen and BuildBindings Task
+     */
+    private fun configureBindgenTasks(
+        project: Project,
+        uniffiExtension: UniffiExtension,
+        cargoExtension: CargoExtension,
+        cargoMetadataProvider: Provider<String>
+    ) {
+        project.tasks.named<InstallBindgenTask>(INSTALL_BINDGEN_TASK_NAME) {
+            source.set(uniffiExtension.bindgenSource)
+        }
+
+        project.tasks.named<BuildBindingsTask>(BUILD_BINDINGS_TASK_NAME) {
+            packageDirectory.set(cargoExtension.packageDirectory)
+            cargoMetadata.set(cargoMetadataProvider)
+            bindgen.set(project.layout.buildDirectory.file("bindgen-install/bin/${Constants.BINDGEN_BIN_NAME}"))
+
+            dependsOn(INSTALL_BINDGEN_TASK_NAME)
+        }
+    }
+
+    /**
      * Configures the targets' sourceSets and dependencies
      */
     private fun configureTargets(
         project: Project,
-        kmpExtension: KotlinMultiplatformExtension
+        kmpExtension: KotlinMultiplatformExtension,
+        addRuntime: Boolean,
     ) {
         // Configure common main
         val commonMain = kmpExtension.sourceSets.maybeCreate("commonMain")
@@ -162,7 +184,9 @@ class UniffiPlugin : Plugin<Project> {
             .kotlin
             .srcDir(project.layout.buildDirectory.dir("generated/uniffi/commonMain"))
         commonMain.dependencies {
-            implementation("ch.ubique.uniffi:runtime:${Constants.RUNTIME_VERSION}")
+            if (addRuntime) {
+                implementation("ch.ubique.uniffi:runtime:${Constants.RUNTIME_VERSION}")
+            }
 
             implementation("com.squareup.okio:okio:${Constants.OKIO_VERSION}")
             implementation("org.jetbrains.kotlinx:atomicfu:${Constants.ATOMICFU_VERSION}")
@@ -223,7 +247,13 @@ class UniffiPlugin : Plugin<Project> {
             implementation("net.java.dev.jna:jna:${Constants.JNA_VERSION}")
         }
 
-        val copyNativeLibsTask = project.tasks.named(copyNativeLibrariesTaskName(BuildTarget.Jvm, isRelease, dynamic = true))
+        val copyNativeLibsTask = project.tasks.named(
+            copyNativeLibrariesTaskName(
+                BuildTarget.Jvm,
+                isRelease,
+                dynamic = true
+            )
+        )
 
         // Hook into the JVM build process
         project.tasks.named("jvmProcessResources") {
@@ -614,12 +644,20 @@ class UniffiPlugin : Plugin<Project> {
 
         val staticLibName = "lib$libraryName.a"
 
-        project.tasks.named<GenerateDefFileTask>(GENERATE_DEF_FILE_TASK_NAME) {
+        val generateDefFileTask = project.tasks.named<GenerateDefFileTask>(GENERATE_DEF_FILE_TASK_NAME) {
             this.headers.set(headersFile)
             this.libraryName.set(staticLibName)
             this.outputFile.set(defFile)
 
             dependsOn(BUILD_BINDINGS_TASK_NAME)
+        }
+
+        project.gradle.taskGraph.whenReady {
+            val includeStatic = allTasks.any { it.name.contains("link", ignoreCase = true) }
+
+            generateDefFileTask.configure {
+                includeStaticLib.set(includeStatic)
+            }
         }
     }
 

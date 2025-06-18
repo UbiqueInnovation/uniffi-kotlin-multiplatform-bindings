@@ -12,6 +12,14 @@ abstract class UniffiExtension(project: Project) {
         project.objects.property<BindgenSource>().convention(Constants.BINDGEN_SOURCE)
 
     /**
+     * Add the runtime dependency to commonMain.
+     *
+     * TODO: Allow for configuration like bindgen source
+     */
+    val addRuntime: Property<Boolean> =
+        project.objects.property<Boolean>().convention(true)
+
+    /**
      * Install the bindgen of the given [version] from the given [registry]. If [registry] is not specified, this will
      * download the bindgen from `crates.io`.
      */
