@@ -496,12 +496,7 @@ class UniffiPlugin : Plugin<Project> {
         val rustTargetDir =
             project.objects.directoryProperty().fileValue(File(cargoMetadata.targetDirectory))
 
-        // Read out Android ndk configuration
-        val androidExtension = project.extensions.getByType<AndroidExtension>()
-        val sdkRoot = androidExtension.sdkDirectory
-        val apiLevel = androidExtension.defaultConfig.minSdk ?: 21
-        val ndkVersion = androidExtension.ndkVersion.takeIf(String::isNotEmpty)
-        val ndkRoot = androidExtension.ndkPath?.let { File(it) }
+        val androidExtension = project.extensions.findByType<AndroidExtension>()
 
         // Register the build tasks for each rust target.
         // This task will run `cargo build --target <target>`
@@ -528,7 +523,12 @@ class UniffiPlugin : Plugin<Project> {
                     //     include("lib$libraryName.*")
                     // })
 
-                    if (target.isAndroid) {
+                    if (target.isAndroid && androidExtension != null) {
+                        val sdkRoot = androidExtension.sdkDirectory
+                        val apiLevel = androidExtension.defaultConfig.minSdk ?: 21
+                        val ndkVersion = androidExtension.ndkVersion.takeIf(String::isNotEmpty)
+                        val ndkRoot = androidExtension.ndkPath?.let { File(it) }
+
                         val ndkEnv = NdkUtil.ndkEnvVariables(
                             sdkRoot,
                             apiLevel,

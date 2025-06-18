@@ -3,14 +3,23 @@ agp = "8.8.2"
 kotlin = "2.1.10"
 
 androidx-annotation = "1.8.2"
-
+gradle-publish = "1.2.1"
 kotest = "5.8.0"
+kotlinx-serialization = "1.8.1"
+shadow = "8.1.1"
 
 [plugins]
 android-library = { id = "com.android.library", version.ref = "agp" }
+gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish" }
 kotlin-atomicfu = { id = "org.jetbrains.kotlin.plugin.atomicfu", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
 
 [libraries]
+android-tools-gradle = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
