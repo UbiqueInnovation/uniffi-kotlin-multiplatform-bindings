@@ -26,7 +26,7 @@ abstract class UniffiExtension(project: Project) {
     fun bindgenFromRegistry(
         packageName: String,
         version: String,
-        bindgenName: String? = null,
+        bindgenName: String? = Constants.BINDGEN_BIN_NAME,
     ) {
         bindgenSource.set(BindgenSource.Registry(packageName, version, bindgenName))
     }
@@ -36,8 +36,8 @@ abstract class UniffiExtension(project: Project) {
      */
     fun bindgenFromPath(
         path: Directory,
-        bindgenName: String? = null,
-        packageName: String? = null,
+        bindgenName: String? = Constants.BINDGEN_BIN_NAME,
+        packageName: String? = Constants.BINDGEN_PACKAGE_NAME,
     ) {
         bindgenSource.set(BindgenSource.Path(path.asFile.absolutePath, bindgenName, packageName))
     }
@@ -49,8 +49,8 @@ abstract class UniffiExtension(project: Project) {
     fun bindgenFromGit(
         repository: String,
         commit: BindgenSource.Git.Commit? = null,
-        bindgenName: String? = null,
-        packageName: String? = null,
+        bindgenName: String? = Constants.BINDGEN_BIN_NAME,
+        packageName: String? = Constants.BINDGEN_PACKAGE_NAME,
     ) {
         bindgenSource.set(BindgenSource.Git(repository, commit, bindgenName, packageName))
     }
@@ -61,8 +61,8 @@ abstract class UniffiExtension(project: Project) {
     fun bindgenFromGitBranch(
         repository: String,
         branch: String,
-        bindgenName: String? = null,
-        packageName: String? = null,
+        bindgenName: String? = Constants.BINDGEN_BIN_NAME,
+        packageName: String? = Constants.BINDGEN_PACKAGE_NAME,
     ) {
         bindgenFromGit(repository, BindgenSource.Git.Commit.Branch(branch), bindgenName, packageName)
     }
@@ -73,8 +73,8 @@ abstract class UniffiExtension(project: Project) {
     fun bindgenFromGitTag(
         repository: String,
         tag: String,
-        bindgenName: String? = null,
-        packageName: String? = null,
+        bindgenName: String? = Constants.BINDGEN_BIN_NAME,
+        packageName: String? = Constants.BINDGEN_PACKAGE_NAME,
     ) {
         bindgenFromGit(repository, BindgenSource.Git.Commit.Tag(tag), bindgenName, packageName)
     }
@@ -85,8 +85,8 @@ abstract class UniffiExtension(project: Project) {
     fun bindgenFromGitRevision(
         repository: String,
         revision: String,
-        bindgenName: String? = null,
-        packageName: String? = null,
+        bindgenName: String? = Constants.BINDGEN_BIN_NAME,
+        packageName: String? = Constants.BINDGEN_PACKAGE_NAME,
     ) {
         bindgenFromGit(repository, BindgenSource.Git.Commit.Revision(revision), bindgenName, packageName)
     }
