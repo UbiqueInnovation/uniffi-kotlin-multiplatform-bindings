@@ -1,17 +1,19 @@
 package ch.ubique.uniffi.plugin.tasks
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import kotlin.String
 
 abstract class GenerateDefFileTask : DefaultTask() {
-    @get:InputFile
-    abstract val headers: RegularFileProperty
+    @get:InputDirectory
+    abstract val headers: DirectoryProperty
 
     @get:Input
     abstract val libraryName: Property<String>
@@ -26,18 +28,21 @@ abstract class GenerateDefFileTask : DefaultTask() {
     fun generateDefFile() {
         val output = outputFile.get().asFile
 
-        val headersPath = headers.get().asFile.absolutePath
+        val headersDir = headers.asFile.get()
+        val allHeaders = headersDir.walkTopDown()
+            .filter { it.isFile && it.extension == "h" }
+            .joinToString(" ") { it.absolutePath }
 
         if (includeStaticLib.get()) {
             val libraryName = libraryName.get()
 
             output.writeText("""
             staticLibraries = $libraryName
-            headers = $headersPath
+            headers = $allHeaders
             """.trimIndent())
         } else {
             output.writeText("""
-            headers = $headersPath
+            headers = $allHeaders
             """.trimIndent())
         }
     }

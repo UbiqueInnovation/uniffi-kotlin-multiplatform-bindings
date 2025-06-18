@@ -637,7 +637,7 @@ class UniffiPlugin : Plugin<Project> {
         val headersFile = project
             .layout
             .buildDirectory
-            .file("generated/uniffi/nativeInterop/cinterop/headers/$libraryName/$libraryName.h")
+            .dir("generated/uniffi/nativeInterop/cinterop/headers/")
 
         val defFile = project
             .layout
