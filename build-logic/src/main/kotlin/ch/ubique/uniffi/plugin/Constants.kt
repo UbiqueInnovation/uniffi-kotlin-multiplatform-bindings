@@ -16,4 +16,6 @@ object Constants {
     const val JNA_VERSION = "5.17.0"
     const val ATOMICFU_VERSION = "0.25.0"
     const val OKIO_VERSION = "3.9.1"
+    const val COROUTINES_VERSION = "1.9.0"
+    const val DATETIME_VERSION = "0.6.0"
 }

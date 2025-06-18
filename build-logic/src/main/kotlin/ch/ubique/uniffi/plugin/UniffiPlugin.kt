@@ -36,8 +36,6 @@ class UniffiPlugin : Plugin<Project> {
         private const val INSTALL_BINDGEN_TASK_NAME = "installBindgen"
         private const val BUILD_BINDINGS_TASK_NAME = "buildBindings"
         private const val GENERATE_DEF_FILE_TASK_NAME = "generateDefFile"
-
-        private const val CARGO_METADATA_SERVICE_NAME = "cargoMetadataService"
     }
 
     private lateinit var cargoMetadata: CargoMetadata
@@ -91,11 +89,18 @@ class UniffiPlugin : Plugin<Project> {
             throw GradleException("Please set 'kotlin.mpp.enableCInteropCommonization=true' in gradle.properties")
         }
 
+        // Make sure the bindings generation is defined
+        if (!uniffiExtension.bindingsGeneration.isPresent) {
+            throw GradleException("Please call either 'generateFromLibrary' or 'generateFromUdl'.")
+        }
+
         val cargoMetadataService = project.providers.of(CargoMetadataService::class.java) {
             parameters.packageDirectory.set(cargoExtension.packageDirectory)
         }
 
         cargoMetadata = CargoMetadata.fromJsonString(cargoMetadataService.get())
+
+        uniffiExtension.bindingsGeneration.get().namespace.convention(libraryName)
 
         configureBindgenTasks(project, uniffiExtension, cargoExtension, cargoMetadataService)
 
@@ -124,7 +129,7 @@ class UniffiPlugin : Plugin<Project> {
         project.plugins.withId(KOTLIN_MULTIPLATFORM_PLUGIN_ID) {
             val kotlinExt = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
 
-            configureTargets(project, kotlinExt, addRuntime = uniffiExtension.addRuntime.get())
+            configureTargets(project, kotlinExt, uniffiExtension)
         }
 
         // Make sure the bindings are built before kotlin code is compiled
@@ -178,7 +183,7 @@ class UniffiPlugin : Plugin<Project> {
     private fun configureTargets(
         project: Project,
         kmpExtension: KotlinMultiplatformExtension,
-        addRuntime: Boolean,
+        uniffiExtension: UniffiExtension,
     ) {
         // Configure common main
         val commonMain = kmpExtension.sourceSets.maybeCreate("commonMain")
@@ -186,12 +191,14 @@ class UniffiPlugin : Plugin<Project> {
             .kotlin
             .srcDir(project.layout.buildDirectory.dir("generated/uniffi/commonMain"))
         commonMain.dependencies {
-            if (addRuntime) {
+            if (uniffiExtension.addRuntime.get()) {
                 implementation("ch.ubique.uniffi:runtime:${Constants.RUNTIME_VERSION}")
             }
 
             implementation("com.squareup.okio:okio:${Constants.OKIO_VERSION}")
             implementation("org.jetbrains.kotlinx:atomicfu:${Constants.ATOMICFU_VERSION}")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Constants.COROUTINES_VERSION}")
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:${Constants.DATETIME_VERSION}")
         }
 
         val targets = kmpExtension.targets
@@ -219,7 +226,8 @@ class UniffiPlugin : Plugin<Project> {
                     project,
                     buildTarget,
                     kmpExtension.sourceSets.getByName(buildTarget.sourceSetName),
-                    kotlinTarget as KotlinNativeTarget
+                    kotlinTarget as KotlinNativeTarget,
+                    uniffiExtension.bindingsGeneration.get().namespace.get()
                 )
             }
         }
@@ -370,6 +378,7 @@ class UniffiPlugin : Plugin<Project> {
         buildTarget: BuildTarget,
         nativeMain: KotlinSourceSet,
         nativeTarget: KotlinNativeTarget,
+        namespace: String,
     ) {
         nativeMain
             .kotlin
@@ -411,7 +420,7 @@ class UniffiPlugin : Plugin<Project> {
                     libraryIncludeDir
                 )
 
-                packageName("$libraryName.cinterop")
+                packageName("$namespace.cinterop")
 
                 project.tasks.named(interopProcessingTaskName) {
                     // Generates the .def file

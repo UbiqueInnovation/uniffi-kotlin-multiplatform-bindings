@@ -22,7 +22,7 @@ uniffi {
 
     addRuntime = false
 
-    // generateFromLibrary()
+    generateFromLibrary()
 }
 
 kotlin {
@@ -67,11 +67,6 @@ kotlin {
     }
 
     sourceSets {
-        commonMain.dependencies {
-            implementation(libs.kotlinx.coroutines.core)
-            implementation(libs.kotlinx.datetime)
-        }
-
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotest.assertions.core)
