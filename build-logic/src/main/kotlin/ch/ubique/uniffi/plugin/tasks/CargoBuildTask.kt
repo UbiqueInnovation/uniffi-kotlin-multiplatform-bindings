@@ -63,6 +63,7 @@ abstract class CargoBuildTask : DefaultTask() {
 
         val processBuilder = ProcessBuilder(arguments)
         processBuilder.redirectErrorStream(true)
+        processBuilder.directory(packageDirectory.asFile.get())
 
         val env = processBuilder.environment()
         additionalEnvironment.get().forEach { key, value ->
