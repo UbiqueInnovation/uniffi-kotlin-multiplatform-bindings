@@ -17,6 +17,7 @@ import com.android.build.gradle.tasks.MergeSourceSetFolders
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
@@ -495,6 +496,7 @@ class UniffiPlugin : Plugin<Project> {
     ) {
         val rustTargetDir =
             project.objects.directoryProperty().fileValue(File(cargoMetadata.targetDirectory))
+        val buildOutputDir = project.layout.buildDirectory.dir("target")
 
         val androidExtension = project.extensions.findByType<AndroidExtension>()
 
@@ -504,10 +506,15 @@ class UniffiPlugin : Plugin<Project> {
         for (target in BuildTarget.RustTarget.entries) {
             for (release in listOf<Boolean>(true, false)) {
                 val taskName = cargoBuildTaskName(target, release)
-                val outputDir = if (release) {
+                val cargoOutputDir = if (release) {
                     rustTargetDir.dir("${target.rustTriple}/release")
                 } else {
                     rustTargetDir.dir("${target.rustTriple}/debug")
+                }
+                val outputDir = if (release) {
+                    buildOutputDir.map { it.dir("${target.rustTriple}/release") }
+                } else {
+                    buildOutputDir.map { it.dir("${target.rustTriple}/debug") }
                 }
 
                 project.tasks.named<CargoBuildTask>(taskName) {
@@ -515,13 +522,9 @@ class UniffiPlugin : Plugin<Project> {
                     this.triple.set(target.rustTriple)
                     this.release.set(release)
                     this.packageName.set(targetPackage.name)
-                    // NOTE: For some reason gradle doesn't like this in multi-project setups
-                    //       as such, no output directory is declared, but the caching is
-                    //       handled by cargo.
-                    // this.outputDirectory.set(outputDir)
-                    // this.outputs.files(project.fileTree(outputDir) {
-                    //     include("lib$libraryName.*")
-                    // })
+                    this.libraryName.set(this@UniffiPlugin.libraryName)
+                    this.cargoOutputDirectory.set(cargoOutputDir)
+                    this.outputDirectory.set(outputDir)
 
                     if (target.isAndroid && androidExtension != null) {
                         val sdkRoot = androidExtension.sdkDirectory
@@ -552,7 +555,7 @@ class UniffiPlugin : Plugin<Project> {
                 buildTarget.debugTargets.forEach { rustTarget ->
                     configureCopyNativeLibrariesTask(
                         project,
-                        rustTargetDir,
+                        buildOutputDir,
                         buildTarget,
                         rustTarget,
                         false,
@@ -564,7 +567,7 @@ class UniffiPlugin : Plugin<Project> {
                 buildTarget.releaseTargets.forEach { rustTarget ->
                     configureCopyNativeLibrariesTask(
                         project,
-                        rustTargetDir,
+                        buildOutputDir,
                         buildTarget,
                         rustTarget,
                         true,
@@ -578,7 +581,7 @@ class UniffiPlugin : Plugin<Project> {
 
     private fun configureCopyNativeLibrariesTask(
         project: Project,
-        rustTargetDir: DirectoryProperty,
+        buildDir: Provider<Directory>,
         buildTarget: BuildTarget,
         rustTarget: BuildTarget.RustTarget,
         release: Boolean,
@@ -588,10 +591,10 @@ class UniffiPlugin : Plugin<Project> {
         val cargoBuildTask = cargoBuildTaskName(rustTarget, release)
         val copyTaskName = copyNativeLibrariesTaskName(rustTarget, buildTarget, release, dynamic)
 
-        val cargoTargetDir = if (release) {
-            rustTargetDir.dir("${rustTarget.rustTriple}/release")
+        val buildDir = if (release) {
+            buildDir.map { it.dir("${rustTarget.rustTriple}/release") }
         } else {
-            rustTargetDir.dir("${rustTarget.rustTriple}/debug")
+            buildDir.map { it.dir("${rustTarget.rustTriple}/debug") }
         }
         val outputDir = if (rustTarget.apkLibraryPath != null) {
             project
@@ -622,7 +625,7 @@ class UniffiPlugin : Plugin<Project> {
         } else {
             rustTarget.staticLibraryName(packageName)
         } ?: throw GradleException("Could not determine library file name!")
-        val libraryFile = cargoTargetDir.map { it.file(libraryFileName) }
+        val libraryFile = buildDir.map { it.file(libraryFileName) }
 
         project.tasks.named<Copy>(copyTaskName) {
             from(libraryFile)

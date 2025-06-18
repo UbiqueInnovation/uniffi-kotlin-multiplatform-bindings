@@ -6,11 +6,12 @@ import org.gradle.api.file.FileTree
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.mapProperty
+import java.io.File
 import kotlin.String
 
 abstract class CargoBuildTask : DefaultTask() {
@@ -43,8 +44,14 @@ abstract class CargoBuildTask : DefaultTask() {
     @get:Input
     abstract val packageName: Property<String>
 
-    // @get:OutputDirectory
-    // abstract val outputDirectory: DirectoryProperty
+    @get:Internal
+    abstract val cargoOutputDirectory: DirectoryProperty
+
+    @get:Input
+    abstract val libraryName: Property<String>
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
 
     @TaskAction
     fun build() {
@@ -79,5 +86,14 @@ abstract class CargoBuildTask : DefaultTask() {
             println(output)
             "Failed build rust code with exit code $exitCode"
         }
+
+        val targetDir = outputDirectory.asFile.get()
+        targetDir.mkdirs()
+
+        val libPrefix = "lib${libraryName.get()}"
+        cargoOutputDirectory.get()
+            .asFile
+            .listFiles { file -> file.name.startsWith(libPrefix) }
+            .forEach { file -> file.copyTo(File(targetDir, file.name), overwrite = true) }
     }
 }
