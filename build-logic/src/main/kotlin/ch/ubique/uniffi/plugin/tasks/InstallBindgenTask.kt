@@ -29,7 +29,8 @@ abstract class InstallBindgenTask : DefaultTask() {
         arguments.add(bindgenPath.get().asFile.path)
         arguments.add("--force")
 
-        when (val source = source.get()) {
+        val source = source.get()
+        when (source) {
             is BindgenSource.Path -> {
                 arguments.add("--path")
                 arguments.add(source.path)
@@ -58,9 +59,14 @@ abstract class InstallBindgenTask : DefaultTask() {
             }
         }
 
-        arguments.add("--bin")
-        arguments.add(Constants.BINDGEN_BIN_NAME)
-        arguments.add(Constants.BINDGEN_PACKAGE_NAME)
+        if (source.bindgenName != null) {
+            arguments.add("--bin")
+            arguments.add(source.bindgenName)
+        }
+
+        if (source.packageName != null) {
+            arguments.add(source.packageName)
+        }
 
         val processBuilder = ProcessBuilder(arguments)
         processBuilder.redirectErrorStream(true)

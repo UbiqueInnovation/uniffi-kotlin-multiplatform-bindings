@@ -26,43 +26,68 @@ abstract class UniffiExtension(project: Project) {
     fun bindgenFromRegistry(
         packageName: String,
         version: String,
+        bindgenName: String? = null,
     ) {
-        bindgenSource.set(BindgenSource.Registry(packageName, version))
+        bindgenSource.set(BindgenSource.Registry(packageName, version, bindgenName))
     }
 
     /**
      * Install the bindgen located in the given [path].
      */
-    fun bindgenFromPath(path: Directory) {
-        bindgenSource.set(BindgenSource.Path(path.asFile.absolutePath))
+    fun bindgenFromPath(
+        path: Directory,
+        bindgenName: String? = null,
+        packageName: String? = null,
+    ) {
+        bindgenSource.set(BindgenSource.Path(path.asFile.absolutePath, bindgenName, packageName))
     }
 
     /**
      * Download and install the bindgen from the given Git repository. If [commit] is specified, `cargo install` will
      * install the bindgen of that [commit].
      */
-    fun bindgenFromGit(repository: String, commit: BindgenSource.Git.Commit? = null) {
-        bindgenSource.set(BindgenSource.Git(repository, commit))
+    fun bindgenFromGit(
+        repository: String,
+        commit: BindgenSource.Git.Commit? = null,
+        bindgenName: String? = null,
+        packageName: String? = null,
+    ) {
+        bindgenSource.set(BindgenSource.Git(repository, commit, bindgenName, packageName))
     }
 
     /**
      * Download and install the bindgen from the given Git repository, using the given [branch].
      */
-    fun bindgenFromGitBranch(repository: String, branch: String) {
-        bindgenFromGit(repository, BindgenSource.Git.Commit.Branch(branch))
+    fun bindgenFromGitBranch(
+        repository: String,
+        branch: String,
+        bindgenName: String? = null,
+        packageName: String? = null,
+    ) {
+        bindgenFromGit(repository, BindgenSource.Git.Commit.Branch(branch), bindgenName, packageName)
     }
 
     /**
      * Download and install the bindgen from the given Git repository, using the given [tag].
      */
-    fun bindgenFromGitTag(repository: String, tag: String) {
-        bindgenFromGit(repository, BindgenSource.Git.Commit.Tag(tag))
+    fun bindgenFromGitTag(
+        repository: String,
+        tag: String,
+        bindgenName: String? = null,
+        packageName: String? = null,
+    ) {
+        bindgenFromGit(repository, BindgenSource.Git.Commit.Tag(tag), bindgenName, packageName)
     }
 
     /**
      * Download and install the bindgen from the given Git repository, using the given commit [revision].
      */
-    fun bindgenFromGitRevision(repository: String, revision: String) {
-        bindgenFromGit(repository, BindgenSource.Git.Commit.Revision(revision))
+    fun bindgenFromGitRevision(
+        repository: String,
+        revision: String,
+        bindgenName: String? = null,
+        packageName: String? = null,
+    ) {
+        bindgenFromGit(repository, BindgenSource.Git.Commit.Revision(revision), bindgenName, packageName)
     }
 }

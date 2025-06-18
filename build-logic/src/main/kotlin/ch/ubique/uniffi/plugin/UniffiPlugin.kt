@@ -161,10 +161,12 @@ class UniffiPlugin : Plugin<Project> {
             source.set(uniffiExtension.bindgenSource)
         }
 
+        val bindgenName = uniffiExtension.bindgenSource.get().bindgenName ?: Constants.BINDGEN_BIN_NAME
+
         project.tasks.named<BuildBindingsTask>(BUILD_BINDINGS_TASK_NAME) {
             packageDirectory.set(cargoExtension.packageDirectory)
             cargoMetadata.set(cargoMetadataProvider)
-            bindgen.set(project.layout.buildDirectory.file("bindgen-install/bin/${Constants.BINDGEN_BIN_NAME}"))
+            bindgen.set(project.layout.buildDirectory.file("bindgen-install/bin/$bindgenName"))
 
             dependsOn(INSTALL_BINDGEN_TASK_NAME)
         }
