@@ -12,3 +12,5 @@ dependencyResolutionManagement {
         mavenLocal()
     }
 }
+
+include(":gradle-plugin")
