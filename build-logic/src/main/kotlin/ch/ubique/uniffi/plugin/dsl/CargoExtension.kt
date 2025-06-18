@@ -9,5 +9,5 @@ abstract class CargoExtension(project: Project) {
      */
     val packageDirectory: DirectoryProperty =
         project.objects.directoryProperty()
-            .convention(project.layout.projectDirectory.dir("rust-src"))
+            .convention(project.layout.projectDirectory)
 }
