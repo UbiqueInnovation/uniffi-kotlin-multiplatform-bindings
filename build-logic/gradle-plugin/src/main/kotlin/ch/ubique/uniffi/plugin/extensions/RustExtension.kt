@@ -17,9 +17,11 @@ fun KotlinNativeCompilation.useRustUpLinker() {
         .resolve(currentTarget.rustTriple)
         .resolve("bin/gcc-ld/ld.lld")
 
-    kotlinOptions.freeCompilerArgs += listOf(
-        "-Xoverride-konan-properties=linker.${currentTarget.konanName}=${rustUpLinker.absolutePath}"
-    )
+    for (target in BuildTarget.fromTargetName(target.name)?.targets ?: listOf()) {
+        kotlinOptions.freeCompilerArgs += listOf(
+            "-Xoverride-konan-properties=linker.${currentTarget.konanName}-${target.konanName}=${rustUpLinker.absolutePath}"
+        )
+    }
 }
 
 private fun getRustUpHome(project: Project): String {

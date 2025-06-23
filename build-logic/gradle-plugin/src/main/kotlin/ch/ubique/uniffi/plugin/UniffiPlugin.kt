@@ -222,13 +222,16 @@ class UniffiPlugin : Plugin<Project> {
                     kmpExtension.sourceSets.maybeCreate("androidUnitTest")
                 )
 
-                BuildTarget.MacosArm64, BuildTarget.IosSimulatorArm64,
-                BuildTarget.IosArm64, BuildTarget.IosX64 -> configureNativeTarget(
-                    project,
-                    buildTarget,
-                    kmpExtension.sourceSets.getByName(buildTarget.sourceSetName),
-                    kotlinTarget as KotlinNativeTarget,
-                    uniffiExtension.bindingsGeneration.get().namespace.get()
+                BuildTarget.MacosArm64, BuildTarget.MacosX64,
+                BuildTarget.LinuxAarch64, BuildTarget.LinuxX64,
+                BuildTarget.WindowsX64,
+                BuildTarget.IosSimulatorArm64, BuildTarget.IosArm64, BuildTarget.IosX64
+                    -> configureNativeTarget(
+                        project,
+                        buildTarget,
+                        kmpExtension.sourceSets.getByName(buildTarget.sourceSetName),
+                        kotlinTarget as KotlinNativeTarget,
+                        uniffiExtension.bindingsGeneration.get().namespace.get()
                 )
             }
         }
@@ -404,7 +407,7 @@ class UniffiPlugin : Plugin<Project> {
                 rustTarget,
                 buildTarget,
                 isRelease,
-                dynamic = false
+                buildTarget.useDynamicLib == true
             ),
             Copy::class.java
         )

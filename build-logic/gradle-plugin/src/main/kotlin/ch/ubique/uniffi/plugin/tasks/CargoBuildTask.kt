@@ -90,10 +90,9 @@ abstract class CargoBuildTask : DefaultTask() {
         val targetDir = outputDirectory.asFile.get()
         targetDir.mkdirs()
 
-        val libPrefix = "lib${libraryName.get()}"
         cargoOutputDirectory.get()
             .asFile
-            .listFiles { file -> file.name.startsWith(libPrefix) }
+            .listFiles { file -> file.name.contains(libraryName.get()) }
             .forEach { file -> file.copyTo(File(targetDir, file.name), overwrite = true) }
     }
 }

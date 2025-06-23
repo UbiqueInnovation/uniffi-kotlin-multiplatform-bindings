@@ -19,7 +19,12 @@ enum class BuildTarget(
     /**
      * Targets to build and include for a release build
      */
-    val releaseTargets: List<RustTarget>
+    val releaseTargets: List<RustTarget>,
+
+    /**
+     * Build with the dynamic library
+     */
+    val useDynamicLib: Boolean? = null
 ) {
     Jvm(
         sourceSetName = "jvmMain",
@@ -32,9 +37,7 @@ enum class BuildTarget(
             RustTarget.X64AppleDarwin,
             RustTarget.Aarch64LinuxGnu,
             RustTarget.X64LinuxGnu,
-            // NOTE: Currently windows is not supported
-            // RustTarget.Aarch64WindowsMsvc,
-            // RustTarget.X64WindowsMsvc,
+            RustTarget.X64WindowsGnu,
         )
     ),
 
@@ -61,6 +64,36 @@ enum class BuildTarget(
         debugTargets = listOf(RustTarget.Aarch64AppleDarwin),
         releaseTargets = listOf(RustTarget.Aarch64AppleDarwin)
     ),
+    MacosX64(
+        sourceSetName = "macosX64Main",
+        targetName = "macosX64",
+        debugTargets = listOf(RustTarget.X64AppleDarwin),
+        releaseTargets = listOf(RustTarget.X64AppleDarwin)
+    ),
+
+    LinuxAarch64(
+        sourceSetName = "linuxArm64Main",
+        targetName = "linuxArm64",
+        debugTargets = listOf(RustTarget.Aarch64LinuxGnu),
+        releaseTargets = listOf(RustTarget.Aarch64LinuxGnu)
+    ),
+    LinuxX64(
+        sourceSetName = "linuxX64Main",
+        targetName = "linuxX64",
+        debugTargets = listOf(RustTarget.X64LinuxGnu),
+        releaseTargets = listOf(RustTarget.X64LinuxGnu)
+    ),
+
+    WindowsX64(
+        sourceSetName = "mingwX64Main",
+        targetName = "mingwX64",
+        debugTargets = listOf(RustTarget.X64WindowsGnu),
+        releaseTargets = listOf(RustTarget.X64WindowsGnu),
+        useDynamicLib = true,
+    ),
+    // NOTE: WindowsArm64 doesn't seem to build out of the box.
+    //       Using `cargo zigbuild` does work though, and maybe
+    //       can be implemented later (or using `cargo cross`).
 
     IosArm64(
         sourceSetName = "iosArm64Main",
@@ -118,6 +151,7 @@ enum class BuildTarget(
         // Windows
         Aarch64WindowsMsvc("aarch64-pc-windows-msvc", "win32-aarch64"),
         X64WindowsMsvc("x86_64-pc-windows-msvc", "win32-amd64"),
+        X64WindowsGnu("x86_64-pc-windows-gnu", "win32-amd64"),
 
         // Android
         Aarch64Android("aarch64-linux-android", "android-aarch64", apkLibraryPath = "arm64-v8a"),
@@ -138,6 +172,9 @@ enum class BuildTarget(
 
             Aarch64WindowsMsvc, X64WindowsMsvc ->
                 CrateType.SystemDynamicLibrary.outputFileNameForMsvc(packageName)
+
+            X64WindowsGnu ->
+                CrateType.SystemDynamicLibrary.outputFileNameForMsvc(packageName)
         }
 
         fun staticLibraryName(packageName: String): String? = when (this) {
@@ -149,13 +186,17 @@ enum class BuildTarget(
 
             Aarch64WindowsMsvc, X64WindowsMsvc ->
                 CrateType.SystemStaticLibrary.outputFileNameForMsvc(packageName)
+
+            X64WindowsGnu ->
+                CrateType.SystemStaticLibrary.outputFileNameForMsvc(packageName)
         }
 
         val isAndroid: Boolean
             get() = when (this) {
                 Aarch64AppleDarwin, X64AppleDarwin, Aarch64LinuxGnu, X64LinuxGnu,
-                Aarch64WindowsMsvc, X64WindowsMsvc, Aarch64AppleIosSimulator,
-                Aarch64AppleIos, X64AppleIos -> false
+                Aarch64WindowsMsvc, X64WindowsMsvc, X64WindowsGnu,
+                Aarch64AppleIosSimulator, Aarch64AppleIos, X64AppleIos
+                    -> false
 
                 Aarch64Android, ArmV7Android, X64Android -> true
             }
@@ -176,8 +217,9 @@ enum class BuildTarget(
                 X64LinuxGnu -> "linux_x64"
 
                 // Windows
-                Aarch64WindowsMsvc -> "windows_arm64"
-                X64WindowsMsvc -> "windows_x64"
+                Aarch64WindowsMsvc -> "mingw_arm64"
+                X64WindowsMsvc -> "mingw_x64"
+                X64WindowsGnu -> "mingw_x64"
 
                 // Android
                 Aarch64Android -> "android_arm64"
@@ -223,6 +265,9 @@ enum class BuildTarget(
                 }
         }
     }
+
+    val targets: List<RustTarget>
+        get() = (debugTargets + releaseTargets).distinct()
 
     companion object {
         fun fromSourceSetName(name: String): BuildTarget? =
