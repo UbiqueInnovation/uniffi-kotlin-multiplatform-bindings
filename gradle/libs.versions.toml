@@ -5,6 +5,7 @@ kotlin = "2.1.10"
 androidx-annotation = "1.8.2"
 gradle-publish = "1.2.1"
 kotest = "5.8.0"
+kotlinx-coroutines = "1.9.0"
 kotlinx-serialization = "1.8.1"
 shadow = "8.1.1"
 
@@ -22,4 +23,5 @@ android-tools-gradle = { module = "com.android.tools.build:gradle", version.ref 
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
