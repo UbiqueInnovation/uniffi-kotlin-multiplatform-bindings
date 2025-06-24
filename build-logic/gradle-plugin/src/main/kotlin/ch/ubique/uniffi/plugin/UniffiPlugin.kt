@@ -51,14 +51,18 @@ class UniffiPlugin : Plugin<Project> {
     private val isRelease: Boolean
         get() = buildVariant == CargoBuildVariant.Release
 
+    private lateinit var uniffiExtension: UniffiExtension
+
+    private lateinit var cargoExtension: CargoExtension
+
     /**
      * Applies the Plugin to the target Project. Registers all tasks and
      * configures them, once the project has been evaluated.
      */
     override fun apply(project: Project) {
         // Create the extensions
-        val uniffiExtension = project.extensions.create<UniffiExtension>("uniffi")
-        val cargoExtension = project.extensions.create<CargoExtension>("cargo")
+        uniffiExtension = project.extensions.create<UniffiExtension>("uniffi")
+        cargoExtension = project.extensions.create<CargoExtension>("cargo")
 
         // Register tasks
         registerBindgenTasks(project)
@@ -68,18 +72,14 @@ class UniffiPlugin : Plugin<Project> {
         registerGenerateDefFileTask(project)
 
         // Configure tasks after evaluation
-        project.afterEvaluate { afterEvaluate(this, uniffiExtension, cargoExtension) }
+        project.afterEvaluate { afterEvaluate(this) }
     }
 
     /**
      * Runs after the project was evaluated. Checks whether all configuration is
      * as expected and configures the tasks accordingly.
      */
-    private fun afterEvaluate(
-        project: Project,
-        uniffiExtension: UniffiExtension,
-        cargoExtension: CargoExtension,
-    ) {
+    private fun afterEvaluate(project: Project) {
         // Check if the KMP Plugin is applied
         if (!project.plugins.hasPlugin(KOTLIN_MULTIPLATFORM_PLUGIN_ID)) {
             throw GradleException("Kotlin Multiplatform Plugin is required!")
@@ -103,7 +103,7 @@ class UniffiPlugin : Plugin<Project> {
 
         uniffiExtension.bindingsGeneration.get().namespace.convention(libraryName)
 
-        configureBindgenTasks(project, uniffiExtension, cargoExtension, cargoMetadataService)
+        configureBindgenTasks(project, cargoMetadataService)
 
         configureBuildTasks(
             project,
@@ -128,7 +128,7 @@ class UniffiPlugin : Plugin<Project> {
         project.plugins.withId(KOTLIN_MULTIPLATFORM_PLUGIN_ID) {
             val kotlinExt = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
 
-            configureTargets(project, kotlinExt, uniffiExtension)
+            configureTargets(project, kotlinExt)
         }
 
         // Make sure the bindings are built before kotlin code is compiled
@@ -157,8 +157,6 @@ class UniffiPlugin : Plugin<Project> {
      */
     private fun configureBindgenTasks(
         project: Project,
-        uniffiExtension: UniffiExtension,
-        cargoExtension: CargoExtension,
         cargoMetadataProvider: Provider<String>
     ) {
         project.tasks.named<InstallBindgenTask>(INSTALL_BINDGEN_TASK_NAME) {
@@ -182,7 +180,6 @@ class UniffiPlugin : Plugin<Project> {
     private fun configureTargets(
         project: Project,
         kmpExtension: KotlinMultiplatformExtension,
-        uniffiExtension: UniffiExtension,
     ) {
         // Configure common main
         val commonMain = kmpExtension.sourceSets.maybeCreate("commonMain")
@@ -659,11 +656,20 @@ class UniffiPlugin : Plugin<Project> {
 
         val staticLibName = "lib$libraryName.a"
 
+        // Def files are generated only for native build targets,
+        // they should only have exactly one rust target.
+        check(buildTarget.debugTargets.size == 1) {
+            "Native build target has multiple targets"
+        }
+        val rustTarget = buildTarget.debugTargets[0]
+
         val generateDefFileTask =
             project.tasks.named<GenerateDefFileTask>(generateDefFileTaskName(buildTarget)) {
                 this.headers.set(headersFile)
                 this.libraryName.set(staticLibName)
                 this.outputFile.set(defFile)
+                this.packageDirectory.set(cargoExtension.packageDirectory)
+                this.targetString.set(rustTarget.rustTriple)
 
                 dependsOn(BUILD_BINDINGS_TASK_NAME)
             }
