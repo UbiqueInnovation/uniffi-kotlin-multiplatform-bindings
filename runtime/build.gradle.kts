@@ -30,7 +30,6 @@ kotlin {
 
     jvm()
 
-    /*
     arrayOf(
         mingwX64(),
     ).forEach { nativeTarget ->
@@ -38,13 +37,10 @@ kotlin {
             useRustUpLinker()
         }
     }
-    */
 
     androidTarget {
         publishLibraryVariants("release")
     }
-
-    // hostNativeTarget()
 
     linuxX64()
     linuxArm64()

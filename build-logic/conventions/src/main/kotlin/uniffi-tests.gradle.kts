@@ -16,13 +16,11 @@ uniffi {
 kotlin {
     jvm()
 
-    /*
     mingwX64 {
         compilations.getByName("test") {
             useRustUpLinker()
         }
     }
-    */
 
     linuxX64()
     linuxArm64()

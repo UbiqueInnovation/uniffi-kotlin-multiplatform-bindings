@@ -187,7 +187,7 @@ enum class BuildTarget(
                 CrateType.SystemStaticLibrary.outputFileNameForMsvc(packageName)
 
             X64WindowsGnu ->
-                CrateType.SystemStaticLibrary.outputFileNameForMsvc(packageName)
+                CrateType.SystemStaticLibrary.outputFileNameForMinGW(packageName)
         }
 
         val isAndroid: Boolean
