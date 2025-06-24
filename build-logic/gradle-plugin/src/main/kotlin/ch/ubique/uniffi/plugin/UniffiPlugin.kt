@@ -21,6 +21,7 @@ import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.*
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
@@ -36,7 +37,6 @@ class UniffiPlugin : Plugin<Project> {
 
         private const val INSTALL_BINDGEN_TASK_NAME = "installBindgen"
         private const val BUILD_BINDINGS_TASK_NAME = "buildBindings"
-        private const val GENERATE_DEF_FILE_TASK_NAME = "generateDefFile"
     }
 
     private lateinit var cargoMetadata: CargoMetadata
@@ -109,8 +109,6 @@ class UniffiPlugin : Plugin<Project> {
             project,
             cargoExtension.packageDirectory
         )
-
-        configureGenerateDefFileTask(project)
 
         // The CInteropProcess Task will run on Sync if
         // 'kotlin.mpp.enableCInteropCommonization' is
@@ -388,10 +386,7 @@ class UniffiPlugin : Plugin<Project> {
             .kotlin
             .srcDir(project.layout.buildDirectory.dir("generated/uniffi/nativeMain"))
 
-        val generateDefFileTask = project.tasks.named(
-            GENERATE_DEF_FILE_TASK_NAME,
-            GenerateDefFileTask::class.java
-        )
+        val generateDefFileTask = configureGenerateDefFileTask(project, buildTarget)
         val generatedDefFile = generateDefFileTask.get().outputFile
 
         // As native targets need to be configured separately per architecture
@@ -414,8 +409,8 @@ class UniffiPlugin : Plugin<Project> {
         val libraryIncludeDir = copyNativeLibsTask.get().destinationDir.path
 
         nativeTarget.compilations.getByName("main") {
-            cinterops.register("rust") {
-                includeDirs(project.layout.buildDirectory.dir("generated/uniffi/nativeInterop"))
+            cinterops.register("uniffi") {
+                packageName("$namespace.cinterop")
 
                 defFile(generatedDefFile)
 
@@ -423,8 +418,6 @@ class UniffiPlugin : Plugin<Project> {
                     "-libraryPath",
                     libraryIncludeDir
                 )
-
-                packageName("$namespace.cinterop")
 
                 project.tasks.named(interopProcessingTaskName) {
                     // Generates the .def file
@@ -642,13 +635,18 @@ class UniffiPlugin : Plugin<Project> {
      * Registers the GenerateDefFileTask, needed for native targets.
      */
     private fun registerGenerateDefFileTask(project: Project) {
-        project.tasks.register<GenerateDefFileTask>(GENERATE_DEF_FILE_TASK_NAME)
+        for (buildTarget in BuildTarget.entries) {
+            project.tasks.register<GenerateDefFileTask>(generateDefFileTaskName(buildTarget))
+        }
     }
 
     /**
      * Configures the GenerateDefFileTask, needed for native targets.
      */
-    private fun configureGenerateDefFileTask(project: Project) {
+    private fun configureGenerateDefFileTask(
+        project: Project,
+        buildTarget: BuildTarget,
+    ): TaskProvider<GenerateDefFileTask> {
         val headersFile = project
             .layout
             .buildDirectory
@@ -657,17 +655,18 @@ class UniffiPlugin : Plugin<Project> {
         val defFile = project
             .layout
             .buildDirectory
-            .file("generated/uniffi/nativeInterop/cinterop/$libraryName.def")
+            .file("generated/uniffi/nativeInterop/cinterop/${buildTarget.name}/$libraryName.def")
 
         val staticLibName = "lib$libraryName.a"
 
-        val generateDefFileTask = project.tasks.named<GenerateDefFileTask>(GENERATE_DEF_FILE_TASK_NAME) {
-            this.headers.set(headersFile)
-            this.libraryName.set(staticLibName)
-            this.outputFile.set(defFile)
+        val generateDefFileTask =
+            project.tasks.named<GenerateDefFileTask>(generateDefFileTaskName(buildTarget)) {
+                this.headers.set(headersFile)
+                this.libraryName.set(staticLibName)
+                this.outputFile.set(defFile)
 
-            dependsOn(BUILD_BINDINGS_TASK_NAME)
-        }
+                dependsOn(BUILD_BINDINGS_TASK_NAME)
+            }
 
         project.gradle.taskGraph.whenReady {
             val includeStatic = allTasks.any { it.name.contains("link", ignoreCase = true) }
@@ -676,6 +675,8 @@ class UniffiPlugin : Plugin<Project> {
                 includeStaticLib.set(includeStatic)
             }
         }
+
+        return generateDefFileTask
     }
 
     private fun currentBuildVariant(project: Project): CargoBuildVariant? {
@@ -728,4 +729,9 @@ class UniffiPlugin : Plugin<Project> {
         dynamic: Boolean,
     ): String =
         "copyNative${dynamicString(dynamic)}Libs${releaseString(release)}${buildTarget.name}"
+
+    private fun generateDefFileTaskName(
+        buildTarget: BuildTarget
+    ): String =
+        "generateDefFileFor${buildTarget.name}"
 }
