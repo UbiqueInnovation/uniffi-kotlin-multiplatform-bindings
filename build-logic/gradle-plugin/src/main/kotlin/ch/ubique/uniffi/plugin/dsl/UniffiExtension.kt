@@ -19,6 +19,12 @@ abstract class UniffiExtension(internal val project: Project) {
     internal abstract val bindingsGeneration: Property<BindingsGeneration>
 
     /**
+     * Runs `ktlint` on the generated bindings. `ktlint` needs to be in PATH.
+     */
+    val formatCode: Property<Boolean> =
+        project.objects.property<Boolean>().convention(false)
+
+    /**
      * Add the runtime dependency to commonMain.
      *
      * TODO: Allow for configuration like bindgen source

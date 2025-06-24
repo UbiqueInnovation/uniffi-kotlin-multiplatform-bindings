@@ -1,6 +1,6 @@
 plugins {
     id("uniffi-tests-from-library")
-    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlinx.serialization)
 }
 
 uniffi.formatCode = true

@@ -1,15 +1,9 @@
-import io.gitlab.trixnity.gradle.rust.dsl.hostNativeTarget
-
 plugins {
     kotlin("multiplatform")
-
-    id("io.gitlab.trixnity.rust.kotlin.multiplatform")
 }
 
 kotlin {
     jvm()
-
-    hostNativeTarget()
 
     sourceSets {
         commonTest.dependencies {

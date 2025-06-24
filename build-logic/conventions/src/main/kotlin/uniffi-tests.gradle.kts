@@ -47,6 +47,7 @@ kotlin {
 
         commonMain.dependencies {
             implementation(project(":runtime"))
+            implementation(libs.kotlinx.serialization.json)
         }
 
         commonTest.dependencies {
