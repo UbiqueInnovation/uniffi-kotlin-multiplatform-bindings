@@ -89,7 +89,6 @@ enum class BuildTarget(
         targetName = "mingwX64",
         debugTargets = listOf(RustTarget.X64WindowsGnu),
         releaseTargets = listOf(RustTarget.X64WindowsGnu),
-        useDynamicLib = true,
     ),
     // NOTE: WindowsArm64 doesn't seem to build out of the box.
     //       Using `cargo zigbuild` does work though, and maybe
