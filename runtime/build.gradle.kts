@@ -73,19 +73,6 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.annotation)
         }
-
-        listOf(
-            mingwX64Main.get(),
-            linuxX64Main.get(),
-            linuxArm64Main.get(),
-            macosArm64Main.get(),
-            macosX64Main.get(),
-            iosArm64Main.get(),
-            iosSimulatorArm64Main.get(),
-            iosX64Main.get(),
-        ).forEach {
-            it.kotlin.srcDir(project.layout.projectDirectory.dir("src/unifiedNativeMain"))
-        }
     }
 }
 

@@ -208,6 +208,15 @@ class UniffiPlugin : Plugin<Project> {
                     ?.let { Pair(it, target) }
             }
 
+        val namespace = uniffiExtension.bindingsGeneration.get().namespace.get()
+
+        if (targets.any { (buildTarget, _) -> buildTarget in BuildTarget.nativeTargets }) {
+            configureBaseNativeTarget(
+                project,
+                kmpExtension.sourceSets.maybeCreate("nativeMain"),
+            )
+        }
+
         // Configure all other build targets
         targets.forEach { (buildTarget, kotlinTarget) ->
             when (buildTarget) {
@@ -222,17 +231,14 @@ class UniffiPlugin : Plugin<Project> {
                     kmpExtension.sourceSets.maybeCreate("androidUnitTest")
                 )
 
-                BuildTarget.MacosArm64, BuildTarget.MacosX64,
-                BuildTarget.LinuxAarch64, BuildTarget.LinuxX64,
-                BuildTarget.WindowsX64,
-                BuildTarget.IosSimulatorArm64, BuildTarget.IosArm64, BuildTarget.IosX64
-                    -> configureNativeTarget(
+                in BuildTarget.nativeTargets -> configureNativeTarget(
                     project,
                     buildTarget,
-                    kmpExtension.sourceSets.getByName(buildTarget.sourceSetName),
                     kotlinTarget as KotlinNativeTarget,
-                    uniffiExtension.bindingsGeneration.get().namespace.get()
+                    namespace
                 )
+
+                else -> throw GradleException("Unhandled build target: ${buildTarget.name}")
             }
         }
     }
@@ -377,34 +383,34 @@ class UniffiPlugin : Plugin<Project> {
         }
     }
 
-    private fun configureNativeTarget(
+    private fun configureBaseNativeTarget(
         project: Project,
-        buildTarget: BuildTarget,
         nativeMain: KotlinSourceSet,
-        nativeTarget: KotlinNativeTarget,
-        namespace: String,
     ) {
         nativeMain
             .kotlin
             .srcDir(project.layout.buildDirectory.dir("generated/uniffi/nativeMain"))
 
-        val generateDefFileTask = configureGenerateDefFileTask(project, buildTarget)
-        val generatedDefFile = generateDefFileTask.get().outputFile
+        // Dummy def file is the same for all native targets
+        configureGenerateDummyDefFileTask(project)
+    }
 
-        val dummyDefFile =
-            project.layout.buildDirectory.file("generated/uniffi/nativeInterop/cinterop/dummy.def")
+    private fun configureNativeTarget(
+        project: Project,
+        buildTarget: BuildTarget,
+        nativeTarget: KotlinNativeTarget,
+        namespace: String,
+    ) {
+        val generateDefFileTask = configureGenerateDefFileTask(project, buildTarget)
+        val generatedDefFile = generateDefFileTask.map { it.outputFile }.get()
+
         val generateDummyDefFileTask =
-            project.tasks.named<GenerateDummyDefFileTask>(GENERATE_DUMMY_DEF_FILE) {
-                this.outputFile.set(dummyDefFile)
-            }
+            project.tasks.named<GenerateDummyDefFileTask>(GENERATE_DUMMY_DEF_FILE)
+        val dummyDefFile = generateDummyDefFileTask.map { it.outputFile }.get()
 
         // As native targets need to be configured separately per architecture
         // there should be exactly one rust target for the build target.
-        val rustTarget = if (isRelease) {
-            buildTarget.releaseTargets.first()
-        } else {
-            buildTarget.debugTargets.first()
-        }
+        val rustTarget = buildTarget.checkedNativeTarget
 
         val copyNativeLibsTask = project.tasks.named(
             copyNativeLibrariesTaskName(
@@ -681,12 +687,7 @@ class UniffiPlugin : Plugin<Project> {
             .buildDirectory
             .file("generated/uniffi/nativeInterop/cinterop/$libraryName-${buildTarget.name}.def")
 
-        // Def files are generated only for native build targets,
-        // they should only have exactly one rust target.
-        check(buildTarget.debugTargets.size == 1) {
-            "Native build target has multiple targets"
-        }
-        val rustTarget = buildTarget.debugTargets[0]
+        val rustTarget = buildTarget.checkedNativeTarget
         val staticLibName = rustTarget.staticLibraryName(libraryName)
 
         val generateDefFileTask =
@@ -700,6 +701,18 @@ class UniffiPlugin : Plugin<Project> {
             }
 
         return generateDefFileTask
+    }
+
+    /**
+     * Configures the GenerateDummyDefFileTask, needed to make syncs go fast.
+     */
+    private fun configureGenerateDummyDefFileTask(project: Project) {
+        val dummyDefFile =
+            project.layout.buildDirectory.file("generated/uniffi/nativeInterop/cinterop/dummy.def")
+
+        project.tasks.named<GenerateDummyDefFileTask>(GENERATE_DUMMY_DEF_FILE) {
+            this.outputFile.set(dummyDefFile)
+        }
     }
 
     private fun currentBuildVariant(project: Project): CargoBuildVariant? {

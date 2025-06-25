@@ -268,11 +268,35 @@ enum class BuildTarget(
     val targets: List<RustTarget>
         get() = (debugTargets + releaseTargets).distinct()
 
+    val checkedNativeTarget: RustTarget
+        get() {
+            check(debugTargets.size == 1) {
+                "$name has more than one debug target"
+            }
+
+            check(releaseTargets.size == 1) {
+                "$name has more than one release target"
+            }
+
+            check(debugTargets[0] == releaseTargets[0]) {
+                "$name has different debug and release targets"
+            }
+
+            return releaseTargets[0]
+        }
+
     companion object {
         fun fromSourceSetName(name: String): BuildTarget? =
             BuildTarget.entries.find { it.sourceSetName == name }
 
         fun fromTargetName(name: String): BuildTarget? =
             BuildTarget.entries.find { it.targetName == name }
+
+        val nativeTargets: List<BuildTarget> = listOf(
+            MacosArm64, MacosX64,
+            LinuxAarch64, LinuxX64,
+            WindowsX64,
+            IosSimulatorArm64, IosArm64, IosX64
+        )
     }
 }
