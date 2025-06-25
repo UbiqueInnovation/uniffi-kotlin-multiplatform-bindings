@@ -1,5 +1,6 @@
 package ch.ubique.uniffi.plugin.tasks
 
+import ch.ubique.uniffi.plugin.utils.CargoRunner
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileTree
@@ -38,8 +39,8 @@ abstract class CargoBuildTask : DefaultTask() {
     abstract val release: Property<Boolean>
 
     @Input
-    val additionalEnvironment: MapProperty<String, String>
-        = project.objects.mapProperty<String, String>().convention(emptyMap<String, String>())
+    val additionalEnvironment: MapProperty<String, String> =
+        project.objects.mapProperty<String, String>().convention(emptyMap<String, String>())
 
     @get:Input
     abstract val packageName: Property<String>
@@ -55,37 +56,23 @@ abstract class CargoBuildTask : DefaultTask() {
 
     @TaskAction
     fun build() {
-        val arguments = mutableListOf<String>(
-            "cargo",
-            "build",
-            "--target",
-            triple.get(),
-            "--package",
-            packageName.get()
-        )
+        CargoRunner {
+            argument("build")
+            argument("--target")
+            argument(triple.get())
+            argument("--package")
+            argument(packageName.get())
 
-        if (release.get()) {
-            arguments += "--release"
-        }
+            if (release.get()) {
+                argument("--release")
+            }
 
-        val processBuilder = ProcessBuilder(arguments)
-        processBuilder.redirectErrorStream(true)
-        processBuilder.directory(packageDirectory.asFile.get())
+            workdir(packageDirectory.asFile.get())
 
-        val env = processBuilder.environment()
-        additionalEnvironment.get().forEach { key, value ->
-            env[key] = value
-        }
-
-        val process = processBuilder.start()
-
-        val output = process.inputStream.bufferedReader().readText()
-        val exitCode = process.waitFor()
-
-        check(exitCode == 0) {
-            println(output)
-            "Failed build rust code with exit code $exitCode"
-        }
+            additionalEnvironment.get().forEach { key, value ->
+                env(key, value)
+            }
+        }.run()
 
         val targetDir = outputDirectory.asFile.get()
         targetDir.mkdirs()

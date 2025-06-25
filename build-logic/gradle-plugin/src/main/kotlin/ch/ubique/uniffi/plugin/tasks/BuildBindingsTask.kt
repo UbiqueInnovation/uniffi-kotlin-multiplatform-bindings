@@ -1,6 +1,7 @@
 package ch.ubique.uniffi.plugin.tasks
 
 import ch.ubique.uniffi.plugin.model.CargoMetadata
+import ch.ubique.uniffi.plugin.utils.CargoRunner
 import ch.ubique.uniffi.plugin.utils.targetPackage
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
@@ -56,23 +57,11 @@ abstract class BuildBindingsTask : DefaultTask() {
 
     private fun cargoBuild(packageName: String) {
         // TODO: Allow specification of target
-        val process = ProcessBuilder(
-            "cargo",
-            "build",
-            "--package",
-            packageName,
-        )
-            .directory(packageDirectory.asFile.get())
-            .redirectErrorStream(true)
-            .start()
-
-        val output = process.inputStream.bufferedReader().readText()
-        val exitCode = process.waitFor()
-
-        check(exitCode == 0) {
-            println(output)
-            "Failed to build the rust project with exit code $exitCode"
-        }
+        CargoRunner {
+            argument("build")
+            argument("--package")
+            argument(packageName)
+        }.run()
     }
 
 

@@ -1,12 +1,11 @@
 package ch.ubique.uniffi.plugin.tasks
 
+import ch.ubique.uniffi.plugin.utils.CargoRunner
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -31,9 +30,11 @@ abstract class GenerateDefFileTask : DefaultTask() {
 
         val libraryName = libraryName.get()
 
-        output.writeText("""
+        output.writeText(
+            """
             staticLibraries = $libraryName
-            """.trimIndent())
+            """.trimIndent()
+        )
 
         val opts = getLinkerOpts()
         if (opts != null) {
@@ -42,29 +43,22 @@ abstract class GenerateDefFileTask : DefaultTask() {
     }
 
     private fun getLinkerOpts(): String? {
-        val process = ProcessBuilder(
-            "cargo",
-            "rustc",
-            "--target",
-            targetString.get(),
-            "--",
-            "--print",
-            "native-static-libs"
-        )
-            .directory(packageDirectory.asFile.get())
-            .redirectErrorStream(true)
-            .start()
+        val output = CargoRunner {
+            argument("rustc")
+            argument("--target")
+            argument(targetString.get())
+            argument("--")
+            argument("--print")
+            argument("native-static-libs")
 
-        val output = process.inputStream.bufferedReader().readText()
-        val exitCode = process.waitFor()
+            workdir(packageDirectory.asFile.get())
 
-        check(exitCode == 0) {
-            println(output)
-            "Failed to build the rust project with exit code $exitCode"
-        }
+            redirectErrorStream(true)
+        }.run()
 
         val linkerFlag = output.split('\n')
-            .map { it.trim().substringAfter("note: native-static-libs: ", "") }.firstOrNull(String::isNotEmpty)
+            .map { it.trim().substringAfter("note: native-static-libs: ", "") }
+            .firstOrNull(String::isNotEmpty)
 
         return linkerFlag
     }
