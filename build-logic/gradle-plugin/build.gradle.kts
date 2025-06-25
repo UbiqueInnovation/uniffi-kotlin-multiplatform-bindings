@@ -39,8 +39,8 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        create("ch.ubique.uniffi-plugin") {
-            id = "ch.ubique.uniffi-plugin"
+        create("ch.ubique.uniffi.plugin") {
+            id = "ch.ubique.uniffi.plugin"
             implementationClass = "ch.ubique.uniffi.plugin.UniffiPlugin"
         }
     }
@@ -48,7 +48,7 @@ gradlePlugin {
 
 group = "ch.ubique.uniffi"
 description = "Gradle UniFFI Plugin"
-version = "0.0.1337"
+version = "0.2.0"
 
 tasks.publish {
     dependsOn(tasks.publishPlugins)

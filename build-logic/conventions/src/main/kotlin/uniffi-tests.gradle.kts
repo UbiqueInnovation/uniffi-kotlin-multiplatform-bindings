@@ -4,7 +4,7 @@ import org.gradle.accessors.dm.*
 
 plugins {
     kotlin("multiplatform")
-    id("ch.ubique.uniffi-plugin")
+    id("ch.ubique.uniffi.plugin")
 }
 
 uniffi {
