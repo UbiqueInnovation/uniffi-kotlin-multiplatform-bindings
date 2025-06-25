@@ -2,6 +2,7 @@ package ch.ubique.uniffi.plugin.utils
 
 import org.gradle.api.logging.Logger
 import java.io.File
+import java.io.RandomAccessFile
 
 class CargoRunner(
     private val logger: Logger,
@@ -63,9 +64,14 @@ class CargoRunner(
             builder.environment().putAll(environment)
             workingDir?.let { builder.directory(it) }
 
-            val process = builder.start()
-            val output = process.inputStream.bufferedReader().readText()
-            val exitCode = process.waitFor()
+            val lockFile = File(System.getProperty("java.io.tmpdir"), "ch.ubique.rustup.lock")
+
+            val (output, exitCode) = withGlobalFileLock(lockFile) {
+                val process = builder.start()
+                val output = process.inputStream.bufferedReader().readText()
+                val exitCode = process.waitFor()
+                output to exitCode
+            }
 
             check(exitCode == 0) {
                 println(output)
@@ -88,6 +94,14 @@ class CargoRunner(
             stdout + "\n" + stderr
         } else {
             stdout
+        }
+    }
+}
+
+fun <T> withGlobalFileLock(lockFile: File, action: () -> T): T {
+    RandomAccessFile(lockFile, "rw").use { raf ->
+        raf.channel.lock().use {
+            return action()
         }
     }
 }
