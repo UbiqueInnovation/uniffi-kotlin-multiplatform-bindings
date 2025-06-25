@@ -3,6 +3,8 @@ package ch.ubique.uniffi.plugin.utils
 import org.gradle.api.logging.Logger
 import java.io.File
 import java.io.RandomAccessFile
+import java.nio.channels.FileLock
+import java.nio.channels.OverlappingFileLockException
 
 class CargoRunner(
     private val logger: Logger,
@@ -100,8 +102,16 @@ class CargoRunner(
 
 fun <T> withGlobalFileLock(lockFile: File, action: () -> T): T {
     RandomAccessFile(lockFile, "rw").use { raf ->
-        raf.channel.lock().use {
-            return action()
+        val channel = raf.channel
+        var lock: FileLock? = null
+        while (lock == null) {
+            try {
+                lock = channel.tryLock()
+            } catch (e: OverlappingFileLockException) {
+                // Already locked in this JVM – wait and retry
+                Thread.sleep(50)
+            }
         }
+        lock.use { return action() }
     }
 }
