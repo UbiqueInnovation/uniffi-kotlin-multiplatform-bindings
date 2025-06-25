@@ -48,18 +48,17 @@ class CargoRunner(
         val exitCode = process.waitFor()
 
         // Check if maybe just a target is missing and install it using rustup
-        val rustupCommand = stderr.split('\n')
-            .map {
-                it.trim().substringAfter("help: consider downloading the target with `", "")
-                    .substringBefore("`", "")
-            }.firstOrNull(String::isNotEmpty)
+        val targetToInstall = stderr.lineSequence()
+            .mapNotNull {
+                Regex("""consider downloading the target with `rustup target add ([^`]+)`""")
+                    .find(it)?.groupValues?.get(1)
+            }
+            .firstOrNull()
 
-        if (exitCode != 0 && rustupCommand != null) {
-            logger.warn("Failed to run 'cargo ${arguments.joinToString(" ")}' trying to install rustup toolchain using '$rustupCommand'")
+        if (exitCode != 0 && targetToInstall != null) {
+            logger.warn("Failed to run 'cargo ${arguments.joinToString(" ")}' trying to install rustup toolchain using 'rustup target add $targetToInstall'")
 
-            val args = rustupCommand.split(' ')
-
-            val builder = ProcessBuilder(args)
+            val builder = ProcessBuilder(listOf("rustup", "target", "add", targetToInstall))
             builder.redirectErrorStream(true)
             builder.environment().putAll(environment)
             workingDir?.let { builder.directory(it) }
@@ -70,8 +69,8 @@ class CargoRunner(
 
             check(exitCode == 0) {
                 println(output)
-                logger.error("Failed to run '$rustupCommand'")
-                "Failed to run command: '$rustupCommand' with exit code $exitCode"
+                logger.error("Failed to run 'rustup target add $targetToInstall'")
+                "Failed to run command: 'rustup target add $targetToInstall' with exit code $exitCode"
             }
 
             // If the rustup command succeeded, retry the failed command.
