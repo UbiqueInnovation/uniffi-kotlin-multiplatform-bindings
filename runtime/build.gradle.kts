@@ -1,20 +1,26 @@
-import io.gitlab.trixnity.gradle.RustHost
-import io.gitlab.trixnity.gradle.rust.dsl.hostNativeTarget
-import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
+import ch.ubique.uniffi.plugin.extensions.useRustUpLinker
+import ch.ubique.uniffi.plugin.model.RustHost
 
 plugins {
-    kotlin("multiplatform")
-    id("com.android.library")
-    id("maven-publish")
-
-    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform")
-    id("io.gitlab.trixnity.cargo.kotlin.multiplatform")
-    id("io.gitlab.trixnity.rust.kotlin.multiplatform")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.atomicfu)
+    id("ch.ubique.uniffi.plugin")
+
+    `maven-publish`
+}
+
+cargo {
+    packageDirectory = project.layout.projectDirectory
 }
 
 uniffi {
-    bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen-bootstrap"))
+    bindgenFromPath(
+        rootProject.layout.projectDirectory.dir("bindgen-bootstrap"),
+        packageName = "uniffi_bindgen_kotlin_multiplatform_bootstrap"
+    )
+
+    addRuntime = false
 
     generateFromLibrary()
 }
@@ -35,8 +41,6 @@ kotlin {
     androidTarget {
         publishLibraryVariants("release")
     }
-
-    hostNativeTarget()
 
     linuxX64()
     linuxArm64()
@@ -65,6 +69,10 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.kotest.assertions.core)
         }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.annotation)
+        }
     }
 }
 
@@ -80,7 +88,7 @@ android {
 apply(from = "../gradle/artifactory.gradle")
 
 group = "ch.ubique.uniffi"
-version = "0.1.0"
+version = "0.2.0"
 
 publishing {
     repositories {

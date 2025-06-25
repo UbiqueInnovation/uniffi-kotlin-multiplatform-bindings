@@ -4,6 +4,6 @@ plugins {
 
 uniffi {
     generateFromLibrary {
-        namespace = name.replace('-', '_')
+        namespace = name.replace("-", "_")
     }
 }

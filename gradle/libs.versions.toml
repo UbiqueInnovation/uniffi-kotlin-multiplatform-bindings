@@ -1,59 +1,27 @@
 [versions]
+agp = "8.8.2"
+kotlin = "2.1.10"
 
-kotlin = "2.1.0"
-agp = "8.7.3"
-
-gradle-publish = "1.2.1"
-buildconfig = "4.1.2"
-
-kotlinx-serialization = "1.7.3"
-kotlinx-coroutines = "1.9.0"    # Don't forget to change in build-logic/convetions/host-jvm-native-tests.gradle.kts
-kotlinx-atomicfu = "0.25.0"
-kotlinx-datetime = "0.6.0"
-
-androidx-activity-compose = "1.9.3"
 androidx-annotation = "1.8.2"
-
-jna = "5.13.0"
-ktor = "3.0.3"
-okio = "3.9.1"
-compose = "1.7.6"
-compose-runtime = "1.7.6"
-compose-multiplatform = "1.7.1"
-compose-material3 = "1.3.1"
-
+gradle-publish = "1.2.1"
 kotest = "5.8.0"
+kotlinx-coroutines = "1.9.0"
+kotlinx-serialization = "1.8.1"
+shadow = "8.1.1"
 
 [plugins]
-
-android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
-compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
+gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish" }
+kotlin-atomicfu = { id = "org.jetbrains.kotlin.plugin.atomicfu", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-kotlin-atomicfu = { id = "org.jetbrains.kotlin.plugin.atomicfu", version.ref = "kotlin" }
-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish" }
-buildconfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildconfig" }
-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
 
 [libraries]
-
-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
-kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
-kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "kotlinx-atomicfu" }
-kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
-
-androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
-
-jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
-ktor-http = { module = "io.ktor:ktor-http", version.ref = "ktor" }
-okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
-compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose" }
-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "compose" }
-compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }
-compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "compose-material3" }
-
+android-tools-gradle = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
