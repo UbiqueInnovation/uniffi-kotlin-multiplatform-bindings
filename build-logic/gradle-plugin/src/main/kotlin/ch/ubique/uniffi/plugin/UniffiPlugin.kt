@@ -10,6 +10,7 @@ import ch.ubique.uniffi.plugin.services.CargoMetadataService
 import ch.ubique.uniffi.plugin.tasks.BuildBindingsTask
 import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
 import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
+import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
 import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
 import ch.ubique.uniffi.plugin.utils.NdkUtil
 import ch.ubique.uniffi.plugin.utils.targetPackage
@@ -37,6 +38,7 @@ class UniffiPlugin : Plugin<Project> {
 
         private const val INSTALL_BINDGEN_TASK_NAME = "installBindgen"
         private const val BUILD_BINDINGS_TASK_NAME = "buildBindings"
+        private const val GENERATE_DUMMY_DEF_FILE = "generateDummyDefFile"
     }
 
     private lateinit var cargoMetadata: CargoMetadata
@@ -160,10 +162,13 @@ class UniffiPlugin : Plugin<Project> {
         cargoMetadataProvider: Provider<String>
     ) {
         project.tasks.named<InstallBindgenTask>(INSTALL_BINDGEN_TASK_NAME) {
+            bindgenPath.set(project.layout.buildDirectory.dir("bindgen-install"))
+            bindgenTmpPath.set(project.rootProject.layout.buildDirectory.dir("bindgen-install/target"))
             source.set(uniffiExtension.bindgenSource)
         }
 
-        val bindgenName = uniffiExtension.bindgenSource.get().bindgenName ?: Constants.BINDGEN_BIN_NAME
+        val bindgenName =
+            uniffiExtension.bindgenSource.get().bindgenName ?: Constants.BINDGEN_BIN_NAME
 
         project.tasks.named<BuildBindingsTask>(BUILD_BINDINGS_TASK_NAME) {
             packageDirectory.set(cargoExtension.packageDirectory)
@@ -222,11 +227,11 @@ class UniffiPlugin : Plugin<Project> {
                 BuildTarget.WindowsX64,
                 BuildTarget.IosSimulatorArm64, BuildTarget.IosArm64, BuildTarget.IosX64
                     -> configureNativeTarget(
-                        project,
-                        buildTarget,
-                        kmpExtension.sourceSets.getByName(buildTarget.sourceSetName),
-                        kotlinTarget as KotlinNativeTarget,
-                        uniffiExtension.bindingsGeneration.get().namespace.get()
+                    project,
+                    buildTarget,
+                    kmpExtension.sourceSets.getByName(buildTarget.sourceSetName),
+                    kotlinTarget as KotlinNativeTarget,
+                    uniffiExtension.bindingsGeneration.get().namespace.get()
                 )
             }
         }
@@ -386,6 +391,13 @@ class UniffiPlugin : Plugin<Project> {
         val generateDefFileTask = configureGenerateDefFileTask(project, buildTarget)
         val generatedDefFile = generateDefFileTask.get().outputFile
 
+        val dummyDefFile =
+            project.layout.buildDirectory.file("generated/uniffi/nativeInterop/cinterop/dummy.def")
+        val generateDummyDefFileTask =
+            project.tasks.named<GenerateDummyDefFileTask>(GENERATE_DUMMY_DEF_FILE) {
+                this.outputFile.set(dummyDefFile)
+            }
+
         // As native targets need to be configured separately per architecture
         // there should be exactly one rust target for the build target.
         val rustTarget = if (isRelease) {
@@ -405,25 +417,44 @@ class UniffiPlugin : Plugin<Project> {
         )
         val libraryIncludeDir = copyNativeLibsTask.get().destinationDir.path
 
+        val headersDir = project
+            .layout
+            .buildDirectory
+            .dir("generated/uniffi/nativeInterop/cinterop/headers/")
+            .get()
+            .asFile
+        val allHeaders = headersDir.walkTopDown()
+            .filter { it.isFile && it.extension == "h" }
+            .toList()
+
+        val isSync = project.gradle.startParameter.taskNames.isEmpty()
+
         nativeTarget.compilations.getByName("main") {
             cinterops.register("uniffi") {
                 packageName("$namespace.cinterop")
 
-                defFile(generatedDefFile)
+                headers(allHeaders)
+                if (isSync) {
+                    defFile(dummyDefFile)
+                } else {
+                    defFile(generatedDefFile)
 
-                extraOpts(
-                    "-libraryPath",
-                    libraryIncludeDir
-                )
+                    extraOpts(
+                        "-libraryPath",
+                        libraryIncludeDir
+                    )
+                }
 
                 project.tasks.named(interopProcessingTaskName) {
-                    // Generates the .def file
-                    dependsOn(generateDefFileTask)
                     // Generates the headers file
                     dependsOn(BUILD_BINDINGS_TASK_NAME)
 
-                    // Copy native libraries of this is not a sync
-                    if (!project.gradle.startParameter.taskNames.isEmpty()) {
+                    if (isSync) {
+                        dependsOn(generateDummyDefFileTask)
+                    } else {
+                        // Generates the .def file
+                        dependsOn(generateDefFileTask)
+                        // Copy native libraries of this is not a sync
                         dependsOn(copyNativeLibsTask)
                     }
                 }
@@ -635,6 +666,7 @@ class UniffiPlugin : Plugin<Project> {
         for (buildTarget in BuildTarget.entries) {
             project.tasks.register<GenerateDefFileTask>(generateDefFileTaskName(buildTarget))
         }
+        project.tasks.register<GenerateDummyDefFileTask>(GENERATE_DUMMY_DEF_FILE)
     }
 
     /**
@@ -644,17 +676,10 @@ class UniffiPlugin : Plugin<Project> {
         project: Project,
         buildTarget: BuildTarget,
     ): TaskProvider<GenerateDefFileTask> {
-        val headersFile = project
-            .layout
-            .buildDirectory
-            .dir("generated/uniffi/nativeInterop/cinterop/headers/")
-
         val defFile = project
             .layout
             .buildDirectory
-            .file("generated/uniffi/nativeInterop/cinterop/${buildTarget.name}/$libraryName.def")
-
-        val staticLibName = "lib$libraryName.a"
+            .file("generated/uniffi/nativeInterop/cinterop/$libraryName-${buildTarget.name}.def")
 
         // Def files are generated only for native build targets,
         // they should only have exactly one rust target.
@@ -662,10 +687,10 @@ class UniffiPlugin : Plugin<Project> {
             "Native build target has multiple targets"
         }
         val rustTarget = buildTarget.debugTargets[0]
+        val staticLibName = rustTarget.staticLibraryName(libraryName)
 
         val generateDefFileTask =
             project.tasks.named<GenerateDefFileTask>(generateDefFileTaskName(buildTarget)) {
-                this.headers.set(headersFile)
                 this.libraryName.set(staticLibName)
                 this.outputFile.set(defFile)
                 this.packageDirectory.set(cargoExtension.packageDirectory)
@@ -673,14 +698,6 @@ class UniffiPlugin : Plugin<Project> {
 
                 dependsOn(BUILD_BINDINGS_TASK_NAME)
             }
-
-        project.gradle.taskGraph.whenReady {
-            val includeStatic = allTasks.any { it.name.contains("link", ignoreCase = true) }
-
-            generateDefFileTask.configure {
-                includeStaticLib.set(includeStatic)
-            }
-        }
 
         return generateDefFileTask
     }

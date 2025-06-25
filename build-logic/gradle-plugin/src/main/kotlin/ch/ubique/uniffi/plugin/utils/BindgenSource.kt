@@ -3,26 +3,26 @@ package ch.ubique.uniffi.plugin.utils
 import java.io.Serializable
 
 sealed class BindgenSource(
-    val bindgenName: String?,
-    val packageName: String?,
+    open val bindgenName: String?,
+    open val packageName: String?,
 ) : Serializable {
-    class Registry(
-        packageName: String,
+    data class Registry(
+        override val packageName: String,
         val version: String,
-        bindgenName: String? = null,
+        override val bindgenName: String? = null,
     ) : BindgenSource(bindgenName, packageName), Serializable
 
-    class Path(
+    data class Path(
         val path: String,
-        bindgenName: String? = null,
-        packageName: String? = null,
+        override val bindgenName: String? = null,
+        override val packageName: String? = null,
     ) : BindgenSource(bindgenName, packageName), Serializable
 
-    class Git(
+    data class Git(
         val repository: String,
         val commit: Commit? = null,
-        bindgenName: String? = null,
-        packageName: String? = null,
+        override val bindgenName: String? = null,
+        override val packageName: String? = null,
     ) : BindgenSource(bindgenName, packageName), Serializable {
         sealed interface Commit : Serializable {
             data class Branch(val branch: String) : Commit, Serializable

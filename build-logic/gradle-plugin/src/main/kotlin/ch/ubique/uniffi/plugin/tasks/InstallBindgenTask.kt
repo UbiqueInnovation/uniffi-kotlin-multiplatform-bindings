@@ -3,18 +3,21 @@ package ch.ubique.uniffi.plugin.tasks
 import ch.ubique.uniffi.plugin.Constants
 import ch.ubique.uniffi.plugin.utils.BindgenSource
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
+@CacheableTask
 abstract class InstallBindgenTask : DefaultTask() {
 
-    @OutputDirectory
-    val bindgenPath = project.layout.buildDirectory.dir("bindgen-install")
+    @get:OutputDirectory
+    abstract val bindgenPath: DirectoryProperty
 
-    @OutputDirectory
-    val bindgenTmpPath = project.rootProject.layout.buildDirectory.dir("bindgen-install/target")
+    @get:OutputDirectory
+    abstract val bindgenTmpPath: DirectoryProperty
 
     @get:Input
     abstract val source: Property<BindgenSource>
@@ -59,13 +62,13 @@ abstract class InstallBindgenTask : DefaultTask() {
             }
         }
 
-        if (source.bindgenName != null) {
+        source.bindgenName?.let {
             arguments.add("--bin")
-            arguments.add(source.bindgenName)
+            arguments.add(it)
         }
 
-        if (source.packageName != null) {
-            arguments.add(source.packageName)
+        source.packageName?.let {
+            arguments.add(it)
         }
 
         val processBuilder = ProcessBuilder(arguments)
