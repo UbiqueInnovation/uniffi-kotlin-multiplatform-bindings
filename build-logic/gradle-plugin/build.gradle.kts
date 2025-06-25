@@ -50,6 +50,8 @@ group = "ch.ubique.uniffi"
 description = "Gradle UniFFI Plugin"
 version = "0.2.0"
 
+apply(from = "../../gradle/artifactory.gradle")
+
 tasks.publish {
     dependsOn(tasks.publishPlugins)
 }
