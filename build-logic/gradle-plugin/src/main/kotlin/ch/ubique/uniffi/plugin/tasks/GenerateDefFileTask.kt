@@ -43,7 +43,7 @@ abstract class GenerateDefFileTask : DefaultTask() {
     }
 
     private fun getLinkerOpts(): String? {
-        val output = CargoRunner {
+        val output = CargoRunner(logger) {
             argument("rustc")
             argument("--target")
             argument(targetString.get())

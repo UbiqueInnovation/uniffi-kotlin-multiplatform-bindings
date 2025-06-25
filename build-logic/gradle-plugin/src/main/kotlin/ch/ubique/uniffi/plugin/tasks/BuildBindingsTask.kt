@@ -57,7 +57,7 @@ abstract class BuildBindingsTask : DefaultTask() {
 
     private fun cargoBuild(packageName: String) {
         // TODO: Allow specification of target
-        CargoRunner {
+        CargoRunner(logger) {
             argument("build")
             argument("--package")
             argument(packageName)

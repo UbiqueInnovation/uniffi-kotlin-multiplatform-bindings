@@ -1,8 +1,10 @@
 package ch.ubique.uniffi.plugin.utils
 
+import org.gradle.api.logging.Logger
 import java.io.File
 
 class CargoRunner(
+    private val logger: Logger,
     action: CargoRunner.() -> Unit = {}
 ) {
     private val arguments: MutableList<String> = mutableListOf()
@@ -53,6 +55,8 @@ class CargoRunner(
             }.firstOrNull(String::isNotEmpty)
 
         if (exitCode != 0 && rustupCommand != null) {
+            logger.warn("Failed to run 'cargo ${arguments.joinToString(" ")}' trying to install rustup toolchain using '$rustupCommand'")
+
             val args = rustupCommand.split(' ')
 
             val builder = ProcessBuilder(args)
@@ -66,6 +70,7 @@ class CargoRunner(
 
             check(exitCode == 0) {
                 println(output)
+                logger.error("Failed to run '$rustupCommand'")
                 "Failed to run command: '$rustupCommand' with exit code $exitCode"
             }
 
@@ -76,6 +81,7 @@ class CargoRunner(
         check(exitCode == 0) {
             println(stdout)
             println(stderr)
+            logger.error("Failed to run 'cargo ${arguments.joinToString(" ")}'")
             "Failed to run 'cargo ${arguments.joinToString(" ")}' with exit code $exitCode"
         }
 

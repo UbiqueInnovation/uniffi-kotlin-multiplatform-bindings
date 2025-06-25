@@ -56,7 +56,7 @@ abstract class CargoBuildTask : DefaultTask() {
 
     @TaskAction
     fun build() {
-        CargoRunner {
+        CargoRunner(logger) {
             argument("build")
             argument("--target")
             argument(triple.get())

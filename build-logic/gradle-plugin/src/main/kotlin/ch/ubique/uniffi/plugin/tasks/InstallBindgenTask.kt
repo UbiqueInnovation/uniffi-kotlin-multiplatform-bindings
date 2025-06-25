@@ -23,7 +23,7 @@ abstract class InstallBindgenTask : DefaultTask() {
 
     @TaskAction
     fun action() {
-        CargoRunner {
+        CargoRunner(logger) {
             argument("install")
             argument("--root")
             argument(bindgenPath.asFile.get().path)
