@@ -9,6 +9,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.mapProperty
@@ -32,6 +33,7 @@ abstract class CargoBuildTask : DefaultTask() {
             include("Cargo.toml", "Cargo.lock")
         }
 
+    @get:Optional
     @get:Input
     abstract val triple: Property<String>
 
@@ -58,8 +60,10 @@ abstract class CargoBuildTask : DefaultTask() {
     fun build() {
         CargoRunner(logger) {
             argument("build")
-            argument("--target")
-            argument(triple.get())
+            if (triple.isPresent) {
+                argument("--target")
+                argument(triple.get())
+            }
             argument("--package")
             argument(packageName.get())
 

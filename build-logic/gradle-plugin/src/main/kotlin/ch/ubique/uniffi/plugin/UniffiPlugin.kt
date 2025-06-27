@@ -37,6 +37,7 @@ class UniffiPlugin : Plugin<Project> {
         private const val KOTLIN_MULTIPLATFORM_PLUGIN_ID = "org.jetbrains.kotlin.multiplatform"
 
         private const val INSTALL_BINDGEN_TASK_NAME = "installBindgen"
+        private const val BUILD_LIB_FOR_BINDINGS_TASK_NAME = "buildLibraryForBindings"
         private const val BUILD_BINDINGS_TASK_NAME = "buildBindings"
         private const val GENERATE_DUMMY_DEF_FILE = "generateDummyDefFile"
     }
@@ -151,6 +152,8 @@ class UniffiPlugin : Plugin<Project> {
     private fun registerBindgenTasks(project: Project) {
         project.tasks.register<InstallBindgenTask>(INSTALL_BINDGEN_TASK_NAME)
 
+        project.tasks.register<CargoBuildTask>(BUILD_LIB_FOR_BINDINGS_TASK_NAME)
+
         project.tasks.register<BuildBindingsTask>(BUILD_BINDINGS_TASK_NAME)
     }
 
@@ -170,11 +173,34 @@ class UniffiPlugin : Plugin<Project> {
         val bindgenName =
             uniffiExtension.bindgenSource.get().bindgenName ?: Constants.BINDGEN_BIN_NAME
 
+        val cargoOutputDir =
+            project.objects.directoryProperty().fileValue(File(cargoMetadata.targetDirectory))
+                .dir("debug")
+
+        val outputDir = project.layout.buildDirectory.dir("bindgen-libs")
+
+        project.tasks.named<CargoBuildTask>(BUILD_LIB_FOR_BINDINGS_TASK_NAME) {
+            this.packageDirectory.set(cargoExtension.packageDirectory)
+            this.release.set(false)
+            this.packageName.set(targetPackage.name)
+            this.libraryName.set(this@UniffiPlugin.libraryName)
+            this.cargoOutputDirectory.set(cargoOutputDir)
+            this.outputDirectory.set(outputDir)
+        }
+
+        val libFile = outputDir.map {
+            it.file(
+                BuildTarget.RustTarget.forCurrentPlatform.dynamicLibraryName(libraryName)!!
+            )
+        }
+
         project.tasks.named<BuildBindingsTask>(BUILD_BINDINGS_TASK_NAME) {
             packageDirectory.set(cargoExtension.packageDirectory)
             cargoMetadata.set(cargoMetadataProvider)
             bindgen.set(project.layout.buildDirectory.file("bindgen-install/bin/$bindgenName"))
+            libraryFile.set(libFile)
 
+            dependsOn(BUILD_LIB_FOR_BINDINGS_TASK_NAME)
             dependsOn(INSTALL_BINDGEN_TASK_NAME)
         }
     }

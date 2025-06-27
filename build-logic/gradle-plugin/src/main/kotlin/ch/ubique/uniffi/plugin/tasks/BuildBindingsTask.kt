@@ -21,10 +21,6 @@ abstract class BuildBindingsTask : DefaultTask() {
     @get:Internal
     abstract val packageDirectory: DirectoryProperty
 
-    @get:Input
-    val packageDirectoryPath: String
-        get() = packageDirectory.get().asFile.absolutePath
-
     @get:InputFiles
     val rustSources: FileTree
         get() = packageDirectory.get().asFileTree.matching {
@@ -35,6 +31,9 @@ abstract class BuildBindingsTask : DefaultTask() {
 
     @get:InputFile
     abstract val bindgen: RegularFileProperty
+
+    @get:InputFile
+    abstract val libraryFile: RegularFileProperty
 
     @get:Input
     abstract val cargoMetadata: Property<String>
@@ -48,45 +47,14 @@ abstract class BuildBindingsTask : DefaultTask() {
 
         val targetPackage = metadata.targetPackage
 
-        cargoBuild(targetPackage.name)
-
-        val libraryPath = getPathToLibrary(metadata, targetPackage)
-
-        buildBindings(libraryPath, targetPackage.targets[0].name)
+        buildBindings(targetPackage.targets[0].name)
     }
 
-    private fun cargoBuild(packageName: String) {
-        // TODO: Allow specification of target
-        CargoRunner(logger) {
-            argument("build")
-            argument("--package")
-            argument(packageName)
-        }.run()
-    }
-
-
-    private fun getPathToLibrary(
-        metadata: CargoMetadata,
-        targetPackage: CargoMetadata.Package
-    ): File {
-        val targetLib = targetPackage.targets.first()
-
-        val crateName = targetLib.name
-
-        // TODO: Make sure this works cross platform
-        val libraryName =
-            targetLib.kinds.first { it.isNormalLibrary() }.crateType.outputFileNameForMacOS(
-                crateName
-            )
-
-        return File("${metadata.targetDirectory}/debug/$libraryName")
-    }
-
-    private fun buildBindings(libraryPath: File, crateName: String) {
+    private fun buildBindings(crateName: String) {
         val process = ProcessBuilder(
             bindgen.get().asFile.path,
             "--library",
-            libraryPath.path,
+            libraryFile.get().asFile.path,
             "--out-dir",
             bindingsDirectory.get().asFile.path,
             "--crate",
