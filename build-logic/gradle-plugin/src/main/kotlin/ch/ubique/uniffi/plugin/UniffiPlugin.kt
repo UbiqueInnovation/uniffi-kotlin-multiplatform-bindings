@@ -587,7 +587,7 @@ class UniffiPlugin : Plugin<Project> {
                             target.rustTriple,
                             target.ndkLlvmTriple
                         )
-                        this.additionalEnvironment.set(ndkEnv)
+                        // this.additionalEnvironment.set(ndkEnv)
                     }
                 }
             }
