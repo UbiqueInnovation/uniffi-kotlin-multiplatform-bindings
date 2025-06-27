@@ -6,6 +6,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -24,15 +25,24 @@ abstract class GenerateDefFileTask : DefaultTask() {
     @get:Input
     abstract val targetString: Property<String>
 
+    @get:InputDirectory
+    abstract val headersDir: DirectoryProperty
+
     @TaskAction
     fun generateDefFile() {
         val output = outputFile.get().asFile
 
         val libraryName = libraryName.get()
 
+        val allHeaders = headersDir.get().asFile.walkTopDown()
+            .filter { it.isFile && it.extension == "h" }
+            .toList()
+            .joinToString(" ")
+
         output.writeText(
             """
             staticLibraries = $libraryName
+            headers = $allHeaders
             """.trimIndent()
         )
 

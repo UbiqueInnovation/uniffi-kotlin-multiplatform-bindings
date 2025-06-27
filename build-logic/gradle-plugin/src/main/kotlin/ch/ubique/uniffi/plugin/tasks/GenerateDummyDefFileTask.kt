@@ -19,12 +19,25 @@ abstract class GenerateDummyDefFileTask : DefaultTask() {
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
 
+    @get:InputDirectory
+    abstract val headersDir: DirectoryProperty
+
     @TaskAction
     fun generateDefFile() {
         val output = outputFile.get().asFile
+
+        val allHeaders = headersDir.get().asFile.walkTopDown()
+            .filter { it.isFile && it.extension == "h" }
+            .toList()
+            .joinToString(" ")
+
         if (!output.exists()) {
             output.parentFile.mkdirs()
-            output.writeText("")
+            output.writeText(
+                """
+                headers = $allHeaders
+                """.trimIndent()
+            )
         }
     }
 }

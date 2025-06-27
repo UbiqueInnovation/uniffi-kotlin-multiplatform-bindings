@@ -423,23 +423,12 @@ class UniffiPlugin : Plugin<Project> {
         )
         val libraryIncludeDir = copyNativeLibsTask.get().destinationDir.path
 
-        val headersDir = project
-            .layout
-            .buildDirectory
-            .dir("generated/uniffi/nativeInterop/cinterop/headers/")
-            .get()
-            .asFile
-        val allHeaders = headersDir.walkTopDown()
-            .filter { it.isFile && it.extension == "h" }
-            .toList()
-
         val isSync = project.gradle.startParameter.taskNames.isEmpty()
 
         nativeTarget.compilations.getByName("main") {
             cinterops.register("uniffi") {
                 packageName("$namespace.cinterop")
 
-                headers(allHeaders)
                 if (isSync) {
                     defFile(dummyDefFile)
                 } else {
@@ -690,12 +679,19 @@ class UniffiPlugin : Plugin<Project> {
         val rustTarget = buildTarget.checkedNativeTarget
         val staticLibName = rustTarget.staticLibraryName(libraryName)
 
+        val headersDir = project
+            .layout
+            .buildDirectory
+            .dir("generated/uniffi/nativeInterop/cinterop/headers/")
+
         val generateDefFileTask =
             project.tasks.named<GenerateDefFileTask>(generateDefFileTaskName(buildTarget)) {
                 this.libraryName.set(staticLibName)
                 this.outputFile.set(defFile)
                 this.packageDirectory.set(cargoExtension.packageDirectory)
                 this.targetString.set(rustTarget.rustTriple)
+                this.headersDir.set(headersDir)
+
 
                 dependsOn(BUILD_BINDINGS_TASK_NAME)
             }
@@ -710,8 +706,16 @@ class UniffiPlugin : Plugin<Project> {
         val dummyDefFile =
             project.layout.buildDirectory.file("generated/uniffi/nativeInterop/cinterop/dummy.def")
 
+        val headersDir = project
+            .layout
+            .buildDirectory
+            .dir("generated/uniffi/nativeInterop/cinterop/headers/")
+
         project.tasks.named<GenerateDummyDefFileTask>(GENERATE_DUMMY_DEF_FILE) {
             this.outputFile.set(dummyDefFile)
+            this.headersDir.set(headersDir)
+
+            dependsOn(BUILD_BINDINGS_TASK_NAME)
         }
     }
 
