@@ -132,7 +132,12 @@ enum class BuildTarget(
         /**
          * The LLVM triple prefix of the ABI, which is used by the LLVM toolchain in NDK.
          */
-        val ndkLlvmTriple: String = rustTriple
+        val ndkLlvmTriple: String = rustTriple,
+
+        /**
+         * Use `cross` to compile the the library.
+         */
+        val useCross: Boolean = false,
     ) {
         // iOS
         Aarch64AppleIos("aarch64-apple-ios", "ios-aarch64"),
@@ -144,8 +149,16 @@ enum class BuildTarget(
         X64AppleDarwin("x86_64-apple-darwin", "darwin-amd64"),
 
         // Linux
-        Aarch64LinuxGnu("aarch64-unknown-linux-gnu", "linux-aarch64"),
-        X64LinuxGnu("x86_64-unknown-linux-gnu", "linux-amd64"),
+        Aarch64LinuxGnu(
+            "aarch64-unknown-linux-gnu",
+            "linux-aarch64",
+            useCross = true,
+        ),
+        X64LinuxGnu(
+            "x86_64-unknown-linux-gnu",
+            "linux-amd64",
+            useCross = true,
+        ),
 
         // Windows
         Aarch64WindowsMsvc("aarch64-pc-windows-msvc", "win32-aarch64"),
@@ -153,14 +166,25 @@ enum class BuildTarget(
         X64WindowsGnu("x86_64-pc-windows-gnu", "win32-amd64"),
 
         // Android
-        Aarch64Android("aarch64-linux-android", "android-aarch64", apkLibraryPath = "arm64-v8a"),
+        Aarch64Android(
+            "aarch64-linux-android",
+            "android-aarch64",
+            apkLibraryPath = "arm64-v8a",
+            useCross = true,
+        ),
         ArmV7Android(
             "armv7-linux-androideabi",
             "android-arm",
             apkLibraryPath = "armeabi-v7a",
-            ndkLlvmTriple = "armv7a-linux-androideabi"
+            ndkLlvmTriple = "armv7a-linux-androideabi",
+            useCross = true,
         ),
-        X64Android("x86_64-linux-android", "android-x86-64", apkLibraryPath = "x86_64");
+        X64Android(
+            "x86_64-linux-android",
+            "android-x86-64",
+            apkLibraryPath = "x86_64",
+            useCross = true,
+        );
 
         fun dynamicLibraryName(packageName: String): String? = when (this) {
             Aarch64AppleDarwin, X64AppleDarwin, Aarch64AppleIosSimulator, Aarch64AppleIos, X64AppleIos ->

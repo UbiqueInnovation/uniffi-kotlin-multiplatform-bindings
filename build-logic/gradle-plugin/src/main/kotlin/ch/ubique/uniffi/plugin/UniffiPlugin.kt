@@ -186,6 +186,7 @@ class UniffiPlugin : Plugin<Project> {
             this.libraryName.set(this@UniffiPlugin.libraryName)
             this.cargoOutputDirectory.set(cargoOutputDir)
             this.outputDirectory.set(outputDir)
+            this.useCross.set(false)
         }
 
         val libFile = outputDir.map {
@@ -570,6 +571,7 @@ class UniffiPlugin : Plugin<Project> {
                     this.libraryName.set(this@UniffiPlugin.libraryName)
                     this.cargoOutputDirectory.set(cargoOutputDir)
                     this.outputDirectory.set(outputDir)
+                    this.useCross.set(target.useCross)
 
                     if (target.isAndroid && androidExtension != null) {
                         val sdkRoot = androidExtension.sdkDirectory
@@ -717,7 +719,7 @@ class UniffiPlugin : Plugin<Project> {
                 this.packageDirectory.set(cargoExtension.packageDirectory)
                 this.targetString.set(rustTarget.rustTriple)
                 this.headersDir.set(headersDir)
-
+                this.useCross.set(rustTarget.useCross)
 
                 dependsOn(BUILD_BINDINGS_TASK_NAME)
             }

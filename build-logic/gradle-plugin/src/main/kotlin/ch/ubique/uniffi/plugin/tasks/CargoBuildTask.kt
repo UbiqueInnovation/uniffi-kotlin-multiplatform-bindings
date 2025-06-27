@@ -56,9 +56,12 @@ abstract class CargoBuildTask : DefaultTask() {
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
 
+    @get:Input
+    abstract val useCross: Property<Boolean>
+
     @TaskAction
     fun build() {
-        CargoRunner(logger) {
+        CargoRunner(logger, useCross = useCross.get()) {
             argument("build")
             if (triple.isPresent) {
                 argument("--target")

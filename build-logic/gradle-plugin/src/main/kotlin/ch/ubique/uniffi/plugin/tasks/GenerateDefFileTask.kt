@@ -28,6 +28,9 @@ abstract class GenerateDefFileTask : DefaultTask() {
     @get:InputDirectory
     abstract val headersDir: DirectoryProperty
 
+    @get:Input
+    abstract val useCross: Property<Boolean>
+
     @TaskAction
     fun generateDefFile() {
         val output = outputFile.get().asFile
@@ -53,7 +56,7 @@ abstract class GenerateDefFileTask : DefaultTask() {
     }
 
     private fun getLinkerOpts(): String? {
-        val output = CargoRunner(logger) {
+        val output = CargoRunner(logger, useCross = useCross.get()) {
             argument("rustc")
             argument("--target")
             argument(targetString.get())

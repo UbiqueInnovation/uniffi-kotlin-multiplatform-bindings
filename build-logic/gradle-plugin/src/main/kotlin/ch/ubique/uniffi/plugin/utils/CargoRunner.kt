@@ -8,7 +8,8 @@ import java.nio.channels.OverlappingFileLockException
 
 class CargoRunner(
     private val logger: Logger,
-    action: CargoRunner.() -> Unit = {}
+    private val useCross: Boolean = false,
+    action: CargoRunner.() -> Unit = {},
 ) {
     private val arguments: MutableList<String> = mutableListOf()
 
@@ -39,7 +40,9 @@ class CargoRunner(
     }
 
     fun run(): String {
-        val builder = ProcessBuilder(listOf("cargo") + arguments)
+        val command = if (useCross) { "cross" } else { "cargo" }
+
+        val builder = ProcessBuilder(listOf(command) + arguments)
         builder.redirectErrorStream(false)
         builder.environment().putAll(environment)
         workingDir?.let { builder.directory(it) }
