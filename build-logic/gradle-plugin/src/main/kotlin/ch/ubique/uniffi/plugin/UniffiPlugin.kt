@@ -508,30 +508,22 @@ class UniffiPlugin : Plugin<Project> {
         for (buildTarget in BuildTarget.entries) {
             for (dynamic in listOf<Boolean>(true, false)) {
                 // For debug targets
-                buildTarget.debugTargets.forEach { rustTarget ->
+                buildTarget.debugTargetsAll.forEach { rustTarget ->
                     val copyTaskName =
                         copyNativeLibrariesTaskName(rustTarget, buildTarget, false, dynamic)
                     project.tasks.register<Copy>(copyTaskName)
                 }
                 // For release targets
-                buildTarget.releaseTargets.forEach { rustTarget ->
+                buildTarget.releaseTargetsAll.forEach { rustTarget ->
                     val copyTaskName =
                         copyNativeLibrariesTaskName(rustTarget, buildTarget, true, dynamic)
                     project.tasks.register<Copy>(copyTaskName)
                 }
 
                 // Create a unified task that copies all the libraries for the buildTarget (debug)
-                project.tasks.register(copyNativeLibrariesTaskName(buildTarget, false, dynamic)) {
-                    dependsOn(buildTarget.debugTargets.map {
-                        copyNativeLibrariesTaskName(it, buildTarget, false, dynamic)
-                    })
-                }
+                project.tasks.register(copyNativeLibrariesTaskName(buildTarget, false, dynamic))
                 // Create a unified task that copies all the libraries for the buildTarget (release)
-                project.tasks.register(copyNativeLibrariesTaskName(buildTarget, true, dynamic)) {
-                    dependsOn(buildTarget.releaseTargets.map {
-                        copyNativeLibrariesTaskName(it, buildTarget, true, dynamic)
-                    })
-                }
+                project.tasks.register(copyNativeLibrariesTaskName(buildTarget, true, dynamic))
             }
         }
     }
@@ -605,7 +597,7 @@ class UniffiPlugin : Plugin<Project> {
         for (buildTarget in BuildTarget.entries) {
             for (dynamic in listOf<Boolean>(true, false)) {
                 // For debug targets
-                buildTarget.debugTargets.forEach { rustTarget ->
+                buildTarget.debugTargetsAll.forEach { rustTarget ->
                     configureCopyNativeLibrariesTask(
                         project,
                         buildOutputDir,
@@ -617,7 +609,7 @@ class UniffiPlugin : Plugin<Project> {
                     )
                 }
                 // For release targets
-                buildTarget.releaseTargets.forEach { rustTarget ->
+                buildTarget.releaseTargetsAll.forEach { rustTarget ->
                     configureCopyNativeLibrariesTask(
                         project,
                         buildOutputDir,
@@ -627,6 +619,37 @@ class UniffiPlugin : Plugin<Project> {
                         dynamic,
                         targetPackage.targets.first().name
                     )
+                }
+            }
+        }
+
+        val abiFilters = androidExtension?.defaultConfig?.ndk?.abiFilters?.toList() ?: listOf()
+
+        for (buildTarget in BuildTarget.entries) {
+            for (dynamic in listOf<Boolean>(true, false)) {
+                val debugTargets = if (buildTarget == BuildTarget.Android && abiFilters.isNotEmpty()) {
+                    buildTarget.debugTargets.filter { abiFilters.contains(it.abiName) }
+                } else {
+                    buildTarget.debugTargets
+                } + buildTarget.baseTargets
+
+                val releaseTargets = if (buildTarget == BuildTarget.Android && abiFilters.isNotEmpty()) {
+                    buildTarget.releaseTargets.filter { abiFilters.contains(it.abiName) }
+                } else {
+                    buildTarget.releaseTargets
+                } + buildTarget.baseTargets
+
+                // Create a unified task that copies all the libraries for the buildTarget (debug)
+                project.tasks.named(copyNativeLibrariesTaskName(buildTarget, false, dynamic)) {
+                    dependsOn(debugTargets.map {
+                        copyNativeLibrariesTaskName(it, buildTarget, false, dynamic)
+                    })
+                }
+                // Create a unified task that copies all the libraries for the buildTarget (release)
+                project.tasks.named(copyNativeLibrariesTaskName(buildTarget, true, dynamic)) {
+                    dependsOn(releaseTargets.map {
+                        copyNativeLibrariesTaskName(it, buildTarget, true, dynamic)
+                    })
                 }
             }
         }
@@ -649,7 +672,7 @@ class UniffiPlugin : Plugin<Project> {
         } else {
             buildDir.map { it.dir("${rustTarget.rustTriple}/debug") }
         }
-        val outputDir = if (rustTarget.apkLibraryPath != null) {
+        val outputDir = if (rustTarget.abiName != null) {
             project
                 .layout
                 .buildDirectory
@@ -658,7 +681,7 @@ class UniffiPlugin : Plugin<Project> {
                         releaseString(
                             release
                         )
-                    }/${rustTarget.apkLibraryPath}"
+                    }/${rustTarget.abiName}"
                 )
         } else {
             project

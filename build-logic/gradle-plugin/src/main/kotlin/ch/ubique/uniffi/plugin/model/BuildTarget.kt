@@ -22,6 +22,11 @@ enum class BuildTarget(
     val releaseTargets: List<RustTarget>,
 
     /**
+     * An additional set of targets to always build.
+     */
+    val baseTargets: List<RustTarget> = listOf(),
+
+    /**
      * Build with the dynamic library
      */
     val useDynamicLib: Boolean? = null
@@ -44,16 +49,17 @@ enum class BuildTarget(
     Android(
         sourceSetName = "androidMain",
         targetName = "android",
+        baseTargets = listOf(
+            // For executing "android (local)" tests
+            RustTarget.forCurrentPlatform,
+        ),
         debugTargets = listOf(
             RustTarget.androidTargetForCurrentPlatform,
-            RustTarget.forCurrentPlatform
         ),
         releaseTargets = listOf(
             RustTarget.Aarch64Android,
             RustTarget.X64Android,
             RustTarget.ArmV7Android,
-            // When executing tests in release mode
-            RustTarget.forCurrentPlatform,
         ),
     ),
 
@@ -125,9 +131,9 @@ enum class BuildTarget(
         val jarLibraryPath: String,
 
         /**
-         * Where the native library should be located within the APK, such that JNI can find it.
+         * ABI Name of the target. Also used by JNI to find the correct library.
          */
-        val apkLibraryPath: String? = null,
+        val abiName: String? = null,
 
         /**
          * The LLVM triple prefix of the ABI, which is used by the LLVM toolchain in NDK.
@@ -162,18 +168,18 @@ enum class BuildTarget(
         Aarch64Android(
             "aarch64-linux-android",
             "android-aarch64",
-            apkLibraryPath = "arm64-v8a",
+            abiName = "arm64-v8a",
         ),
         ArmV7Android(
             "armv7-linux-androideabi",
             "android-arm",
-            apkLibraryPath = "armeabi-v7a",
+            abiName = "armeabi-v7a",
             ndkLlvmTriple = "armv7a-linux-androideabi",
         ),
         X64Android(
             "x86_64-linux-android",
             "android-x86-64",
-            apkLibraryPath = "x86_64",
+            abiName = "x86_64",
         );
 
         fun dynamicLibraryName(packageName: String): String? = when (this) {
@@ -280,7 +286,13 @@ enum class BuildTarget(
     }
 
     val targets: List<RustTarget>
-        get() = (debugTargets + releaseTargets).distinct()
+        get() = (baseTargets + debugTargets + releaseTargets).distinct()
+
+    val debugTargetsAll: List<RustTarget>
+        get() = baseTargets + debugTargets
+
+    val releaseTargetsAll: List<RustTarget>
+        get() = baseTargets + releaseTargets
 
     val checkedNativeTarget: RustTarget
         get() {
