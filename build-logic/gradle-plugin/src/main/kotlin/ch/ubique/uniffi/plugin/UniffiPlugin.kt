@@ -550,6 +550,8 @@ class UniffiPlugin : Plugin<Project> {
         // This task will run `cargo build --target <target>`
         // for the corresponding target.
         for (target in BuildTarget.RustTarget.entries) {
+            val config = cargoExtension.compilations.getByName(target.name)
+
             for (release in listOf<Boolean>(true, false)) {
                 val taskName = cargoBuildTaskName(target, release)
                 val cargoOutputDir = if (release) {
@@ -571,7 +573,7 @@ class UniffiPlugin : Plugin<Project> {
                     this.libraryName.set(this@UniffiPlugin.libraryName)
                     this.cargoOutputDirectory.set(cargoOutputDir)
                     this.outputDirectory.set(outputDir)
-                    this.useCross.set(target.useCross)
+                    this.useCross.set(config.useCross)
 
                     if (target.isAndroid && androidExtension != null) {
                         val sdkRoot = androidExtension.sdkDirectory
@@ -587,7 +589,11 @@ class UniffiPlugin : Plugin<Project> {
                             target.rustTriple,
                             target.ndkLlvmTriple
                         )
-                        // this.additionalEnvironment.set(ndkEnv)
+
+                        if (!config.useCross.get()) {
+                            // When using cross, it will manage the correct environmental variables
+                            this.additionalEnvironment.set(ndkEnv)
+                        }
                     }
                 }
             }
@@ -712,6 +718,8 @@ class UniffiPlugin : Plugin<Project> {
             .buildDirectory
             .dir("generated/uniffi/nativeInterop/cinterop/headers/")
 
+        val config = cargoExtension.compilations.getByName(rustTarget.name)
+
         val generateDefFileTask =
             project.tasks.named<GenerateDefFileTask>(generateDefFileTaskName(buildTarget)) {
                 this.libraryName.set(staticLibName)
@@ -719,7 +727,7 @@ class UniffiPlugin : Plugin<Project> {
                 this.packageDirectory.set(cargoExtension.packageDirectory)
                 this.targetString.set(rustTarget.rustTriple)
                 this.headersDir.set(headersDir)
-                this.useCross.set(rustTarget.useCross)
+                this.useCross.set(config.useCross)
 
                 dependsOn(BUILD_BINDINGS_TASK_NAME)
             }

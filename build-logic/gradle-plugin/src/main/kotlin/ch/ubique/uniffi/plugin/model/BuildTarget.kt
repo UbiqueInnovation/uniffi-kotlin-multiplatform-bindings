@@ -133,11 +133,6 @@ enum class BuildTarget(
          * The LLVM triple prefix of the ABI, which is used by the LLVM toolchain in NDK.
          */
         val ndkLlvmTriple: String = rustTriple,
-
-        /**
-         * Use `cross` to compile the the library.
-         */
-        val useCross: Boolean = false,
     ) {
         // iOS
         Aarch64AppleIos("aarch64-apple-ios", "ios-aarch64"),
@@ -152,12 +147,10 @@ enum class BuildTarget(
         Aarch64LinuxGnu(
             "aarch64-unknown-linux-gnu",
             "linux-aarch64",
-            useCross = true,
         ),
         X64LinuxGnu(
             "x86_64-unknown-linux-gnu",
             "linux-amd64",
-            useCross = true,
         ),
 
         // Windows
@@ -170,20 +163,17 @@ enum class BuildTarget(
             "aarch64-linux-android",
             "android-aarch64",
             apkLibraryPath = "arm64-v8a",
-            useCross = true,
         ),
         ArmV7Android(
             "armv7-linux-androideabi",
             "android-arm",
             apkLibraryPath = "armeabi-v7a",
             ndkLlvmTriple = "armv7a-linux-androideabi",
-            useCross = true,
         ),
         X64Android(
             "x86_64-linux-android",
             "android-x86-64",
             apkLibraryPath = "x86_64",
-            useCross = true,
         );
 
         fun dynamicLibraryName(packageName: String): String? = when (this) {
