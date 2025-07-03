@@ -451,6 +451,7 @@ class UniffiPlugin : Plugin<Project> {
         val libraryIncludeDir = copyNativeLibsTask.get().destinationDir.path
 
         val isSync = project.gradle.startParameter.taskNames.isEmpty()
+                && (project.findProperty("forceBuildNativeLibs") != "true")
 
         nativeTarget.compilations.getByName("main") {
             cinterops.register("uniffi") {
