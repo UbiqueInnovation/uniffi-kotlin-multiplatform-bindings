@@ -142,12 +142,12 @@ enum class BuildTarget(
     ) {
         // iOS
         Aarch64AppleIos("aarch64-apple-ios", "ios-aarch64"),
-        X64AppleIos("x86_64-apple-ios", "ios-amd64"),
+        X64AppleIos("x86_64-apple-ios", "ios-x64"),
         Aarch64AppleIosSimulator("aarch64-apple-ios-sim", "ios-sim-aarch64"),
 
         // MacOS
         Aarch64AppleDarwin("aarch64-apple-darwin", "darwin-aarch64"),
-        X64AppleDarwin("x86_64-apple-darwin", "darwin-amd64"),
+        X64AppleDarwin("x86_64-apple-darwin", "darwin-x64"),
 
         // Linux
         Aarch64LinuxGnu(
@@ -156,13 +156,13 @@ enum class BuildTarget(
         ),
         X64LinuxGnu(
             "x86_64-unknown-linux-gnu",
-            "linux-amd64",
+            "linux-x64",
         ),
 
         // Windows
         Aarch64WindowsMsvc("aarch64-pc-windows-msvc", "win32-aarch64"),
-        X64WindowsMsvc("x86_64-pc-windows-msvc", "win32-amd64"),
-        X64WindowsGnu("x86_64-pc-windows-gnu", "win32-amd64"),
+        X64WindowsMsvc("x86_64-pc-windows-msvc", "win32-x64"),
+        X64WindowsGnu("x86_64-pc-windows-gnu", "win32-x64"),
 
         // Android
         Aarch64Android(

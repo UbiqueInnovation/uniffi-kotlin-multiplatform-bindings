@@ -48,7 +48,7 @@ gradlePlugin {
 
 group = "ch.ubique.uniffi"
 description = "Gradle UniFFI Plugin"
-version = "0.2.11"
+version = "0.2.12"
 
 apply(from = "../../gradle/artifactory.gradle")
 
