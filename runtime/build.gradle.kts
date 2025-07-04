@@ -88,7 +88,7 @@ android {
 apply(from = "../gradle/artifactory.gradle")
 
 group = "ch.ubique.uniffi"
-version = "0.2.1"
+version = "0.2.2"
 
 publishing {
     repositories {
