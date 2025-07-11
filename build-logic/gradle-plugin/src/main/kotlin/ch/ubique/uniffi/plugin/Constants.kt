@@ -12,7 +12,7 @@ object Constants {
     const val BINDGEN_BIN_NAME = "uniffi-bindgen-kotlin-multiplatform"
     const val BINDGEN_PACKAGE_NAME = "uniffi_bindgen_kotlin_multiplatform"
 
-    const val RUNTIME_VERSION = "0.2.2"
+    const val RUNTIME_VERSION = PluginVersions.RUNTIME_VERSION
     const val JNA_VERSION = "5.17.0"
     const val ATOMICFU_VERSION = "0.25.0"
     const val OKIO_VERSION = "3.9.1"

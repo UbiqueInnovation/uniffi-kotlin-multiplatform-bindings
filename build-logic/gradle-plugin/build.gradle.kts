@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlinx.serialization)
     alias(libs.plugins.gradle.publish)
+    alias(libs.plugins.buildconfig)
 }
 
 tasks.shadowJar {
@@ -48,10 +49,24 @@ gradlePlugin {
 
 group = "ch.ubique.uniffi"
 description = "Gradle UniFFI Plugin"
-version = "0.2.14"
+version = getProjectVersion()
 
 apply(from = "../../gradle/artifactory.gradle")
 
 tasks.publish {
     dependsOn(tasks.publishPlugins)
+}
+
+private fun getProjectVersion(): String {
+    val versionFromGradleProperties = property("VERSION").toString()
+    val versionFromWorkflow = runCatching { property("githubRefName").toString().removePrefix("v") }.getOrNull()
+    return versionFromWorkflow ?: versionFromGradleProperties
+}
+
+buildConfig {
+    packageName = "ch.ubique.uniffi.plugin"
+
+    forClass("PluginVersions") {
+        buildConfigField("String", "RUNTIME_VERSION", "\"${version}\"")
+    }
 }

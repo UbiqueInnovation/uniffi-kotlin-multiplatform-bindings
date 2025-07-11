@@ -88,7 +88,7 @@ android {
 apply(from = "../gradle/artifactory.gradle")
 
 group = "ch.ubique.uniffi"
-version = "0.2.2"
+version = getProjectVersion()
 
 publishing {
     repositories {
@@ -96,4 +96,10 @@ publishing {
             mavenLocal()
         }
     }
+}
+
+private fun getProjectVersion(): String {
+    val versionFromGradleProperties = property("VERSION").toString()
+    val versionFromWorkflow = runCatching { property("githubRefName").toString().removePrefix("v") }.getOrNull()
+    return versionFromWorkflow ?: versionFromGradleProperties
 }

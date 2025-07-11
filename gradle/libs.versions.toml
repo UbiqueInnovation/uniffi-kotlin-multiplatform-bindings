@@ -3,6 +3,7 @@ agp = "8.8.2"
 kotlin = "2.1.10"
 
 androidx-annotation = "1.8.2"
+buildconfig = "4.1.2"
 gradle-publish = "1.2.1"
 kotest = "5.8.0"
 kotlinx-coroutines = "1.9.0"
@@ -11,6 +12,7 @@ shadow = "8.1.1"
 
 [plugins]
 android-library = { id = "com.android.library", version.ref = "agp" }
+buildconfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildconfig" }
 gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish" }
 kotlin-atomicfu = { id = "org.jetbrains.kotlin.plugin.atomicfu", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
