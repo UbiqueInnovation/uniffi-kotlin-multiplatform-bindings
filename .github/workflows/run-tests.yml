@@ -58,6 +58,6 @@ jobs:
 
       - name: Build and Test
         run: |
-          source $HOME/.cargo/env
+          . $HOME/.cargo/env
           cargo test
           ./gradlew build
