@@ -25,7 +25,7 @@ jobs:
         run: |
           echo "${{secrets.MAVEN_SIGNING_KEY_ARMOR_ASC}}" > ./signingkey.asc
           gpg --quiet --output $GITHUB_WORKSPACE/signingkey.gpg --dearmor ./signingkey.asc
-          ./gradlew :build-logic:gradle-plugin:publishAndReleaseToMavenCentral -Psigning.secretKeyRingFile=$GITHUB_WORKSPACE/signingkey.gpg -Psigning.password='${{secrets.MAVEN_SIGNING_KEY_PASSPHRASE}}' -Psigning.keyId=${{secrets.MAVEN_SIGNING_KEY_ID}} -PmavenCentralUsername=${{secrets.MAVEN_CENTRAL_USERNAME}} -PmavenCentralPassword=${{secrets.MAVEN_CENTRAL_PASSWORD}} -PgithubRefName=${{ github.ref_name }}
+          ./gradlew :build-logic:gradle-plugin:publishAndReleaseToMavenCentral -Psigning.secretKeyRingFile=$GITHUB_WORKSPACE/signingkey.gpg -Psigning.password='${{secrets.MAVEN_SIGNING_KEY_PASSPHRASE}}' -Psigning.keyId=${{secrets.MAVEN_SIGNING_KEY_ID}} -PmavenCentralUsername=${{secrets.MAVEN_CENTRAL_USERNAME}} -PmavenCentralPassword=${{secrets.MAVEN_CENTRAL_PASSWORD}} -PgithubRefName=${{ github.ref_name }} --no-configuration-cache
 
   publish-runtime:
     runs-on: macos-15-xlarge
@@ -66,4 +66,4 @@ jobs:
         run: |
           echo "${{secrets.MAVEN_SIGNING_KEY_ARMOR_ASC}}" > ./signingkey.asc
           gpg --quiet --output $GITHUB_WORKSPACE/signingkey.gpg --dearmor ./signingkey.asc
-          ./gradlew :runtime:publishAndReleaseToMavenCentral -Psigning.secretKeyRingFile=$GITHUB_WORKSPACE/signingkey.gpg -Psigning.password='${{secrets.MAVEN_SIGNING_KEY_PASSPHRASE}}' -Psigning.keyId=${{secrets.MAVEN_SIGNING_KEY_ID}} -PmavenCentralUsername=${{secrets.MAVEN_CENTRAL_USERNAME}} -PmavenCentralPassword=${{secrets.MAVEN_CENTRAL_PASSWORD}} -PgithubRefName=${{ github.ref_name }} -PreleaseBuild=true    
+          ./gradlew :runtime:publishAndReleaseToMavenCentral -Psigning.secretKeyRingFile=$GITHUB_WORKSPACE/signingkey.gpg -Psigning.password='${{secrets.MAVEN_SIGNING_KEY_PASSPHRASE}}' -Psigning.keyId=${{secrets.MAVEN_SIGNING_KEY_ID}} -PmavenCentralUsername=${{secrets.MAVEN_CENTRAL_USERNAME}} -PmavenCentralPassword=${{secrets.MAVEN_CENTRAL_PASSWORD}} -PgithubRefName=${{ github.ref_name }} -PreleaseBuild=true --no-configuration-cache
