@@ -13,24 +13,28 @@ jobs:
     runs-on: large-runner
     container:
       image: ubuntu:22.04
+    env:
+      PATH: ${{ github.workspace }}/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      CARGO_HOME: ${{ github.workspace }}/.cargo
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-      
+
       - name: Install Dependencies
         run: |
           apt update && apt install -y \
             build-essential binutils sdkmanager \
             gcc-mingw-w64 mingw-w64-x86-64-dev \
-            libgtk-4-dev wget perl libssl-dev && \
+            libgtk-4-dev wget perl libssl-dev \
+            git curl unzip
           rm -rf /var/lib/apt/lists/*
-      
+
       - name: Install Zig
         run: |
           export ZIG_VERSION=0.12.1 && \
@@ -43,14 +47,18 @@ jobs:
           mkdir -p $HOME/.cargo && \
           echo "[target.aarch64-unknown-linux-gnu]
           linker = \"$HOME/zig/aarch64-unknown-linux-gnu-cc.sh\"" > $HOME/.cargo/config.toml
-      
+
+      - name: Install rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
       - name: Install Android SDK
         run: |
           mkdir -p $HOME/android-sdk
           export ANDROID_HOME=$HOME/android-sdk
           yes | sdkmanager --install "build-tools;34.0.0" "platforms;android-34" "ndk;28.1.13356709"
           yes | sdkmanager --licenses
-      
+
       - name: Build and Test
         run: |
           cargo test
