@@ -5,9 +5,9 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.atomicfu)
-    id("ch.ubique.uniffi.plugin")
-
     `maven-publish`
+    alias(libs.plugins.maven.publish)
+    id("ch.ubique.uniffi.plugin")
 }
 
 cargo {
@@ -87,7 +87,8 @@ android {
 
 apply(from = "../gradle/artifactory.gradle")
 
-group = "ch.ubique.uniffi"
+group = property("GROUP").toString()
+description = property("POM_DESCRIPTION").toString()
 version = getProjectVersion()
 
 publishing {
@@ -96,6 +97,11 @@ publishing {
             mavenLocal()
         }
     }
+}
+
+mavenPublishing {
+    publishToMavenCentral(true)
+    signAllPublications()
 }
 
 private fun getProjectVersion(): String {

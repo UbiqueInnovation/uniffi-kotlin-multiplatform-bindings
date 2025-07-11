@@ -1,3 +1,4 @@
+import com.vanniktech.maven.publish.GradlePublishPlugin
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -9,6 +10,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlinx.serialization)
     alias(libs.plugins.gradle.publish)
+    alias(libs.plugins.maven.publish)
     alias(libs.plugins.buildconfig)
 }
 
@@ -47,14 +49,21 @@ gradlePlugin {
     }
 }
 
-group = "ch.ubique.uniffi"
-description = "Gradle UniFFI Plugin"
+group = property("GROUP").toString()
+description = property("POM_DESCRIPTION").toString()
 version = getProjectVersion()
-
-apply(from = "../../gradle/artifactory.gradle")
 
 tasks.publish {
     dependsOn(tasks.publishPlugins)
+}
+
+mavenPublishing {
+    configure(GradlePublishPlugin())
+
+    coordinates(property("GROUP").toString(), property("ARTIFACT_ID").toString(), project.version.toString())
+
+    publishToMavenCentral(true)
+    signAllPublications()
 }
 
 private fun getProjectVersion(): String {
