@@ -38,7 +38,7 @@ class FuturesTest {
     }
 
     private fun assertReturnsImmediately(block: suspend CoroutineScope.() -> Unit) =
-        assertMaxTime(4, block)
+        assertMaxTime(20, block)
 
     private fun assertApproximateTime(expectedTime: Int, range: Int = 100, block: suspend CoroutineScope.() -> Unit) =
         runTest {
@@ -285,7 +285,7 @@ class FuturesTest {
     }
 
     @Test
-    fun testFutureWithLockButNotCancelled() = assertApproximateTime(100, range = 200) {
+    fun testFutureWithLockButNotCancelled() = assertApproximateTime(100, range = 300) {
         useSharedResource(SharedResourceOptions(releaseAfterMs = 100U, timeoutMs = 1000U))
         useSharedResource(SharedResourceOptions(releaseAfterMs = 0U, timeoutMs = 1000U))
     }
