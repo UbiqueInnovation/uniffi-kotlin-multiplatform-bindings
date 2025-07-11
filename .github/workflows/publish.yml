@@ -27,7 +27,7 @@ jobs:
           ./gradlew :build-logic:gradle-plugin:publishAndReleaseToMavenCentral -Psigning.secretKeyRingFile=$GITHUB_WORKSPACE/signingkey.gpg -Psigning.password='${{secrets.MAVEN_SIGNING_KEY_PASSPHRASE}}' -Psigning.keyId=${{secrets.MAVEN_SIGNING_KEY_ID}} -PmavenCentralUsername=${{secrets.MAVEN_CENTRAL_USERNAME}} -PmavenCentralPassword=${{secrets.MAVEN_CENTRAL_PASSWORD}} -PgithubRefName=${{ github.ref_name }}
 
   publish-runtime:
-    runs-on: ["self-hosted", "macOS"]
+    runs-on: macos-15-xlarge
     steps:
       - uses: actions/checkout@v4
 
