@@ -1,0 +1,22 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@ubique-innovation/wasm-share-memory':
+        specifier: ^0.1.2
+        version: 0.1.2
+
+packages:
+
+  '@ubique-innovation/wasm-share-memory@0.1.2':
+    resolution: {integrity: sha512-XZ5K4LkEUbfFmmV0yAJ+ePswyLMFBhRxPC+3VtwuJhuRHcRFbitOXe2NF4OftwJk5aX64D3gYLqUmYgpsLMe8g==}
+
+snapshots:
+
+  '@ubique-innovation/wasm-share-memory@0.1.2': {}

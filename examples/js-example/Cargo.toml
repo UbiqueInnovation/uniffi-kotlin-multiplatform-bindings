@@ -1,0 +1,13 @@
+[package]
+name = "uniffi-kmm-js-example"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "uniffi_kmm_js_example"
+crate-type = ["cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[dependencies]
+uniffi = { workspace = true }

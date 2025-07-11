@@ -46,6 +46,7 @@ members = [
     "examples/arithmetic-procmacro",
     "examples/audio-cpp-app",
     "examples/custom-types",
+    "examples/js-example",
     "examples/todolist",
     "examples/tokio-blake3-app",
 ]

@@ -1,0 +1,12 @@
+{
+  "name": "js-example-usage",
+  "version": "0.1.0",
+  "main": "src/commonMain/javascript/index.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node src/commonMain/javascript/index.mjs"
+  },
+  "dependencies": {
+    "@ubique-innovation/wasm-share-memory": "^0.1.2"
+  }
+}
