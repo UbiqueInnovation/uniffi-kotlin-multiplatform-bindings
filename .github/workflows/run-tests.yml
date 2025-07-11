@@ -48,7 +48,7 @@ jobs:
         run: |
           mkdir -p $HOME/android-sdk
           export ANDROID_HOME=$HOME/android-sdk
-          yes | sdkmanager --install "build-tools;34.0.0" "platforms;android-34" "ndk;28.0.12433566"
+          yes | sdkmanager --install "build-tools;34.0.0" "platforms;android-34" "ndk;28.1.13356709"
           yes | sdkmanager --licenses
       
       - name: Build and Test
