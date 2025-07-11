@@ -13,9 +13,6 @@ jobs:
     runs-on: large-runner
     container:
       image: ubuntu:22.04
-    env:
-      PATH: ${{ github.workspace }}/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-      CARGO_HOME: ${{ github.workspace }}/.cargo
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -61,5 +58,6 @@ jobs:
 
       - name: Build and Test
         run: |
+          source $HOME/.cargo/env
           cargo test
           ./gradlew build
