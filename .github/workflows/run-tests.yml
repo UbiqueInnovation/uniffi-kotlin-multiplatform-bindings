@@ -25,11 +25,11 @@ jobs:
       
       - name: Install Dependencies
         run: |
-          sudo apt update && sudo apt install -y \
+          apt update && apt install -y \
             build-essential binutils sdkmanager \
             gcc-mingw-w64 mingw-w64-x86-64-dev \
             libgtk-4-dev wget perl libssl-dev && \
-          sudo rm -rf /var/lib/apt/lists/*
+          rm -rf /var/lib/apt/lists/*
       
       - name: Install Zig
         run: |
