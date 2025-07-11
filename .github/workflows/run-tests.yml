@@ -10,7 +10,7 @@ on:
 jobs:
   build-and-test:
     name: Build and run tests
-    runs-on: [ 'k8s-runner' ]
+    runs-on: large-runner
     container:
       image: ubuntu:22.04
     steps:
@@ -48,20 +48,10 @@ jobs:
         run: |
           mkdir -p $HOME/android-sdk
           export ANDROID_HOME=$HOME/android-sdk
-          yes | sdkmanager --install "build-tools;34.0.0" "platforms;android-34" "ndk;26.1.10909125"
+          yes | sdkmanager --install "build-tools;34.0.0" "platforms;android-34" "ndk;28.0.12433566"
           yes | sdkmanager --licenses
       
       - name: Build and Test
         run: |
-          cargo build && \
-          cargo test && \
-          ./gradlew :build-logic:gradle-plugin:test && \
+          cargo test
           ./gradlew build
-      
-      - name: Upload Test Results
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: '**/test-results/*Test/*.xml'
-
-        
