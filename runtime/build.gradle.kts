@@ -101,7 +101,12 @@ publishing {
 
 mavenPublishing {
     publishToMavenCentral(true)
-    signAllPublications()
+
+    val disableSigning = hasProperty("disableSigning") && property("disableSigning") == "true"
+
+    if (!disableSigning) {
+        signAllPublications()
+    }
 }
 
 private fun getProjectVersion(): String {
