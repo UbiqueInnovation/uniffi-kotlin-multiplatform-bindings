@@ -29,7 +29,7 @@ enum class BuildTarget(
     /**
      * Build with the dynamic library
      */
-    val useDynamicLib: Boolean? = null
+    val useDynamicLib: Boolean? = null,
 ) {
     Jvm(
         sourceSetName = "jvmMain",
@@ -53,9 +53,7 @@ enum class BuildTarget(
             // For executing "android (local)" tests
             RustTarget.forCurrentPlatform,
         ),
-        debugTargets = listOf(
-            RustTarget.androidTargetForCurrentPlatform,
-        ),
+        debugTargets = RustTarget.androidTargetForCurrentPlatform,
         releaseTargets = listOf(
             RustTarget.Aarch64Android,
             RustTarget.X64Android,
@@ -265,21 +263,21 @@ enum class BuildTarget(
                     }
                 }
 
-            val androidTargetForCurrentPlatform: RustTarget
+            val androidTargetForCurrentPlatform: List<RustTarget>
                 get() = when (RustHost.Platform.current) {
                     RustHost.Platform.MacOS -> when (RustHost.Arch.current) {
-                        RustHost.Arch.Arm64 -> Aarch64Android
-                        RustHost.Arch.X64 -> X64Android
+                        RustHost.Arch.Arm64 -> listOf(Aarch64Android)
+                        RustHost.Arch.X64 -> listOf(X64Android, Aarch64Android)
                     }
 
                     RustHost.Platform.Linux -> when (RustHost.Arch.current) {
-                        RustHost.Arch.Arm64 -> Aarch64Android
-                        RustHost.Arch.X64 -> X64Android
+                        RustHost.Arch.Arm64 -> listOf(Aarch64Android)
+                        RustHost.Arch.X64 -> listOf(X64Android, Aarch64Android)
                     }
 
                     RustHost.Platform.Windows -> when (RustHost.Arch.current) {
-                        RustHost.Arch.Arm64 -> Aarch64Android
-                        RustHost.Arch.X64 -> X64Android
+                        RustHost.Arch.Arm64 -> listOf(Aarch64Android)
+                        RustHost.Arch.X64 -> listOf(X64Android, Aarch64Android)
                     }
                 }
         }
