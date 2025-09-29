@@ -32,6 +32,9 @@ abstract class UniffiExtension(internal val project: Project) {
     val addRuntime: Property<Boolean> =
         project.objects.property<Boolean>().convention(true)
 
+    val addDependencies: Property<Boolean> =
+        project.objects.property<Boolean>().convention(true)
+
     /**
      * Install the bindgen of the given [version] from the given [registry]. If [registry] is not specified, this will
      * download the bindgen from `crates.io`.

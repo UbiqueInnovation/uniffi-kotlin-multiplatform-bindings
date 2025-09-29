@@ -223,10 +223,12 @@ class UniffiPlugin : Plugin<Project> {
                 implementation("ch.ubique.uniffi:runtime:${Constants.RUNTIME_VERSION}")
             }
 
-            implementation("com.squareup.okio:okio:${Constants.OKIO_VERSION}")
-            implementation("org.jetbrains.kotlinx:atomicfu:${Constants.ATOMICFU_VERSION}")
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Constants.COROUTINES_VERSION}")
-            implementation("org.jetbrains.kotlinx:kotlinx-datetime:${Constants.DATETIME_VERSION}")
+            if (uniffiExtension.addDependencies.get()) {
+                implementation("com.squareup.okio:okio:${Constants.OKIO_VERSION}")
+                implementation("org.jetbrains.kotlinx:atomicfu:${Constants.ATOMICFU_VERSION}")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Constants.COROUTINES_VERSION}")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:${Constants.DATETIME_VERSION}")
+            }
         }
 
         val targets = kmpExtension.targets
