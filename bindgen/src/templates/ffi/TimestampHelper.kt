@@ -1,10 +1,10 @@
 
-internal object FfiConverterTimestamp: FfiConverterRustBuffer<kotlinx.datetime.Instant> {
-    override fun read(buf: ByteBuffer): kotlinx.datetime.Instant {
+internal object FfiConverterTimestamp: FfiConverterRustBuffer<kotlin.time.Instant> {
+    override fun read(buf: ByteBuffer): kotlin.time.Instant {
         val seconds = buf.getLong()
         val nanoseconds = buf.getInt()
 
-        val instant = kotlinx.datetime.Instant.fromEpochSeconds(
+        val instant = kotlin.time.Instant.fromEpochSeconds(
             seconds,
             // UniFFI negates nanoseconds when epochSeconds is negative. See #37 for details.
             if (seconds >= 0) nanoseconds else -nanoseconds,
@@ -16,9 +16,9 @@ internal object FfiConverterTimestamp: FfiConverterRustBuffer<kotlinx.datetime.I
     }
 
     // 8 bytes for seconds, 4 bytes for nanoseconds
-    override fun allocationSize(value: kotlinx.datetime.Instant) = 12UL
+    override fun allocationSize(value: kotlin.time.Instant) = 12UL
 
-    override fun write(value: kotlinx.datetime.Instant, buf: ByteBuffer) {
+    override fun write(value: kotlin.time.Instant, buf: ByteBuffer) {
         if (value.nanosecondsOfSecond < 0) {
             throw IllegalArgumentException("Invalid timestamp, nano value must be non-negative")
         }

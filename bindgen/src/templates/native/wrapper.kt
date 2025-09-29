@@ -10,7 +10,8 @@
     "unused",
     "RemoveRedundantQualifierName",
     "UnnecessaryOptInAnnotation"
-)@file:OptIn(ExperimentalForeignApi::class)
+)
+@file:OptIn(ExperimentalForeignApi::class, kotlin.time.ExperimentalTime::class)
 
 
 package {{ config.package_name() }}

@@ -10,6 +10,7 @@
     "RemoveRedundantQualifierName",
     "UnnecessaryOptInAnnotation"
 )
+@file:OptIn(kotlin.time.ExperimentalTime::class)
 
 package {{ config.package_name() }}
 

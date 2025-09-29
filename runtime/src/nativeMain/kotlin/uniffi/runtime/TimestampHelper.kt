@@ -1,6 +1,9 @@
+@file:OptIn(ExperimentalTime::class)
+
 package uniffi.runtime
 
-import kotlinx.datetime.Instant
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 object FfiConverterTimestamp: FfiConverterRustBuffer<Instant> {
     override fun read(buf: ByteBuffer): Instant {
