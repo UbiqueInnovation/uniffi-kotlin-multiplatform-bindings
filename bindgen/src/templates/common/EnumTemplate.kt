@@ -75,7 +75,7 @@ object {{ type_name }}PolySerializer : kotlinx.serialization.json.JsonContentPol
         var alternativeFieldName = ""
 
         {%- for variant in e.variants() -%}
-        {%- if variant.has_fields() -%}
+        {% if variant.has_fields() %}
         
         if ( element !is kotlinx.serialization.json.JsonObject) {
             is{{ variant|variant_type_name(ci) }} = false
