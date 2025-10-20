@@ -77,10 +77,6 @@ object {{ type_name }}PolySerializer : kotlinx.serialization.json.JsonContentPol
         {%- for variant in e.variants() -%}
         {% if variant.has_fields() %}
         
-        if ( element !is kotlinx.serialization.json.JsonObject) {
-            is{{ variant|variant_type_name(ci) }} = false
-        }
-
         {%- for field in variant.fields() -%}
 
             {%- let fieldNameInternal = field.name()|var_name|unquote %}
@@ -91,7 +87,8 @@ object {{ type_name }}PolySerializer : kotlinx.serialization.json.JsonContentPol
             {%- if fieldNameInternal != ""  -%}
                 {%- let is_optional = field|is_optional -%}
                 {%- if !is_optional %}
-                        if ( element is kotlinx.serialization.json.JsonObject && !element.containsKey(fieldName) && !element.containsKey(alternativeFieldName)) {
+                        if ((element is kotlinx.serialization.json.JsonObject && !element.containsKey(fieldName) && !element.containsKey(alternativeFieldName))
+                                || (element !is kotlinx.serialization.json.JsonObject)) {
                             is{{ variant|variant_type_name(ci) }} = false
                         }
                 {%- endif -%}
