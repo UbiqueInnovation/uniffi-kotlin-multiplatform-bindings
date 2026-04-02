@@ -457,7 +457,7 @@ class UniffiPlugin : Plugin<Project> {
 
         nativeTarget.compilations.getByName("main") {
             cinterops.register("uniffi") {
-                packageName("$namespace.cinterop")
+                packageName("cinterop")
 
                 if (isSync) {
                     defFile(dummyDefFile)

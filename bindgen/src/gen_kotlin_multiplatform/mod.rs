@@ -148,7 +148,8 @@ impl Config {
     pub fn import_helper_namespace(&self) -> Vec<String> {
         self.import_pointer_from
             .as_ref()
-            .cloned().unwrap_or_default()
+            .cloned()
+            .unwrap_or_default()
     }
 
     pub(crate) fn use_enum_entries(&self) -> bool {
@@ -203,7 +204,12 @@ pub struct MultiplatformBindings {
     pub jvm: String,
     pub android: String,
     pub native: String,
-    pub header: String,
+    pub headers: NativeHeaderBindings,
+}
+
+pub struct NativeHeaderBindings {
+    pub namespace_header: String,
+    pub common_header: String,
 }
 
 // Generate kotlin bindings for the given ComponentInterface, as a string.
@@ -227,16 +233,25 @@ pub fn generate_bindings(
         .render()
         .context("failed to render Kotlin/Native bindings")?;
 
-    let header = HeaderKotlinWrapper::new(config.clone(), ci)
+    let namespace_header = HeaderKotlinWrapper::new(config.clone(), ci)
         .render()
         .context("failed to render Kotlin/Native header")?;
+
+    let common_header = CommonHeaderKotlinWrapper::new(config.clone(), ci)
+        .render()
+        .context("failed to render common Kotlin header")?;
+
+    let headers = NativeHeaderBindings {
+        namespace_header,
+        common_header,
+    };
 
     Ok(MultiplatformBindings {
         common,
         jvm,
         android,
         native,
-        header,
+        headers,
     })
 }
 
@@ -482,6 +497,33 @@ pub struct HeaderKotlinWrapper<'ci> {
 impl<'ci> HeaderKotlinWrapper<'ci> {
     pub fn new(config: Config, ci: &'ci ComponentInterface) -> Self {
         Self { config, ci }
+    }
+
+    pub fn ffi_definitions_no_builtins(&self) -> impl Iterator<Item = FfiDefinition> + '_ {
+        self.ci
+            .ffi_definitions()
+            .filter(|d| !FFI_BUILTINS.contains(&d.name()))
+    }
+}
+
+#[derive(Template)]
+#[template(syntax = "c", escape = "none", path = "headers/common.h")]
+#[allow(dead_code)]
+pub struct CommonHeaderKotlinWrapper<'ci> {
+    #[allow(dead_code)]
+    config: Config,
+    ci: &'ci ComponentInterface,
+}
+
+impl<'ci> CommonHeaderKotlinWrapper<'ci> {
+    pub fn new(config: Config, ci: &'ci ComponentInterface) -> Self {
+        Self { config, ci }
+    }
+
+    pub fn ffi_definitions_builtins(&self) -> impl Iterator<Item = FfiDefinition> + '_ {
+        self.ci
+            .ffi_definitions()
+            .filter(|d| FFI_BUILTINS.contains(&d.name()))
     }
 }
 

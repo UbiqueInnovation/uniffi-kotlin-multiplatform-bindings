@@ -166,7 +166,7 @@
 {%- macro arg_list_ffi_call(func) %}
     {%- for arg in func.arguments() %}
         {%- if arg.type_().borrow()|is_callback -%}
-        {{ arg.name()|var_name }} as {{ci.namespace()}}.cinterop.{{ arg.type_().borrow()|ffi_type_name_for_ffi_callback }}
+        {{ arg.name()|var_name }} as cinterop.{{ arg.type_().borrow()|ffi_type_name_for_ffi_callback }}
         {%- else -%}
         {{- arg.name()|var_name }}
         {%- endif -%}

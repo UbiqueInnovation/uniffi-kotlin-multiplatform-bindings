@@ -57,8 +57,8 @@ abstract class BuildBindingsTask : DefaultTask() {
             libraryFile.get().asFile.path,
             "--out-dir",
             bindingsDirectory.get().asFile.path,
-            "--crate",
-            crateName
+            // "--crate",
+            // crateName
         )
             .directory(packageDirectory.asFile.get())
             .redirectErrorStream(true)

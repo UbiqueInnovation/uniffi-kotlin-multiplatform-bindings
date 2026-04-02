@@ -1801,6 +1801,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "uniffi-kmm-fixture-ext-types-simple"
+version = "0.1.0"
+dependencies = [
+ "uniffi",
+ "uniffi-kmm-fixture-build-common",
+ "uniffi-kmm-fixture-ext-types-simple-external-lib",
+]
+
+[[package]]
+name = "uniffi-kmm-fixture-ext-types-simple-external-lib"
+version = "0.1.0"
+dependencies = [
+ "uniffi",
+ "uniffi-kmm-fixture-build-common",
+]
+
+[[package]]
 name = "uniffi-kmm-fixture-futures"
 version = "0.21.0"
 dependencies = [

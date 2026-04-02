@@ -19,6 +19,8 @@ members = [
     "tests/uniffi/docstring-proc-macro",
     "tests/uniffi/enum-types",
     "tests/uniffi/error-types",
+    "tests/uniffi/ext-types/simple/external-lib",
+    "tests/uniffi/ext-types/simple",
     # Temporarily disable ext-types test.
     # TODO:
     #   1. Properly handle external types in headers

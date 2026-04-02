@@ -52,6 +52,8 @@ include(":tests:uniffi:error-types")
 // include(":tests:uniffi:ext-types:sub-lib")
 // include(":tests:uniffi:ext-types:uniffi-one")
 
+include(":tests:uniffi:ext-types:simple")
+
 include(":tests:uniffi:futures")
 include(":tests:uniffi:keywords")
 include(":tests:uniffi:multi-module:combined")

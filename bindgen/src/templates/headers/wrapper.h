@@ -3,12 +3,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-
-{% include "RustBufferTemplate.h" %}
-
-{% include "Helpers.h" %}
+#include "common/common.h"
 
 {% include "Types.h" %}
 
-{% include "NamespaceLibraryTemplate.h" %}
-
+{% include "FfiDefinitions.h" %}

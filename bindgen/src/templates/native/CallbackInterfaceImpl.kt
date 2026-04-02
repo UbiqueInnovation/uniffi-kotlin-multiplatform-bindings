@@ -41,7 +41,7 @@ internal object {{ trait_impl }} {
 
         {%- else %}
         val uniffiHandleSuccess = { {% if meth.return_type().is_some() %}returnValue{% else %}_{% endif %}: {% match meth.return_type() %}{%- when Some(return_type) %}{{ return_type|type_name(ci) }}{%- when None %}Unit{% endmatch %} ->
-            val uniffiResult = cValue<uniffi_runtime.cinterop.{{ meth.foreign_future_ffi_result_struct().name()|ffi_struct_name }}> {
+            val uniffiResult = cValue<cinterop.{{ meth.foreign_future_ffi_result_struct().name()|ffi_struct_name }}> {
                 {%- if let Some(return_type) = meth.return_type() %}
                 {%- match return_type.into() %}
                 {%- when FfiType::RustBuffer(_) %}
@@ -57,7 +57,7 @@ internal object {{ trait_impl }} {
             uniffiFutureCallback.invoke(uniffiCallbackData, uniffiResult)
         }
         val uniffiHandleError = { callStatus: UniffiRustCallStatusByValue ->
-            val uniffiResult = cValue<uniffi_runtime.cinterop.{{ meth.foreign_future_ffi_result_struct().name()|ffi_struct_name }}> {
+            val uniffiResult = cValue<cinterop.{{ meth.foreign_future_ffi_result_struct().name()|ffi_struct_name }}> {
                 {%- if let Some(return_type) = meth.return_type() %}
                 {%- match return_type.into() %}
                 {%- when FfiType::RustBuffer(_) %}
@@ -97,7 +97,7 @@ internal object {{ trait_impl }} {
         {{ ffi_converter_name }}.handleMap.remove(handle)
     }
 
-    internal val vtable = nativeHeap.alloc<{{ci.namespace()}}.cinterop.{{ vtable|ffi_type_name }}> {
+    internal val vtable = nativeHeap.alloc<cinterop.{{ vtable|ffi_type_name }}> {
         {%- for (ffi_callback, meth) in vtable_methods.iter() %}
         this.{{ meth.name()|var_name }} = staticCFunction {
             {%- for arg in ffi_callback.arguments() -%}
@@ -123,11 +123,11 @@ internal object {{ trait_impl }} {
                 uniffiCallStatus,
                 {%- endif -%}
             )
-        } as {{ ci.namespace() }}.cinterop.{{ ffi_callback.name()|ffi_callback_name }}
+        } as cinterop.{{ ffi_callback.name()|ffi_callback_name }}
         {%- endfor %}
         this.uniffiFree = staticCFunction { handle: Long ->
             {{ trait_impl }}.uniffiFree(handle)
-        } as {{ ci.namespace() }}.cinterop.{{ "CallbackInterfaceFree"|ffi_callback_name }}
+        } as cinterop.{{ "CallbackInterfaceFree"|ffi_callback_name }}
     }.ptr
 
     internal fun register(lib: UniffiLib) {
