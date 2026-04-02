@@ -20,7 +20,7 @@ anyhow = { workspace = true }
 askama = { version = "0.12.1", default-features = false, features = ["config"] }
 camino = { workspace = true }
 cargo_metadata = "0.15.0"
-clap = { version = "4.5.7", features = ["derive", "cargo", "std"] }
+clap = { version = "=4.5.7", features = ["derive", "cargo", "std"] }
 fs-err = "2.11.0"
 heck = "0.5.0"
 paste = "1.0.15"
