@@ -1,3 +1,5 @@
-namespace external {
+namespace external_lib {};
 
+dictionary MyStruct {
+	i32 value;
 };

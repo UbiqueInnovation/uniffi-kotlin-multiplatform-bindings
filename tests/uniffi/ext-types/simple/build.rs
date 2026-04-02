@@ -5,5 +5,5 @@
  */
 
 fn main() {
-    // uniffi_kmm_fixture_build_common::generate_scaffolding_from_current_dir();
+    uniffi_kmm_fixture_build_common::generate_scaffolding_from_current_dir();
 }
