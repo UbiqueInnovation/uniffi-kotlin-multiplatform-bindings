@@ -133,7 +133,7 @@ Per default, these dependencies are added:
 | Dependency                                    | Version |
 | --------------------------------------------- | ------- |
 | com.squareup.okio:okio                        | 3.9.1   |
-| org.jetbrains.kotlinx:atomicfu                | 0.25.0  |
+| org.jetbrains.kotlinx:atomicfu                | 0.32.1  |
 | org.jetbrains.kotlinx:kotlinx-coroutines-core | 1.9.0   |
 | org.jetbrains.kotlinx:kotlinx-datetime        | 0.7.1   |
 
