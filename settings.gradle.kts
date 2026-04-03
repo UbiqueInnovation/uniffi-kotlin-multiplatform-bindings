@@ -57,3 +57,4 @@ include(":tests:uniffi:trait-methods")
 include(":tests:uniffi:type-limits")
 
 include(":examples:custom-types")
+include(":examples:quickstart")
