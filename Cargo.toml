@@ -7,11 +7,7 @@ members = [
 
     "tests/build-common",
 
-    "tests/gradle/android-linking",
-    "tests/gradle/cargo-only",
-
     "tests/runtime",
-
     "tests/uniffi/callbacks",
     "tests/uniffi/chronological",
     "tests/uniffi/coverall",
@@ -41,18 +37,10 @@ members = [
     "tests/uniffi/trait-methods",
     "tests/uniffi/type-limits",
 
-    "examples/arithmetic-procmacro",
-    "examples/audio-cpp-app",
     "examples/custom-types",
-    "examples/todolist",
-    "examples/tokio-blake3-app",
+    "examples/quickstart",
 ]
 resolver = "2"
-
-# Used in tests/gradle/cargo-only
-[profile.my-opt-level-2-profile]
-inherits = "dev"
-opt-level = 2
 
 [workspace.dependencies]
 anyhow = "1.0.86"

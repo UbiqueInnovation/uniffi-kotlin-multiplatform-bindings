@@ -11,12 +11,13 @@ kotlinx-serialization = "1.9.0"
 maven-publish = "0.33.0"
 shadow = "8.1.1"
 ktor = "3.2.3"
+atomicfu = "0.32.1"
 
 [plugins]
 android-library = { id = "com.android.library", version.ref = "agp" }
 buildconfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildconfig" }
 gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish" }
-kotlin-atomicfu = { id = "org.jetbrains.kotlin.plugin.atomicfu", version.ref = "kotlin" }
+kotlin-atomicfu = { id = "org.jetbrains.kotlinx.atomicfu", version.ref = "atomicfu" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
