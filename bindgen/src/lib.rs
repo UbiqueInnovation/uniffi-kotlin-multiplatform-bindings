@@ -14,6 +14,8 @@ use uniffi_bindgen::{BindingGenerator, Component, ComponentInterface, Generation
 mod gen_kotlin_multiplatform;
 use gen_kotlin_multiplatform::{generate_bindings, Config};
 
+use crate::gen_kotlin_multiplatform::NativeHeaderBindings;
+
 pub struct KotlinBindingGenerator;
 impl BindingGenerator for KotlinBindingGenerator {
     type Config = Config;
@@ -49,6 +51,10 @@ impl BindingGenerator for KotlinBindingGenerator {
                 if ext_crate != c.ci.crate_name()
                     && !c.config.external_packages.contains_key(ext_crate)
                 {
+                    println!(
+                        "Adding external package mapping for crate {} to package {}, for component {}",
+                        ext_crate, ext_package, c.ci.crate_name()
+                    );
                     c.config
                         .external_packages
                         .insert(ext_crate.to_string(), ext_package.clone());
@@ -71,7 +77,7 @@ impl BindingGenerator for KotlinBindingGenerator {
             write_bindings_target(ci, settings, config, "android", bindings.android);
             write_bindings_target(ci, settings, config, "native", bindings.native);
 
-            write_cinterop(ci, &settings.out_dir, bindings.header);
+            write_headers(ci, &settings.out_dir, bindings.headers);
         }
         Ok(())
     }
@@ -108,7 +114,7 @@ fn write_bindings_target(
     }
 }
 
-fn write_cinterop(ci: &ComponentInterface, out_dir: &Utf8Path, content: String) {
+fn write_headers(ci: &ComponentInterface, out_dir: &Utf8Path, content: NativeHeaderBindings) {
     let dst_dir = Utf8PathBuf::from(out_dir)
         .join("nativeInterop")
         .join("cinterop")
@@ -117,5 +123,11 @@ fn write_cinterop(ci: &ComponentInterface, out_dir: &Utf8Path, content: String) 
     fs::create_dir_all(&dst_dir).unwrap();
     let file_path = dst_dir.join(format!("{}.h", ci.namespace()));
     let mut f = File::create(file_path).unwrap();
-    write!(f, "{}", content).unwrap();
+    write!(f, "{}", content.namespace_header).unwrap();
+
+    let common_dir = dst_dir.parent().unwrap().join("common");
+    fs::create_dir_all(&common_dir).unwrap();
+    let file_path = common_dir.join("common.h");
+    let mut f = File::create(file_path).unwrap();
+    write!(f, "{}", content.common_header).unwrap();
 }

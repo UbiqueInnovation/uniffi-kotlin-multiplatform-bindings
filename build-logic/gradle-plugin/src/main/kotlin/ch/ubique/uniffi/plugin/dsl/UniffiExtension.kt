@@ -32,8 +32,14 @@ abstract class UniffiExtension(internal val project: Project) {
     val addRuntime: Property<Boolean> =
         project.objects.property<Boolean>().convention(true)
 
-    val addDependencies: Property<Boolean> =
-        project.objects.property<Boolean>().convention(true)
+	val addDependencies: Property<Boolean> =
+		project.objects.property<Boolean>().convention(true)
+
+	/**
+	 * Whether bindings for external crates should be generated. Default: false
+	 */
+	val generateBindingsForExternalCrates: Property<Boolean> =
+		project.objects.property<Boolean>().convention(false)
 
     /**
      * Install the bindgen of the given [version] from the given [registry]. If [registry] is not specified, this will

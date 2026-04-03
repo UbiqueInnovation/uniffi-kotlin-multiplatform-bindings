@@ -28,7 +28,7 @@ actual fun getPointerNativeValue(ptr: Pointer): Long = ptr.inner.rawValue.toLong
 actual fun kotlin.Long.toPointer(): Pointer = Pointer(requireNotNull(this.toCPointer()))
 
 //////// HELPERS ////////
-typealias UniffiRustCallStatus = CPointer<uniffi_runtime.cinterop.UniffiRustCallStatus>
+typealias UniffiRustCallStatus = CPointer<cinterop.UniffiRustCallStatus>
 var UniffiRustCallStatus.code: Byte
     get() = pointed.code
     set(value) { pointed.code = value }
@@ -36,12 +36,12 @@ var UniffiRustCallStatus.errorBuf: RustBufferByValue
     get() = pointed.errorBuf.readValue()
     set(value) { value.place(pointed.errorBuf.ptr) }
 
-typealias UniffiRustCallStatusByValue = CValue<uniffi_runtime.cinterop.UniffiRustCallStatus>
+typealias UniffiRustCallStatusByValue = CValue<cinterop.UniffiRustCallStatus>
 fun UniffiRustCallStatusByValue(
     code: Byte,
     errorBuf: RustBufferByValue
 ): UniffiRustCallStatusByValue {
-    return cValue<uniffi_runtime.cinterop.UniffiRustCallStatus> {
+    return cValue<cinterop.UniffiRustCallStatus> {
         this.code = code
         errorBuf.write(this.errorBuf.rawPtr)
     }
@@ -53,19 +53,19 @@ val UniffiRustCallStatusByValue.errorBuf: RustBufferByValue
 
 object UniffiRustCallStatusHelper
 fun UniffiRustCallStatusHelper.allocValue(): UniffiRustCallStatusByValue
-        = cValue<uniffi_runtime.cinterop.UniffiRustCallStatus>()
+        = cValue<cinterop.UniffiRustCallStatus>()
 fun <U> UniffiRustCallStatusHelper.withReference(
     block: (UniffiRustCallStatus) -> U
 ): U {
     return memScoped {
-        val status = alloc<uniffi_runtime.cinterop.UniffiRustCallStatus>()
+        val status = alloc<cinterop.UniffiRustCallStatus>()
         block(status.ptr)
     }
 }
 
 /////// CALLBACKS ////////
 // Define FFI callback types
-typealias UniffiRustFutureContinuationCallback = uniffi_runtime.cinterop.UniffiRustFutureContinuationCallback
-typealias UniffiForeignFutureFree = uniffi_runtime.cinterop.UniffiForeignFutureFree
-typealias UniffiCallbackInterfaceFree = uniffi_runtime.cinterop.UniffiCallbackInterfaceFree
+typealias UniffiRustFutureContinuationCallback = cinterop.UniffiRustFutureContinuationCallback
+typealias UniffiForeignFutureFree = cinterop.UniffiForeignFutureFree
+typealias UniffiCallbackInterfaceFree = cinterop.UniffiCallbackInterfaceFree
 

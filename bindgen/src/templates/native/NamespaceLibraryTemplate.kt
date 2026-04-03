@@ -4,9 +4,9 @@
 {%- for def in self.ffi_definitions_no_builtins() %}
 {%- match def %}
 {%- when FfiDefinition::CallbackFunction(callback) %}
-internal typealias {{ callback.name()|ffi_callback_name }} = {{ ci.namespace() }}.cinterop.{{ callback.name()|ffi_callback_name }}
+internal typealias {{ callback.name()|ffi_callback_name }} = cinterop.{{ callback.name()|ffi_callback_name }}
 {%- when FfiDefinition::Struct(ffi_struct) %}
-internal typealias {{ ffi_struct.name()|ffi_struct_name }} = CPointer<{{ ci.namespace() }}.cinterop.{{ ffi_struct.name()|ffi_struct_name }}>
+internal typealias {{ ffi_struct.name()|ffi_struct_name }} = CPointer<cinterop.{{ ffi_struct.name()|ffi_struct_name }}>
 {% for field in ffi_struct.fields() %}
 internal var {{ ffi_struct.name()|ffi_struct_name }}.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }}
 {% let type_name = field.type_().borrow()|ffi_type_name_for_ffi_struct -%}
@@ -45,13 +45,13 @@ internal fun {{ ffi_struct.name()|ffi_struct_name }}.uniffiSetValue(other: {{ ff
     {%- endfor %}
 }
 
-internal typealias {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue = CValue<{{ ci.namespace() }}.cinterop.{{ ffi_struct.name()|ffi_struct_name }}>
+internal typealias {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue = CValue<cinterop.{{ ffi_struct.name()|ffi_struct_name }}>
 fun {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue(
     {% for field in ffi_struct.fields() %}
     {{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }},
     {% endfor %}
 ): {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue {
-    return cValue<{{ ci.namespace() }}.cinterop.{{ ffi_struct.name()|ffi_struct_name }}> {
+    return cValue<cinterop.{{ ffi_struct.name()|ffi_struct_name }}> {
         {% for field in ffi_struct.fields() %}
         {%- match field.type_() %}
         {%- when FfiType::RustBuffer(_) %}
@@ -118,7 +118,7 @@ internal class UniffiLibInstance: UniffiLib {
     override fun {{ func.name() }}(
         {%- call kt::arg_list_ffi_decl_for_ffi_function(func) %}
     ): {% match func.return_type() %}{% when Some with (return_type) %}{{ return_type.borrow()|ffi_type_name_for_ffi_function }}{% when None %}Unit{% endmatch %}
-        = {{ ci.namespace() }}.cinterop.{{ func.name() }}({%- call kt::arg_list_ffi_call(func) %})
+        = cinterop.{{ func.name() }}({%- call kt::arg_list_ffi_call(func) %})
           {%- match func.return_type() -%}
           {%- when Some with (return_type) -%}
           {%- if return_type.borrow()|is_pointer_type -%}

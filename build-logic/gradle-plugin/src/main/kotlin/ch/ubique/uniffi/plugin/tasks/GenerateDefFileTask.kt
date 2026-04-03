@@ -44,9 +44,10 @@ abstract class GenerateDefFileTask : DefaultTask() {
 
         output.writeText(
             """
-            staticLibraries = $libraryName
-            headers = $allHeaders
-            """.trimIndent()
+			staticLibraries = $libraryName
+			headers = $allHeaders
+			compilerOpts = -I${headersDir.get().asFile.path}
+			""".trimIndent()
         )
 
         val opts = getLinkerOpts()

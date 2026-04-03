@@ -11,11 +11,11 @@ path = "src/commonMain/rust/lib.rs"
 
 [dependencies]
 uniffi = { workspace = true }
-external-crate = { path = "../../external-crate", package = "uniffi-kmm-fixture-ext-types-external-crate" }
-uniffi-one = { path = "../../uniffi-one/uniffi", package = "uniffi-kmm-fixture-ext-types-uniffi-one" }
-custom = { path = "../../custom-types/uniffi", package = "uniffi-kmm-fixture-ext-types-custom-types" }
-sub-lib = { path = "../../sub-lib/uniffi", package = "uniffi-kmm-fixture-ext-types-sub-lib" }
-custom-types = { path = "../../../../../examples/custom-types", package = "uniffi-kmm-example-custom-types" }
+uniffi-kmm-fixture-ext-types-external-crate = { path = "../external-crate" }
+uniffi-kmm-fixture-ext-types-uniffi-one = { path = "../uniffi-one" }
+uniffi-kmm-fixture-ext-types-custom-types = { path = "../custom-types" }
+uniffi-kmm-fixture-ext-types-sub-lib = { path = "../sub-lib" }
+uniffi-kmm-example-custom-types = { path = "../../../../examples/custom-types" }
 url = { workspace = true }
 
 [build-dependencies]

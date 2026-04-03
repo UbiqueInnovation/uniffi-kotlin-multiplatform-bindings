@@ -4,22 +4,30 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use custom::{ANestedGuid, Guid, Ouid};
-use custom_types::Handle;
-use external_crate::{
+use std::sync::Arc;
+use uniffi_kmm_example_custom_types::Handle;
+use uniffi_kmm_fixture_ext_types_custom_types::{ANestedGuid, Guid, Ouid};
+use uniffi_kmm_fixture_ext_types_external_crate::{
     ExternalCrateDictionary, ExternalCrateInterface, ExternalCrateNonExhaustiveEnum,
 };
-use std::sync::Arc;
-use sub_lib::SubLibType;
-use uniffi_one::{
+use uniffi_kmm_fixture_ext_types_sub_lib::SubLibType;
+use uniffi_kmm_fixture_ext_types_uniffi_one::{
     UniffiOneEnum, UniffiOneInterface, UniffiOneProcMacroType, UniffiOneTrait, UniffiOneType,
     UniffiOneUDLTrait,
 };
 use url::Url;
 
 // #1988
-uniffi::ffi_converter_forward!(custom::Ouid, custom::UniFfiTag, crate::UniFfiTag);
-uniffi::ffi_converter_forward!(custom::ANestedGuid, custom::UniFfiTag, crate::UniFfiTag);
+uniffi::ffi_converter_forward!(
+    uniffi_kmm_fixture_ext_types_custom_types::Ouid,
+    uniffi_kmm_fixture_ext_types_custom_types::UniFfiTag,
+    crate::UniFfiTag
+);
+uniffi::ffi_converter_forward!(
+    uniffi_kmm_fixture_ext_types_custom_types::ANestedGuid,
+    uniffi_kmm_fixture_ext_types_custom_types::UniFfiTag,
+    crate::UniFfiTag
+);
 
 pub struct CombinedType {
     pub uoe: UniffiOneEnum,

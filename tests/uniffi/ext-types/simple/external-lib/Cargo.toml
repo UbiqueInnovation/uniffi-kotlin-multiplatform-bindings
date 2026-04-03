@@ -1,0 +1,17 @@
+[package]
+name = "uniffi-kmm-fixture-ext-types-simple-external-lib"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "external_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+path = "src/lib.rs"
+
+
+[dependencies]
+uniffi = { workspace = true }
+
+[build-dependencies]
+uniffi-kmm-fixture-build-common = { path = "../../../../build-common" }

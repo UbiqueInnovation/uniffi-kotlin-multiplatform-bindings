@@ -11,7 +11,7 @@ import kotlinx.cinterop.readValue
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.useContents
 
-typealias RustBuffer = CPointer<uniffi_runtime.cinterop.RustBuffer>
+typealias RustBuffer = CPointer<cinterop.RustBuffer>
 
 var RustBuffer.capacity: Long
     get() = pointed.capacity
@@ -34,13 +34,13 @@ fun RustBuffer.asByteBuffer(): ByteBuffer? {
     )
 }
 
-typealias RustBufferByValue = CValue<uniffi_runtime.cinterop.RustBuffer>
+typealias RustBufferByValue = CValue<cinterop.RustBuffer>
 fun RustBufferByValue(
     capacity: Long,
     len: Long,
     data: Pointer?,
 ): RustBufferByValue {
-    return cValue<uniffi_runtime.cinterop.RustBuffer> {
+    return cValue<cinterop.RustBuffer> {
         this.capacity = capacity
         this.len = len
         this.data = data?.inner?.reinterpret()
@@ -69,7 +69,7 @@ fun RustBufferByValue.asByteBuffer(): ByteBuffer? {
  *
  * Size is the sum of all values in the struct.
  */
-typealias RustBufferByReference = CPointer<uniffi_runtime.cinterop.RustBufferByReference>
+typealias RustBufferByReference = CPointer<cinterop.RustBufferByReference>
 
 fun RustBufferByReference.setValue(value: RustBufferByValue) {
     pointed.capacity = value.capacity
@@ -77,10 +77,10 @@ fun RustBufferByReference.setValue(value: RustBufferByValue) {
     pointed.data = value.data?.inner?.reinterpret()
 }
 fun RustBufferByReference.getValue(): RustBufferByValue
-        = pointed.reinterpret<uniffi_runtime.cinterop.RustBuffer>().readValue()
+        = pointed.reinterpret<cinterop.RustBuffer>().readValue()
 
 
-typealias ForeignBytes = CPointer<uniffi_runtime.cinterop.ForeignBytes>
+typealias ForeignBytes = CPointer<cinterop.ForeignBytes>
 var ForeignBytes.len: Int
     get() = pointed.len
     set(value) { pointed.len = value }
@@ -88,7 +88,7 @@ var ForeignBytes.data: Pointer?
     get() = pointed.data?.let { Pointer(it) }
     set(value) { pointed.data = value?.inner?.reinterpret() }
 
-typealias ForeignBytesByValue = CValue<uniffi_runtime.cinterop.ForeignBytes>
+typealias ForeignBytesByValue = CValue<cinterop.ForeignBytes>
 val ForeignBytesByValue.len: Int
     get() = useContents { len }
 val ForeignBytesByValue.data: Pointer?

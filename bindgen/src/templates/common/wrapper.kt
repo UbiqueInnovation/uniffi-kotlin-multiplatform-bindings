@@ -29,6 +29,11 @@ package {{ config.package_name() }}
 import uniffi.runtime.*
 
 import kotlin.jvm.JvmField
+
+{%- for req in self.imports() %}
+{{ req.render() }}
+{%- endfor %}
+
 {% if  !config.has_import_helpers() %}
 
 {% include "Helpers.kt" %}

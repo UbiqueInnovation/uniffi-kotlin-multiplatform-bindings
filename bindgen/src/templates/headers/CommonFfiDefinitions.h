@@ -1,5 +1,5 @@
 
-{%- for def in ci.ffi_definitions() %}
+{%- for def in self.ffi_definitions_builtins() %}
 
 {%- match def %}
 {% when FfiDefinition::CallbackFunction(callback) %}

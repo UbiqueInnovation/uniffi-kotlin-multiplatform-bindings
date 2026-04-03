@@ -12,6 +12,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import java.io.File
@@ -38,6 +39,9 @@ abstract class BuildBindingsTask : DefaultTask() {
     @get:Input
     abstract val cargoMetadata: Property<String>
 
+	@get:Input
+	abstract val generateBindingsForExternalCrates: Property<Boolean>
+
     @OutputDirectory
     val bindingsDirectory = project.layout.buildDirectory.dir("generated/uniffi")
 
@@ -51,15 +55,19 @@ abstract class BuildBindingsTask : DefaultTask() {
     }
 
     private fun buildBindings(crateName: String) {
-        val process = ProcessBuilder(
-            bindgen.get().asFile.path,
-            "--library",
-            libraryFile.get().asFile.path,
-            "--out-dir",
-            bindingsDirectory.get().asFile.path,
-            "--crate",
-            crateName
-        )
+		val command = mutableListOf(
+			bindgen.get().asFile.path,
+			"--library",
+			libraryFile.get().asFile.path,
+			"--out-dir",
+			bindingsDirectory.get().asFile.path,
+		)
+		// If it shouldn't generate bindings for external crates specify the '--crate' argument
+		if (!generateBindingsForExternalCrates.get()) {
+			command.add("--crate")
+			command.add(crateName)
+		}
+        val process = ProcessBuilder(command)
             .directory(packageDirectory.asFile.get())
             .redirectErrorStream(true)
             .start()

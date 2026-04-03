@@ -1,13 +1,11 @@
-import io.gitlab.trixnity.gradle.RustHost
-import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
+import ch.ubique.uniffi.plugin.extensions.useRustUpLinker
+import ch.ubique.uniffi.plugin.model.RustHost
 
 plugins {
     kotlin("multiplatform")
-    id("io.gitlab.trixnity.rust.kotlin.multiplatform")
-    id("io.gitlab.trixnity.cargo.kotlin.multiplatform")
-    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform")
-    alias(libs.plugins.kotlin.atomicfu)
-    alias(libs.plugins.android.library)
+	alias(libs.plugins.kotlin.atomicfu)
+    // alias(libs.plugins.android.library)
+	id("ch.ubique.uniffi.plugin")
 }
 
 uniffi {
@@ -16,8 +14,10 @@ uniffi {
 }
 
 kotlin {
-    androidTarget()
-    jvm("desktop")
+	jvmToolchain(17)
+
+    // androidTarget()
+    jvm()
     arrayOf(
         mingwX64(),
     ).forEach { nativeTarget ->
@@ -41,7 +41,7 @@ kotlin {
             dependencies {
                 implementation(project(":runtime"))
 
-                implementation(libs.ktor.http)
+                implementation(libs.ktor.client.core)
             }
         }
         commonTest {
@@ -53,23 +53,23 @@ kotlin {
     }
 }
 
-android {
-    namespace = "io.gitlab.trixnity.uniffi.examples.customtypes"
-    compileSdk = 34
-
-    defaultConfig {
-        consumerProguardFiles("proguard-rules.pro")
-        ndk.abiFilters.add("arm64-v8a")
-    }
-
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-}
+//android {
+//    namespace = "io.gitlab.trixnity.uniffi.examples.customtypes"
+//    compileSdk = 34
+//
+//    defaultConfig {
+//        consumerProguardFiles("proguard-rules.pro")
+//        ndk.abiFilters.add("arm64-v8a")
+//    }
+//
+//    packaging {
+//        resources {
+//            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+//        }
+//    }
+//
+//    compileOptions {
+//        sourceCompatibility = JavaVersion.VERSION_17
+//        targetCompatibility = JavaVersion.VERSION_17
+//    }
+//}

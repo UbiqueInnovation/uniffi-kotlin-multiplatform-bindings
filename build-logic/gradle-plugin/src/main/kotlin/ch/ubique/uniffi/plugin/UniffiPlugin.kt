@@ -200,6 +200,7 @@ class UniffiPlugin : Plugin<Project> {
             cargoMetadata.set(cargoMetadataProvider)
             bindgen.set(project.layout.buildDirectory.file("bindgen-install/bin/$bindgenName"))
             libraryFile.set(libFile)
+            generateBindingsForExternalCrates.set(uniffiExtension.generateBindingsForExternalCrates)
 
             dependsOn(BUILD_LIB_FOR_BINDINGS_TASK_NAME)
             dependsOn(INSTALL_BINDGEN_TASK_NAME)
@@ -457,7 +458,7 @@ class UniffiPlugin : Plugin<Project> {
 
         nativeTarget.compilations.getByName("main") {
             cinterops.register("uniffi") {
-                packageName("$namespace.cinterop")
+                packageName("cinterop")
 
                 if (isSync) {
                     defFile(dummyDefFile)

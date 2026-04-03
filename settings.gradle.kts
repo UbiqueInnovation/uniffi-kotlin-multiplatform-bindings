@@ -40,18 +40,13 @@ include(":tests:uniffi:docstring")
 include(":tests:uniffi:docstring-proc-macro")
 include(":tests:uniffi:enum-types")
 include(":tests:uniffi:error-types")
-
-// Temporarily disable ext-types test.
-// TODO:
-//   1. Properly handle external types in headers
-//   2. Fix panics by uniffi-meta during bindings generation in ext-types
-// include(":tests:uniffi:ext-types:custom-types")
-// include(":tests:uniffi:ext-types:ext-types")
-// include(":tests:uniffi:ext-types:ext-types-proc-macro")
-// include(":tests:uniffi:ext-types:http-headermap")
-// include(":tests:uniffi:ext-types:sub-lib")
-// include(":tests:uniffi:ext-types:uniffi-one")
-
+include(":tests:uniffi:ext-types:custom-types")
+include(":tests:uniffi:ext-types:ext-types")
+include(":tests:uniffi:ext-types:ext-types-proc-macro")
+include(":tests:uniffi:ext-types:http-headermap")
+include(":tests:uniffi:ext-types:simple")
+include(":tests:uniffi:ext-types:sub-lib")
+include(":tests:uniffi:ext-types:uniffi-one")
 include(":tests:uniffi:futures")
 include(":tests:uniffi:keywords")
 include(":tests:uniffi:multi-module:combined")
@@ -69,6 +64,6 @@ include(":tests:uniffi:type-limits")
 // include(":examples:app")
 // include(":examples:arithmetic-procmacro")
 // include(":examples:audio-cpp-app")
-// include(":examples:custom-types")
+include(":examples:custom-types")
 // include(":examples:todolist")
 // include(":examples:tokio-blake3-app")

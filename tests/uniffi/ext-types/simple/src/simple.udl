@@ -1,0 +1,7 @@
+namespace simple {
+    i32 add_one(i32 x);
+    MyStruct add_one_to_my_struct(MyStruct s);
+};
+
+[External="external_lib"]
+typedef extern MyStruct;

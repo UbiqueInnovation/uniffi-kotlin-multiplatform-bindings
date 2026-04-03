@@ -12,7 +12,7 @@ import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import kotlinx.cinterop.write
 
-typealias UniffiForeignFuture = CPointer<uniffi_runtime.cinterop.UniffiForeignFuture>
+typealias UniffiForeignFuture = CPointer<cinterop.UniffiForeignFuture>
 
 var UniffiForeignFuture.handle: Long
     get() = pointed.handle
@@ -36,13 +36,13 @@ fun UniffiForeignFuture.uniffiSetValue(other: UniffiForeignFutureUniffiByValue) 
     free = other.free
 }
 
-typealias UniffiForeignFutureUniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFuture>
+typealias UniffiForeignFutureUniffiByValue = CValue<cinterop.UniffiForeignFuture>
 
 fun UniffiForeignFutureUniffiByValue(
     handle: Long,
     free: Any?,
 ): UniffiForeignFutureUniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFuture> {
+    cValue<cinterop.UniffiForeignFuture> {
         this.handle = handle
 
         this.free = free as UniffiForeignFutureFree?
@@ -54,7 +54,7 @@ val UniffiForeignFutureUniffiByValue.handle: Long
 val UniffiForeignFutureUniffiByValue.free: Any?
     get() = useContents { free }
 
-typealias UniffiForeignFutureStructU8 = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructU8>
+typealias UniffiForeignFutureStructU8 = CPointer<cinterop.UniffiForeignFutureStructU8>
 
 var UniffiForeignFutureStructU8.returnValue: Byte
     get() = pointed.returnValue
@@ -78,13 +78,13 @@ fun UniffiForeignFutureStructU8.uniffiSetValue(other: UniffiForeignFutureStructU
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructU8UniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructU8>
+typealias UniffiForeignFutureStructU8UniffiByValue = CValue<cinterop.UniffiForeignFutureStructU8>
 
 fun UniffiForeignFutureStructU8UniffiByValue(
     returnValue: Byte,
     callStatus: UniffiRustCallStatusByValue,
 ): UniffiForeignFutureStructU8UniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructU8> {
+    cValue<cinterop.UniffiForeignFutureStructU8> {
         this.returnValue = returnValue
 
         callStatus.write(this.callStatus.rawPtr)
@@ -99,8 +99,8 @@ val UniffiForeignFutureStructU8UniffiByValue.returnValue: Byte
 val UniffiForeignFutureStructU8UniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompleteU8 = uniffi_runtime.cinterop.UniffiForeignFutureCompleteU8
-typealias UniffiForeignFutureStructI8 = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructI8>
+typealias UniffiForeignFutureCompleteU8 = cinterop.UniffiForeignFutureCompleteU8
+typealias UniffiForeignFutureStructI8 = CPointer<cinterop.UniffiForeignFutureStructI8>
 
 var UniffiForeignFutureStructI8.returnValue: Byte
     get() = pointed.returnValue
@@ -124,13 +124,13 @@ fun UniffiForeignFutureStructI8.uniffiSetValue(other: UniffiForeignFutureStructI
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructI8UniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructI8>
+typealias UniffiForeignFutureStructI8UniffiByValue = CValue<cinterop.UniffiForeignFutureStructI8>
 
 fun UniffiForeignFutureStructI8UniffiByValue(
     returnValue: Byte,
     callStatus: UniffiRustCallStatusByValue,
 ): UniffiForeignFutureStructI8UniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructI8> {
+    cValue<cinterop.UniffiForeignFutureStructI8> {
         this.returnValue = returnValue
 
         callStatus.write(this.callStatus.rawPtr)
@@ -145,8 +145,8 @@ val UniffiForeignFutureStructI8UniffiByValue.returnValue: Byte
 val UniffiForeignFutureStructI8UniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompleteI8 = uniffi_runtime.cinterop.UniffiForeignFutureCompleteI8
-typealias UniffiForeignFutureStructU16 = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructU16>
+typealias UniffiForeignFutureCompleteI8 = cinterop.UniffiForeignFutureCompleteI8
+typealias UniffiForeignFutureStructU16 = CPointer<cinterop.UniffiForeignFutureStructU16>
 
 var UniffiForeignFutureStructU16.returnValue: Short
     get() = pointed.returnValue
@@ -170,13 +170,13 @@ fun UniffiForeignFutureStructU16.uniffiSetValue(other: UniffiForeignFutureStruct
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructU16UniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructU16>
+typealias UniffiForeignFutureStructU16UniffiByValue = CValue<cinterop.UniffiForeignFutureStructU16>
 
 fun UniffiForeignFutureStructU16UniffiByValue(
     returnValue: Short,
     callStatus: UniffiRustCallStatusByValue,
 ): UniffiForeignFutureStructU16UniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructU16> {
+    cValue<cinterop.UniffiForeignFutureStructU16> {
         this.returnValue = returnValue
 
         callStatus.write(this.callStatus.rawPtr)
@@ -191,8 +191,8 @@ val UniffiForeignFutureStructU16UniffiByValue.returnValue: Short
 val UniffiForeignFutureStructU16UniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompleteU16 = uniffi_runtime.cinterop.UniffiForeignFutureCompleteU16
-typealias UniffiForeignFutureStructI16 = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructI16>
+typealias UniffiForeignFutureCompleteU16 = cinterop.UniffiForeignFutureCompleteU16
+typealias UniffiForeignFutureStructI16 = CPointer<cinterop.UniffiForeignFutureStructI16>
 
 var UniffiForeignFutureStructI16.returnValue: Short
     get() = pointed.returnValue
@@ -216,13 +216,13 @@ fun UniffiForeignFutureStructI16.uniffiSetValue(other: UniffiForeignFutureStruct
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructI16UniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructI16>
+typealias UniffiForeignFutureStructI16UniffiByValue = CValue<cinterop.UniffiForeignFutureStructI16>
 
 fun UniffiForeignFutureStructI16UniffiByValue(
     returnValue: Short,
     callStatus: UniffiRustCallStatusByValue,
 ): UniffiForeignFutureStructI16UniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructI16> {
+    cValue<cinterop.UniffiForeignFutureStructI16> {
         this.returnValue = returnValue
 
         callStatus.write(this.callStatus.rawPtr)
@@ -237,8 +237,8 @@ val UniffiForeignFutureStructI16UniffiByValue.returnValue: Short
 val UniffiForeignFutureStructI16UniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompleteI16 = uniffi_runtime.cinterop.UniffiForeignFutureCompleteI16
-typealias UniffiForeignFutureStructU32 = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructU32>
+typealias UniffiForeignFutureCompleteI16 = cinterop.UniffiForeignFutureCompleteI16
+typealias UniffiForeignFutureStructU32 = CPointer<cinterop.UniffiForeignFutureStructU32>
 
 var UniffiForeignFutureStructU32.returnValue: Int
     get() = pointed.returnValue
@@ -262,13 +262,13 @@ fun UniffiForeignFutureStructU32.uniffiSetValue(other: UniffiForeignFutureStruct
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructU32UniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructU32>
+typealias UniffiForeignFutureStructU32UniffiByValue = CValue<cinterop.UniffiForeignFutureStructU32>
 
 fun UniffiForeignFutureStructU32UniffiByValue(
     returnValue: Int,
     callStatus: UniffiRustCallStatusByValue,
 ): UniffiForeignFutureStructU32UniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructU32> {
+    cValue<cinterop.UniffiForeignFutureStructU32> {
         this.returnValue = returnValue
 
         callStatus.write(this.callStatus.rawPtr)
@@ -283,8 +283,8 @@ val UniffiForeignFutureStructU32UniffiByValue.returnValue: Int
 val UniffiForeignFutureStructU32UniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompleteU32 = uniffi_runtime.cinterop.UniffiForeignFutureCompleteU32
-typealias UniffiForeignFutureStructI32 = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructI32>
+typealias UniffiForeignFutureCompleteU32 = cinterop.UniffiForeignFutureCompleteU32
+typealias UniffiForeignFutureStructI32 = CPointer<cinterop.UniffiForeignFutureStructI32>
 
 var UniffiForeignFutureStructI32.returnValue: Int
     get() = pointed.returnValue
@@ -308,13 +308,13 @@ fun UniffiForeignFutureStructI32.uniffiSetValue(other: UniffiForeignFutureStruct
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructI32UniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructI32>
+typealias UniffiForeignFutureStructI32UniffiByValue = CValue<cinterop.UniffiForeignFutureStructI32>
 
 fun UniffiForeignFutureStructI32UniffiByValue(
     returnValue: Int,
     callStatus: UniffiRustCallStatusByValue,
 ): UniffiForeignFutureStructI32UniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructI32> {
+    cValue<cinterop.UniffiForeignFutureStructI32> {
         this.returnValue = returnValue
 
         callStatus.write(this.callStatus.rawPtr)
@@ -329,8 +329,8 @@ val UniffiForeignFutureStructI32UniffiByValue.returnValue: Int
 val UniffiForeignFutureStructI32UniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompleteI32 = uniffi_runtime.cinterop.UniffiForeignFutureCompleteI32
-typealias UniffiForeignFutureStructU64 = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructU64>
+typealias UniffiForeignFutureCompleteI32 = cinterop.UniffiForeignFutureCompleteI32
+typealias UniffiForeignFutureStructU64 = CPointer<cinterop.UniffiForeignFutureStructU64>
 
 var UniffiForeignFutureStructU64.returnValue: Long
     get() = pointed.returnValue
@@ -354,13 +354,13 @@ fun UniffiForeignFutureStructU64.uniffiSetValue(other: UniffiForeignFutureStruct
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructU64UniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructU64>
+typealias UniffiForeignFutureStructU64UniffiByValue = CValue<cinterop.UniffiForeignFutureStructU64>
 
 fun UniffiForeignFutureStructU64UniffiByValue(
     returnValue: Long,
     callStatus: UniffiRustCallStatusByValue,
 ): UniffiForeignFutureStructU64UniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructU64> {
+    cValue<cinterop.UniffiForeignFutureStructU64> {
         this.returnValue = returnValue
 
         callStatus.write(this.callStatus.rawPtr)
@@ -375,8 +375,8 @@ val UniffiForeignFutureStructU64UniffiByValue.returnValue: Long
 val UniffiForeignFutureStructU64UniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompleteU64 = uniffi_runtime.cinterop.UniffiForeignFutureCompleteU64
-typealias UniffiForeignFutureStructI64 = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructI64>
+typealias UniffiForeignFutureCompleteU64 = cinterop.UniffiForeignFutureCompleteU64
+typealias UniffiForeignFutureStructI64 = CPointer<cinterop.UniffiForeignFutureStructI64>
 
 var UniffiForeignFutureStructI64.returnValue: Long
     get() = pointed.returnValue
@@ -400,13 +400,13 @@ fun UniffiForeignFutureStructI64.uniffiSetValue(other: UniffiForeignFutureStruct
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructI64UniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructI64>
+typealias UniffiForeignFutureStructI64UniffiByValue = CValue<cinterop.UniffiForeignFutureStructI64>
 
 fun UniffiForeignFutureStructI64UniffiByValue(
     returnValue: Long,
     callStatus: UniffiRustCallStatusByValue,
 ): UniffiForeignFutureStructI64UniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructI64> {
+    cValue<cinterop.UniffiForeignFutureStructI64> {
         this.returnValue = returnValue
 
         callStatus.write(this.callStatus.rawPtr)
@@ -421,8 +421,8 @@ val UniffiForeignFutureStructI64UniffiByValue.returnValue: Long
 val UniffiForeignFutureStructI64UniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompleteI64 = uniffi_runtime.cinterop.UniffiForeignFutureCompleteI64
-typealias UniffiForeignFutureStructF32 = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructF32>
+typealias UniffiForeignFutureCompleteI64 = cinterop.UniffiForeignFutureCompleteI64
+typealias UniffiForeignFutureStructF32 = CPointer<cinterop.UniffiForeignFutureStructF32>
 
 var UniffiForeignFutureStructF32.returnValue: Float
     get() = pointed.returnValue
@@ -446,13 +446,13 @@ fun UniffiForeignFutureStructF32.uniffiSetValue(other: UniffiForeignFutureStruct
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructF32UniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructF32>
+typealias UniffiForeignFutureStructF32UniffiByValue = CValue<cinterop.UniffiForeignFutureStructF32>
 
 fun UniffiForeignFutureStructF32UniffiByValue(
     returnValue: Float,
     callStatus: UniffiRustCallStatusByValue,
 ): UniffiForeignFutureStructF32UniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructF32> {
+    cValue<cinterop.UniffiForeignFutureStructF32> {
         this.returnValue = returnValue
 
         callStatus.write(this.callStatus.rawPtr)
@@ -467,8 +467,8 @@ val UniffiForeignFutureStructF32UniffiByValue.returnValue: Float
 val UniffiForeignFutureStructF32UniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompleteF32 = uniffi_runtime.cinterop.UniffiForeignFutureCompleteF32
-typealias UniffiForeignFutureStructF64 = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructF64>
+typealias UniffiForeignFutureCompleteF32 = cinterop.UniffiForeignFutureCompleteF32
+typealias UniffiForeignFutureStructF64 = CPointer<cinterop.UniffiForeignFutureStructF64>
 
 var UniffiForeignFutureStructF64.returnValue: Double
     get() = pointed.returnValue
@@ -492,13 +492,13 @@ fun UniffiForeignFutureStructF64.uniffiSetValue(other: UniffiForeignFutureStruct
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructF64UniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructF64>
+typealias UniffiForeignFutureStructF64UniffiByValue = CValue<cinterop.UniffiForeignFutureStructF64>
 
 fun UniffiForeignFutureStructF64UniffiByValue(
     returnValue: Double,
     callStatus: UniffiRustCallStatusByValue,
 ): UniffiForeignFutureStructF64UniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructF64> {
+    cValue<cinterop.UniffiForeignFutureStructF64> {
         this.returnValue = returnValue
 
         callStatus.write(this.callStatus.rawPtr)
@@ -513,8 +513,8 @@ val UniffiForeignFutureStructF64UniffiByValue.returnValue: Double
 val UniffiForeignFutureStructF64UniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompleteF64 = uniffi_runtime.cinterop.UniffiForeignFutureCompleteF64
-typealias UniffiForeignFutureStructPointer = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructPointer>
+typealias UniffiForeignFutureCompleteF64 = cinterop.UniffiForeignFutureCompleteF64
+typealias UniffiForeignFutureStructPointer = CPointer<cinterop.UniffiForeignFutureStructPointer>
 
 var UniffiForeignFutureStructPointer.returnValue: Pointer?
     get() = pointed.returnValue?.let { Pointer(it) }
@@ -538,13 +538,13 @@ fun UniffiForeignFutureStructPointer.uniffiSetValue(other: UniffiForeignFutureSt
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructPointerUniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructPointer>
+typealias UniffiForeignFutureStructPointerUniffiByValue = CValue<cinterop.UniffiForeignFutureStructPointer>
 
 fun UniffiForeignFutureStructPointerUniffiByValue(
     returnValue: Pointer?,
     callStatus: UniffiRustCallStatusByValue,
 ): UniffiForeignFutureStructPointerUniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructPointer> {
+    cValue<cinterop.UniffiForeignFutureStructPointer> {
         this.returnValue = returnValue?.inner
 
         callStatus.write(this.callStatus.rawPtr)
@@ -559,8 +559,8 @@ val UniffiForeignFutureStructPointerUniffiByValue.returnValue: Pointer?
 val UniffiForeignFutureStructPointerUniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompletePointer = uniffi_runtime.cinterop.UniffiForeignFutureCompletePointer
-typealias UniffiForeignFutureStructRustBuffer = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructRustBuffer>
+typealias UniffiForeignFutureCompletePointer = cinterop.UniffiForeignFutureCompletePointer
+typealias UniffiForeignFutureStructRustBuffer = CPointer<cinterop.UniffiForeignFutureStructRustBuffer>
 
 var UniffiForeignFutureStructRustBuffer.returnValue: RustBufferByValue
     get() = pointed.returnValue.readValue()
@@ -584,13 +584,13 @@ fun UniffiForeignFutureStructRustBuffer.uniffiSetValue(other: UniffiForeignFutur
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructRustBufferUniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructRustBuffer>
+typealias UniffiForeignFutureStructRustBufferUniffiByValue = CValue<cinterop.UniffiForeignFutureStructRustBuffer>
 
 fun UniffiForeignFutureStructRustBufferUniffiByValue(
     returnValue: RustBufferByValue,
     callStatus: UniffiRustCallStatusByValue,
 ): UniffiForeignFutureStructRustBufferUniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructRustBuffer> {
+    cValue<cinterop.UniffiForeignFutureStructRustBuffer> {
         returnValue.write(this.returnValue.rawPtr)
 
         callStatus.write(this.callStatus.rawPtr)
@@ -602,8 +602,8 @@ val UniffiForeignFutureStructRustBufferUniffiByValue.returnValue: RustBufferByVa
 val UniffiForeignFutureStructRustBufferUniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompleteRustBuffer = uniffi_runtime.cinterop.UniffiForeignFutureCompleteRustBuffer
-typealias UniffiForeignFutureStructVoid = CPointer<uniffi_runtime.cinterop.UniffiForeignFutureStructVoid>
+typealias UniffiForeignFutureCompleteRustBuffer = cinterop.UniffiForeignFutureCompleteRustBuffer
+typealias UniffiForeignFutureStructVoid = CPointer<cinterop.UniffiForeignFutureStructVoid>
 
 var UniffiForeignFutureStructVoid.callStatus: UniffiRustCallStatusByValue
     get() = pointed.callStatus.readValue()
@@ -619,14 +619,14 @@ fun UniffiForeignFutureStructVoid.uniffiSetValue(other: UniffiForeignFutureStruc
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructVoidUniffiByValue = CValue<uniffi_runtime.cinterop.UniffiForeignFutureStructVoid>
+typealias UniffiForeignFutureStructVoidUniffiByValue = CValue<cinterop.UniffiForeignFutureStructVoid>
 
 fun UniffiForeignFutureStructVoidUniffiByValue(callStatus: UniffiRustCallStatusByValue): UniffiForeignFutureStructVoidUniffiByValue =
-    cValue<uniffi_runtime.cinterop.UniffiForeignFutureStructVoid> {
+    cValue<cinterop.UniffiForeignFutureStructVoid> {
         callStatus.write(this.callStatus.rawPtr)
     }
 
 val UniffiForeignFutureStructVoidUniffiByValue.callStatus: UniffiRustCallStatusByValue
     get() = useContents { callStatus.readValue() }
 
-typealias UniffiForeignFutureCompleteVoid = uniffi_runtime.cinterop.UniffiForeignFutureCompleteVoid
+typealias UniffiForeignFutureCompleteVoid = cinterop.UniffiForeignFutureCompleteVoid

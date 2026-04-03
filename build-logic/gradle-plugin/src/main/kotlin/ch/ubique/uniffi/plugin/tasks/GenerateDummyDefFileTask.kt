@@ -36,6 +36,7 @@ abstract class GenerateDummyDefFileTask : DefaultTask() {
             output.writeText(
                 """
                 headers = $allHeaders
+                compilerOpts = -I${headersDir.get().asFile.path}
                 """.trimIndent()
             )
         }

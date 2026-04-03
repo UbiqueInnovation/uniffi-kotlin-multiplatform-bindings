@@ -28,7 +28,7 @@ internal class UniffiLibInstance: UniffiLib {
     override fun {{ func.name() }}(
         {%- call kt::arg_list_ffi_decl_for_ffi_function(func) %}
     ): {% match func.return_type() %}{% when Some with (return_type) %}{{ return_type.borrow()|ffi_type_name_for_ffi_function }}{% when None %}Unit{% endmatch %}
-        = {{ ci.namespace() }}.cinterop.{{ func.name() }}({%- call kt::arg_list_ffi_call(func) %})
+        = cinterop.{{ func.name() }}({%- call kt::arg_list_ffi_call(func) %})
           {%- match func.return_type() -%}
           {%- when Some with (return_type) -%}
           {%- if return_type.borrow()|is_pointer_type -%}
