@@ -1,3 +1,0 @@
-package_name = "io.gitlab.trixnity.uniffi.examples.arithmeticpm"
-generate_serializable_records = true
-generate_immutable_records = true
