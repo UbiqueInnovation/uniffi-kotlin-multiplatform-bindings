@@ -16,6 +16,11 @@
 
 internal typealias {{ local_rustbuffer_name }} = {{ fully_qualified_rustbuffer_name }}
 internal typealias {{ local_rustbuffer_by_value_name }} = {{ fully_qualified_rustbuffer_by_value_name }}
+internal fun {{ local_rustbuffer_by_value_name }}(
+	capacity: Long,
+	len: Long,
+	data: Pointer?,
+): {{ local_rustbuffer_by_value_name }} = {{ fully_qualified_rustbuffer_by_value_name }}(capacity, len, data)
 
 /*
 fun {{ fully_qualified_ffi_converter_name }}.read(buf: ByteBuffer): {{ name|class_name(ci) }} {

@@ -4,7 +4,7 @@ import ch.ubique.uniffi.plugin.model.RustHost
 plugins {
     kotlin("multiplatform")
 	alias(libs.plugins.kotlin.atomicfu)
-    alias(libs.plugins.android.library)
+    // alias(libs.plugins.android.library)
 	id("ch.ubique.uniffi.plugin")
 }
 
@@ -16,7 +16,7 @@ uniffi {
 kotlin {
 	jvmToolchain(17)
 
-    androidTarget()
+    // androidTarget()
     jvm()
     arrayOf(
         mingwX64(),
@@ -53,23 +53,23 @@ kotlin {
     }
 }
 
-android {
-    namespace = "io.gitlab.trixnity.uniffi.examples.customtypes"
-    compileSdk = 34
-
-    defaultConfig {
-        consumerProguardFiles("proguard-rules.pro")
-        ndk.abiFilters.add("arm64-v8a")
-    }
-
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-}
+//android {
+//    namespace = "io.gitlab.trixnity.uniffi.examples.customtypes"
+//    compileSdk = 34
+//
+//    defaultConfig {
+//        consumerProguardFiles("proguard-rules.pro")
+//        ndk.abiFilters.add("arm64-v8a")
+//    }
+//
+//    packaging {
+//        resources {
+//            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+//        }
+//    }
+//
+//    compileOptions {
+//        sourceCompatibility = JavaVersion.VERSION_17
+//        targetCompatibility = JavaVersion.VERSION_17
+//    }
+//}
