@@ -13,7 +13,7 @@ path = "src/commonMain/rust/lib.rs"
 uniffi = { workspace = true }
 once_cell = { workspace = true }
 thiserror = { workspace = true }
-uniffi-kmm-fixture-ext-types-uniffi-one = { path = "../../uniffi-one/uniffi" }
+uniffi-kmm-fixture-ext-types-uniffi-one = { path = "../uniffi-one" }
 
 [build-dependencies]
 uniffi-kmm-fixture-build-common = { path = "../../../build-common" }

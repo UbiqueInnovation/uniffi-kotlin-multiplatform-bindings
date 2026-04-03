@@ -10,6 +10,7 @@ kotlinx-coroutines = "1.9.0"
 kotlinx-serialization = "1.9.0"
 maven-publish = "0.33.0"
 shadow = "8.1.1"
+ktor = "3.2.3"
 
 [plugins]
 android-library = { id = "com.android.library", version.ref = "agp" }
@@ -29,3 +30,4 @@ kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }

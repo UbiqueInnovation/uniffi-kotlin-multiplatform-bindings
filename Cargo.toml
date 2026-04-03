@@ -19,19 +19,15 @@ members = [
     "tests/uniffi/docstring-proc-macro",
     "tests/uniffi/enum-types",
     "tests/uniffi/error-types",
+    "tests/uniffi/ext-types/custom-types",
+    "tests/uniffi/ext-types/ext-types",
+    "tests/uniffi/ext-types/ext-types-proc-macro",
+    "tests/uniffi/ext-types/external-crate",
+    "tests/uniffi/ext-types/http-headermap",
     "tests/uniffi/ext-types/simple/external-lib",
     "tests/uniffi/ext-types/simple",
-    # Temporarily disable ext-types test.
-    # TODO:
-    #   1. Properly handle external types in headers
-    #   2. Fix panics by uniffi-meta during bindings generation in ext-types
-    # "tests/uniffi/ext-types/custom-types",
-    # "tests/uniffi/ext-types/ext-types",
-    # "tests/uniffi/ext-types/ext-types-proc-macro",
-    # "tests/uniffi/ext-types/external-crate",
-    # "tests/uniffi/ext-types/http-headermap",
-    # "tests/uniffi/ext-types/sub-lib",
-    # "tests/uniffi/ext-types/uniffi-one",
+    "tests/uniffi/ext-types/sub-lib",
+    "tests/uniffi/ext-types/uniffi-one",
     "tests/uniffi/futures",
     "tests/uniffi/keywords",
     "tests/uniffi/multi-module/mod-a",

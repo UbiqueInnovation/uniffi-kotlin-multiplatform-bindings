@@ -1,13 +1,11 @@
-import io.gitlab.trixnity.gradle.RustHost
-import io.gitlab.trixnity.gradle.rust.dsl.useRustUpLinker
+import ch.ubique.uniffi.plugin.extensions.useRustUpLinker
+import ch.ubique.uniffi.plugin.model.RustHost
 
 plugins {
     kotlin("multiplatform")
-    id("io.gitlab.trixnity.rust.kotlin.multiplatform")
-    id("io.gitlab.trixnity.cargo.kotlin.multiplatform")
-    id("io.gitlab.trixnity.uniffi.kotlin.multiplatform")
-    alias(libs.plugins.kotlin.atomicfu)
+	alias(libs.plugins.kotlin.atomicfu)
     alias(libs.plugins.android.library)
+	id("ch.ubique.uniffi.plugin")
 }
 
 uniffi {
@@ -16,8 +14,10 @@ uniffi {
 }
 
 kotlin {
+	jvmToolchain(17)
+
     androidTarget()
-    jvm("desktop")
+    jvm()
     arrayOf(
         mingwX64(),
     ).forEach { nativeTarget ->
@@ -41,7 +41,7 @@ kotlin {
             dependencies {
                 implementation(project(":runtime"))
 
-                implementation(libs.ktor.http)
+                implementation(libs.ktor.client.core)
             }
         }
         commonTest {
