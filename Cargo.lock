@@ -826,6 +826,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "uniffi-kmm-example-quickstart"
+version = "0.1.0"
+dependencies = [
+ "uniffi",
+]
+
+[[package]]
 name = "uniffi-kmm-fixture-build-common"
 version = "0.1.0"
 dependencies = [
@@ -1121,7 +1128,7 @@ dependencies = [
 
 [[package]]
 name = "uniffi_bindgen_kotlin_multiplatform"
-version = "0.7.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "askama",
@@ -1140,7 +1147,7 @@ dependencies = [
 
 [[package]]
 name = "uniffi_bindgen_kotlin_multiplatform_bootstrap"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "askama",

@@ -38,6 +38,7 @@ members = [
     "tests/uniffi/type-limits",
 
     "examples/custom-types",
+    "examples/quickstart",
 ]
 resolver = "2"
 
