@@ -25,9 +25,9 @@ fun KotlinNativeCompilation.useRustUpLinker() {
     }
 }
 
-private fun getRustUpHome(project: Project, withPrefix: Boolean = false): String {
+private fun getRustUpHome(project: Project, withPrefix: Boolean = true): String {
     val rustup = if(withPrefix) {
-        "\$HOME/.cargo/bin/rustup"
+        "${System.getenv("HOME")}/.cargo/bin/rustup"
     } else {
         "rustup"
     }
@@ -44,9 +44,9 @@ private fun getRustUpHome(project: Project, withPrefix: Boolean = false): String
     }
 }
 
-private fun getActiveToolchain(project: Project, withPrefix: Boolean = false): String {
+private fun getActiveToolchain(project: Project, withPrefix: Boolean = true): String {
     val rustup = if(withPrefix) {
-        "\$HOME/.cargo/bin/rustup"
+        "${System.getenv("HOME")}/.cargo/bin/rustup"
     } else {
         "rustup"
     }

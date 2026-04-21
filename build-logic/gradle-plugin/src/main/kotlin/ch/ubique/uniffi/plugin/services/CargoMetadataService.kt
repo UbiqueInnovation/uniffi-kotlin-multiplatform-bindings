@@ -27,9 +27,9 @@ abstract class CargoMetadataService : ValueSource<String, CargoMetadataParams> {
 
     override fun obtain(): String {
         val stdout = ByteArrayOutputStream()
-
+        val cargoCommand = "${System.getenv("HOME")}/.cargo/bin/cargo"
         execOperations.exec {
-            commandLine("cargo", "metadata", "--format-version", "1")
+            commandLine(cargoCommand, "metadata", "--format-version", "1")
             workingDir = parameters.packageDirectory.asFile.get()
             standardOutput = stdout
         }

@@ -40,8 +40,8 @@ class CargoRunner(
         workingDir = dir
     }
 
-    fun run(withPrefix : Boolean = false): String {
-        val pathPrefix = "\$HOME/.cargo/bin/"
+    fun run(withPrefix : Boolean = true): String {
+        val pathPrefix = "${System.getenv("HOME")}/.cargo/bin/"
         val commandName = if (useCross) { "cross" } else { "cargo" }
         val command = if(withPrefix) {
             pathPrefix + commandName
