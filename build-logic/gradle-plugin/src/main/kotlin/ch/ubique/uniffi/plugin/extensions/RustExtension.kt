@@ -52,7 +52,7 @@ private fun getActiveToolchain(project: Project, withPrefix: Boolean = false): S
     }
     try {
         val output = project.providers.exec {
-            commandLine("rustup", "show", "active-toolchain")
+            commandLine(rustup, "show", "active-toolchain")
         }.standardOutput.asText.get().trim()
         val activeToolchains = output.trim().split("\n")
         val toolchain = activeToolchains.firstNotNullOf {
