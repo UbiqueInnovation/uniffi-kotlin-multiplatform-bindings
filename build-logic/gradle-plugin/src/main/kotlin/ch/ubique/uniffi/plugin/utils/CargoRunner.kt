@@ -53,7 +53,13 @@ class CargoRunner(
         builder.environment().putAll(environment)
         workingDir?.let { builder.directory(it) }
 
-        val process = builder.start()
+        val process = runCatching { builder.start() }.getOrNull() ?: run {
+            if(withPrefix) {
+                throw Exception("Failed to start cargo. Is rust installed?")
+            } else {
+                return this.run(true)
+            }
+        }
 
         val stdout = process.inputStream.bufferedReader().readText()
         val stderr = process.errorStream.bufferedReader().readText()
@@ -99,11 +105,6 @@ class CargoRunner(
         }
 
         check(exitCode == 0) {
-            if(!withPrefix) {
-                // try a rerun if it fails without prefix
-                logger.warn("Fallback using prefix to cargo binary paht")
-                return this.run(true)
-            }
             println(stdout)
             println(stderr)
             logger.error("Failed to run '$command ${arguments.joinToString(" ")}'")
