@@ -4,6 +4,7 @@ import ch.ubique.uniffi.plugin.model.BuildTarget
 import org.gradle.api.Project
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCompilation
 import java.io.File
+import java.io.IOException
 import kotlin.text.trim
 
 fun KotlinNativeCompilation.useRustUpLinker() {
@@ -24,21 +25,46 @@ fun KotlinNativeCompilation.useRustUpLinker() {
     }
 }
 
-private fun getRustUpHome(project: Project): String {
-    return project.providers.exec {
-        commandLine("rustup", "show", "home")
-    }.standardOutput.asText.get().trim()
+private fun getRustUpHome(project: Project, withPrefix: Boolean = false): String {
+    val rustup = if(withPrefix) {
+        "\$HOME/.cargo/bin/rustup"
+    } else {
+        "rustup"
+    }
+    try {
+        return project.providers.exec {
+            commandLine(rustup, "show", "home")
+        }.standardOutput.asText.get().trim()
+    } catch(e: IOException) {
+        if(withPrefix) {
+            print("withPrefix failed")
+            throw e
+        }
+        return getRustUpHome(project, true)
+    }
 }
 
-private fun getActiveToolchain(project: Project): String {
-    val output = project.providers.exec {
-        commandLine("rustup", "show", "active-toolchain")
-    }.standardOutput.asText.get().trim()
-
-    val activeToolchains = output.trim().split("\n")
-    val toolchain = activeToolchains.firstNotNullOf {
-        it.trim().split(" ").getOrNull(0)?.takeUnless(String::isEmpty)
+private fun getActiveToolchain(project: Project, withPrefix: Boolean = false): String {
+    val rustup = if(withPrefix) {
+        "\$HOME/.cargo/bin/rustup"
+    } else {
+        "rustup"
     }
+    try {
+        val output = project.providers.exec {
+            commandLine("rustup", "show", "active-toolchain")
+        }.standardOutput.asText.get().trim()
+        val activeToolchains = output.trim().split("\n")
+        val toolchain = activeToolchains.firstNotNullOf {
+            it.trim().split(" ").getOrNull(0)?.takeUnless(String::isEmpty)
+        }
 
-    return toolchain
+        return toolchain
+    } catch(ex: IOException) {
+        if(withPrefix) {
+            print("withPrefix failed")
+            throw ex
+        }
+        return getActiveToolchain(project, true)
+    }
 }

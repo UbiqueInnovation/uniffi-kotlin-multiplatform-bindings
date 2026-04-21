@@ -2,6 +2,7 @@ package ch.ubique.uniffi.plugin.utils
 
 import org.gradle.api.logging.Logger
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
@@ -87,21 +88,28 @@ class CargoRunner(
 
             val lockFile = File(System.getProperty("java.io.tmpdir"), "ch.ubique.rustup.lock")
 
-            val (output, exitCode) = withGlobalFileLock(lockFile) {
-                val process = builder.start()
-                val output = process.inputStream.bufferedReader().readText()
-                val exitCode = process.waitFor()
-                output to exitCode
-            }
+            try {
+                val (output, exitCode) = withGlobalFileLock(lockFile) {
+                    val process = builder.start()
+                    val output = process.inputStream.bufferedReader().readText()
+                    val exitCode = process.waitFor()
+                    output to exitCode
+                }
+                check(exitCode == 0) {
+                    println(output)
+                    logger.error("Failed to run 'rustup target add $targetToInstall'")
+                    "Failed to run command: 'rustup target add $targetToInstall' with exit code $exitCode"
+                }
 
-            check(exitCode == 0) {
-                println(output)
-                logger.error("Failed to run 'rustup target add $targetToInstall'")
-                "Failed to run command: 'rustup target add $targetToInstall' with exit code $exitCode"
+                // If the rustup command succeeded, retry the failed command.
+                return this.run(withPrefix)
+            } catch(ex: IOException) {
+                if(withPrefix) {
+                    throw ex
+                }
+                logger.warn("Failed to run without prefix, trying with explicit prefix set to \$HOME/.cargo/bin")
+                return this.run(true)
             }
-
-            // If the rustup command succeeded, retry the failed command.
-            return this.run(withPrefix)
         }
 
         check(exitCode == 0) {
