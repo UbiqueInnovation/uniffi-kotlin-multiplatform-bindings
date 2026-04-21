@@ -39,8 +39,14 @@ class CargoRunner(
         workingDir = dir
     }
 
-    fun run(): String {
-        val command = if (useCross) { "cross" } else { "cargo" }
+    fun run(withPrefix : Boolean = false): String {
+        val pathPrefix = "\$HOME/.cargo/bin/"
+        val commandName = if (useCross) { "cross" } else { "cargo" }
+        val command = if(withPrefix) {
+            pathPrefix + commandName
+        } else {
+            commandName
+        }
 
         val builder = ProcessBuilder(listOf(command) + arguments)
         builder.redirectErrorStream(false)
@@ -63,8 +69,12 @@ class CargoRunner(
 
         if (exitCode != 0 && targetToInstall != null) {
             logger.warn("Failed to run '$command ${arguments.joinToString(" ")}' trying to install rustup toolchain using 'rustup target add $targetToInstall'")
-
-            val builder = ProcessBuilder(listOf("rustup", "target", "add", targetToInstall))
+            val rustup = if (withPrefix) {
+                pathPrefix + "rustup"
+            } else {
+                "rustup"
+            }
+            val builder = ProcessBuilder(listOf(rustup, "target", "add", targetToInstall))
             builder.redirectErrorStream(true)
             builder.environment().putAll(environment)
             workingDir?.let { builder.directory(it) }
@@ -85,10 +95,15 @@ class CargoRunner(
             }
 
             // If the rustup command succeeded, retry the failed command.
-            return this.run()
+            return this.run(withPrefix)
         }
 
         check(exitCode == 0) {
+            if(!withPrefix) {
+                // try a rerun if it fails without prefix
+                logger.warn("Fallback using prefix to cargo binary paht")
+                return this.run(true)
+            }
             println(stdout)
             println(stderr)
             logger.error("Failed to run '$command ${arguments.joinToString(" ")}'")
