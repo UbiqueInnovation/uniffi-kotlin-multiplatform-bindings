@@ -1,3 +1,5 @@
+use std::{env, path::PathBuf};
+
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -51,6 +53,37 @@ struct Cli {
     metadata_no_deps: bool,
 }
 
+fn get_cargo_path() -> PathBuf {
+    if let Ok(cargo_var) = env::var("CARGO") {
+        return PathBuf::from(cargo_var);
+    }
+
+    if let Ok(path) = which::which("cargo") {
+        return path;
+    }
+
+    if let Ok(home) = env::var("CARGO_HOME") {
+        let mut cargo_path = PathBuf::from(home);
+        cargo_path.push("bin");
+        cargo_path.push(format!("cargo{}", env::consts::EXE_SUFFIX));
+
+        if cargo_path.exists() {
+            return cargo_path;
+        }
+    }
+
+    if let Ok(mut home) = home::cargo_home() {
+        home.push("bin");
+        home.push(format!("cargo{}", env::consts::EXE_SUFFIX));
+
+        if home.exists() {
+            return home;
+        }
+    }
+
+    PathBuf::from("cargo")
+}
+
 fn main() -> anyhow::Result<()> {
     let Cli {
         out_dir,
@@ -74,6 +107,7 @@ fn main() -> anyhow::Result<()> {
         let config_supplier = {
             use uniffi_bindgen::cargo_metadata::CrateConfigSupplier;
             let mut cmd = cargo_metadata::MetadataCommand::new();
+            cmd.cargo_path(get_cargo_path());
             if metadata_no_deps {
                 cmd.no_deps();
             }

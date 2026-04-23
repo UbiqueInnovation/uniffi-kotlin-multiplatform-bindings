@@ -1,8 +1,8 @@
 package ch.ubique.uniffi.plugin.utils
 
+import org.gradle.api.GradleException
 import org.gradle.api.logging.Logger
 import java.io.File
-import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
@@ -40,27 +40,17 @@ class CargoRunner(
         workingDir = dir
     }
 
-    fun run(withPrefix : Boolean = true): String {
-        val pathPrefix = "${System.getenv("HOME")}/.cargo/bin/"
+    fun run(): String {
         val commandName = if (useCross) { "cross" } else { "cargo" }
-        val command = if(withPrefix) {
-            pathPrefix + commandName
-        } else {
-            commandName
-        }
+        val command = RustLocator.findRustExecutable(commandName).path
 
         val builder = ProcessBuilder(listOf(command) + arguments)
         builder.redirectErrorStream(false)
         builder.environment().putAll(environment)
         workingDir?.let { builder.directory(it) }
 
-        val process = runCatching { builder.start() }.getOrNull() ?: run {
-            if(withPrefix) {
-                throw Exception("Failed to start cargo. Is rust installed?")
-            } else {
-                return this.run(true)
-            }
-        }
+        val process = runCatching { builder.start() }.getOrNull()
+			?: throw GradleException("Failed to start $commandName. Is rust installed?")
 
         val stdout = process.inputStream.bufferedReader().readText()
         val stderr = process.errorStream.bufferedReader().readText()
@@ -76,11 +66,7 @@ class CargoRunner(
 
         if (exitCode != 0 && targetToInstall != null) {
             logger.warn("Failed to run '$command ${arguments.joinToString(" ")}' trying to install rustup toolchain using 'rustup target add $targetToInstall'")
-            val rustup = if (withPrefix) {
-                pathPrefix + "rustup"
-            } else {
-                "rustup"
-            }
+            val rustup = RustLocator.findRustExecutable("rustup").path
             val builder = ProcessBuilder(listOf(rustup, "target", "add", targetToInstall))
             builder.redirectErrorStream(true)
             builder.environment().putAll(environment)
@@ -88,28 +74,20 @@ class CargoRunner(
 
             val lockFile = File(System.getProperty("java.io.tmpdir"), "ch.ubique.rustup.lock")
 
-            try {
-                val (output, exitCode) = withGlobalFileLock(lockFile) {
-                    val process = builder.start()
-                    val output = process.inputStream.bufferedReader().readText()
-                    val exitCode = process.waitFor()
-                    output to exitCode
-                }
-                check(exitCode == 0) {
-                    println(output)
-                    logger.error("Failed to run 'rustup target add $targetToInstall'")
-                    "Failed to run command: 'rustup target add $targetToInstall' with exit code $exitCode"
-                }
+			val (output, exitCode) = withGlobalFileLock(lockFile) {
+				val process = builder.start()
+				val output = process.inputStream.bufferedReader().readText()
+				val exitCode = process.waitFor()
+				output to exitCode
+			}
+			check(exitCode == 0) {
+				println(output)
+				logger.error("Failed to run 'rustup target add $targetToInstall'")
+				"Failed to run command: 'rustup target add $targetToInstall' with exit code $exitCode"
+			}
 
-                // If the rustup command succeeded, retry the failed command.
-                return this.run(withPrefix)
-            } catch(ex: IOException) {
-                if(withPrefix) {
-                    throw ex
-                }
-                logger.warn("Failed to run without prefix, trying with explicit prefix set to \$HOME/.cargo/bin")
-                return this.run(true)
-            }
+			// If the rustup command succeeded, retry the failed command.
+			return this.run()
         }
 
         check(exitCode == 0) {

@@ -1,6 +1,7 @@
 package ch.ubique.uniffi.plugin.extensions
 
 import ch.ubique.uniffi.plugin.model.BuildTarget
+import ch.ubique.uniffi.plugin.utils.RustLocator
 import org.gradle.api.Project
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCompilation
 import java.io.File
@@ -26,11 +27,7 @@ fun KotlinNativeCompilation.useRustUpLinker() {
 }
 
 private fun getRustUpHome(project: Project, withPrefix: Boolean = true): String {
-    val rustup = if(withPrefix) {
-        "${System.getenv("HOME")}/.cargo/bin/rustup"
-    } else {
-        "rustup"
-    }
+    val rustup = RustLocator.findRustExecutable("rustup")
     try {
         return project.providers.exec {
             commandLine(rustup, "show", "home")
@@ -45,11 +42,7 @@ private fun getRustUpHome(project: Project, withPrefix: Boolean = true): String 
 }
 
 private fun getActiveToolchain(project: Project, withPrefix: Boolean = true): String {
-    val rustup = if(withPrefix) {
-        "${System.getenv("HOME")}/.cargo/bin/rustup"
-    } else {
-        "rustup"
-    }
+    val rustup = RustLocator.findRustExecutable("rustup")
     try {
         val output = project.providers.exec {
             commandLine(rustup, "show", "active-toolchain")

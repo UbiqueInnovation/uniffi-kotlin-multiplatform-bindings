@@ -1,17 +1,12 @@
 package ch.ubique.uniffi.plugin.services
 
-import ch.ubique.uniffi.plugin.model.CargoMetadata
-import org.gradle.api.GradleException
+import ch.ubique.uniffi.plugin.utils.RustLocator
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ValueSource
 import org.gradle.api.provider.ValueSourceParameters
-import org.gradle.api.services.BuildService
-import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.process.ExecOperations
 import java.io.ByteArrayOutputStream
-import java.io.File
-import java.lang.AutoCloseable
 import java.nio.charset.Charset
 import javax.inject.Inject
 
@@ -27,9 +22,9 @@ abstract class CargoMetadataService : ValueSource<String, CargoMetadataParams> {
 
     override fun obtain(): String {
         val stdout = ByteArrayOutputStream()
-        val cargoCommand = "${System.getenv("HOME")}/.cargo/bin/cargo"
+        val cargoCommand = RustLocator.findRustExecutable("cargo")
         execOperations.exec {
-            commandLine(cargoCommand, "metadata", "--format-version", "1")
+            commandLine(cargoCommand.path, "metadata", "--format-version", "1")
             workingDir = parameters.packageDirectory.asFile.get()
             standardOutput = stdout
         }
