@@ -34,9 +34,11 @@ abstract class BuildBindingsTask : DefaultTask() {
     abstract val bindgen: RegularFileProperty
 
     @get:InputFile
-    abstract val libraryFile: RegularFileProperty?
+	@get:Optional
+    abstract val libraryFile: RegularFileProperty
 	@get:InputFile
-	abstract val udlFile: RegularFileProperty?
+	@get:Optional
+	abstract val udlFile: RegularFileProperty
 
 
     @get:Input
@@ -58,16 +60,14 @@ abstract class BuildBindingsTask : DefaultTask() {
     }
 
     private fun buildBindings(crateName: String) {
-		val udlFile = udlFile;
-		val libraryFile = libraryFile
-		val command = if(udlFile != null) {
+		val command = if(udlFile.isPresent) {
 			mutableListOf(
 				bindgen.get().asFile.path,
 				udlFile.get().asFile.path,
 				"--out-dir",
 				bindingsDirectory.get().asFile.path,
 			)
-		} else if (libraryFile != null) {
+		} else if (libraryFile.isPresent) {
 			mutableListOf(
 				bindgen.get().asFile.path,
 				"--library",
