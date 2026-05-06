@@ -34,7 +34,10 @@ abstract class BuildBindingsTask : DefaultTask() {
     abstract val bindgen: RegularFileProperty
 
     @get:InputFile
-    abstract val libraryFile: RegularFileProperty
+    abstract val libraryFile: RegularFileProperty?
+	@get:InputFile
+	abstract val udlFile: RegularFileProperty?
+
 
     @get:Input
     abstract val cargoMetadata: Property<String>
@@ -55,13 +58,26 @@ abstract class BuildBindingsTask : DefaultTask() {
     }
 
     private fun buildBindings(crateName: String) {
-		val command = mutableListOf(
-			bindgen.get().asFile.path,
-			"--library",
-			libraryFile.get().asFile.path,
-			"--out-dir",
-			bindingsDirectory.get().asFile.path,
-		)
+		val udlFile = udlFile;
+		val libraryFile = libraryFile
+		val command = if(udlFile != null) {
+			mutableListOf(
+				bindgen.get().asFile.path,
+				udlFile.get().asFile.path,
+				"--out-dir",
+				bindingsDirectory.get().asFile.path,
+			)
+		} else if (libraryFile != null) {
+			mutableListOf(
+				bindgen.get().asFile.path,
+				"--library",
+				libraryFile.get().asFile.path,
+				"--out-dir",
+				bindingsDirectory.get().asFile.path,
+			)
+		} else {
+			throw RuntimeException("neither library file nor udl file was provided")
+		}
 		// If it shouldn't generate bindings for external crates specify the '--crate' argument
 		if (!generateBindingsForExternalCrates.get()) {
 			command.add("--crate")

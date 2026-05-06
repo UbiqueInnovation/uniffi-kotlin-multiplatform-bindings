@@ -1,5 +1,6 @@
 package ch.ubique.uniffi.plugin
 
+import ch.ubique.uniffi.plugin.dsl.BindingsGenerationFromUdl
 import com.android.build.gradle.BaseExtension as AndroidExtension
 import ch.ubique.uniffi.plugin.dsl.CargoExtension
 import ch.ubique.uniffi.plugin.dsl.UniffiExtension
@@ -199,7 +200,12 @@ class UniffiPlugin : Plugin<Project> {
             packageDirectory.set(cargoExtension.packageDirectory)
             cargoMetadata.set(cargoMetadataProvider)
             bindgen.set(project.layout.buildDirectory.file("bindgen-install/bin/$bindgenName"))
-            libraryFile.set(libFile)
+            val generation = uniffiExtension.bindingsGeneration.get()
+            if (generation is BindingsGenerationFromUdl) {
+                udlFile.set(generation.udlFile)
+            } else {
+                libraryFile.set(libFile)
+            }
             generateBindingsForExternalCrates.set(uniffiExtension.generateBindingsForExternalCrates)
 
             dependsOn(BUILD_LIB_FOR_BINDINGS_TASK_NAME)
