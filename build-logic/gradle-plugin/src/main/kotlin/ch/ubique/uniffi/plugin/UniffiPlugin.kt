@@ -1,5 +1,6 @@
 package ch.ubique.uniffi.plugin
 
+import ch.ubique.uniffi.plugin.dsl.BindingsGenerationFromLibrary
 import ch.ubique.uniffi.plugin.dsl.BindingsGenerationFromUdl
 import com.android.build.gradle.BaseExtension as AndroidExtension
 import ch.ubique.uniffi.plugin.dsl.CargoExtension
@@ -178,38 +179,52 @@ class UniffiPlugin : Plugin<Project> {
             project.objects.directoryProperty().fileValue(File(cargoMetadata.targetDirectory))
                 .dir("debug")
 
-        val outputDir = project.layout.buildDirectory.dir("bindgen-libs")
+        val generation = uniffiExtension.bindingsGeneration.get()
 
-        project.tasks.named<CargoBuildTask>(BUILD_LIB_FOR_BINDINGS_TASK_NAME) {
-            this.packageDirectory.set(cargoExtension.packageDirectory)
-            this.release.set(false)
-            this.packageName.set(targetPackage.name)
-            this.libraryName.set(this@UniffiPlugin.libraryName)
-            this.cargoOutputDirectory.set(cargoOutputDir)
-            this.outputDirectory.set(outputDir)
-            this.useCross.set(false)
-        }
+        when(generation) {
+            is BindingsGenerationFromLibrary -> {
+                val outputDir = project.layout.buildDirectory.dir("bindgen-libs")
 
-        val libFile = outputDir.map {
-            it.file(
-                BuildTarget.RustTarget.forCurrentPlatform.dynamicLibraryName(libraryName)!!
-            )
-        }
+                project.tasks.named<CargoBuildTask>(BUILD_LIB_FOR_BINDINGS_TASK_NAME) {
+                    this.packageDirectory.set(cargoExtension.packageDirectory)
+                    this.release.set(false)
+                    this.packageName.set(targetPackage.name)
+                    this.libraryName.set(this@UniffiPlugin.libraryName)
+                    this.cargoOutputDirectory.set(cargoOutputDir)
+                    this.outputDirectory.set(outputDir)
+                    this.useCross.set(false)
+                }
 
-        project.tasks.named<BuildBindingsTask>(BUILD_BINDINGS_TASK_NAME) {
-            packageDirectory.set(cargoExtension.packageDirectory)
-            cargoMetadata.set(cargoMetadataProvider)
-            bindgen.set(project.layout.buildDirectory.file("bindgen-install/bin/$bindgenName"))
-            val generation = uniffiExtension.bindingsGeneration.get()
-            if (generation is BindingsGenerationFromUdl) {
-                udlFile.set(generation.udlFile)
-            } else {
-                libraryFile.set(libFile)
+
+                val libFile = outputDir.map {
+                    it.file(
+                        BuildTarget.RustTarget.forCurrentPlatform.dynamicLibraryName(libraryName)!!
+                    )
+                }
+
+                project.tasks.named<BuildBindingsTask>(BUILD_BINDINGS_TASK_NAME) {
+                    packageDirectory.set(cargoExtension.packageDirectory)
+                    cargoMetadata.set(cargoMetadataProvider)
+                    bindgen.set(project.layout.buildDirectory.file("bindgen-install/bin/$bindgenName"))
+                    libraryFile.set(libFile)
+                    generateBindingsForExternalCrates.set(uniffiExtension.generateBindingsForExternalCrates)
+
+                    dependsOn(BUILD_LIB_FOR_BINDINGS_TASK_NAME)
+                    dependsOn(INSTALL_BINDGEN_TASK_NAME)
+                }
             }
-            generateBindingsForExternalCrates.set(uniffiExtension.generateBindingsForExternalCrates)
+            is BindingsGenerationFromUdl -> {
+                project.tasks.named<BuildBindingsTask>(BUILD_BINDINGS_TASK_NAME) {
+                    packageDirectory.set(cargoExtension.packageDirectory)
+                    cargoMetadata.set(cargoMetadataProvider)
+                    bindgen.set(project.layout.buildDirectory.file("bindgen-install/bin/$bindgenName"))
+                    udlFile.set(generation.udlFile)
 
-            dependsOn(BUILD_LIB_FOR_BINDINGS_TASK_NAME)
-            dependsOn(INSTALL_BINDGEN_TASK_NAME)
+                    generateBindingsForExternalCrates.set(uniffiExtension.generateBindingsForExternalCrates)
+
+                    dependsOn(INSTALL_BINDGEN_TASK_NAME)
+                }
+            }
         }
     }
 
