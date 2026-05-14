@@ -98,6 +98,7 @@ pub struct Config {
     pub(super) cdylib_name: Option<String>,
     generate_immutable_records: Option<bool>,
     generate_serializable_records: Option<bool>,
+    skip_serializer_for: Option<Vec<String>>,
     import_pointer_from: Option<Vec<String>>,
     #[serde(default)]
     custom_types: HashMap<String, CustomTypeConfig>,
@@ -140,6 +141,12 @@ impl Config {
     /// Whether to use kotlinx Serializable annotation on the data class
     pub fn generate_serializable_records(&self) -> bool {
         self.generate_serializable_records.unwrap_or(false)
+    }
+    pub fn skip_serializer_for(&self) -> Vec<String> {
+        self.skip_serializer_for
+            .as_ref()
+            .cloned()
+            .unwrap_or_default()
     }
     /// Whether to use kotlinx Serializable annotation on the data class
     pub fn has_import_helpers(&self) -> bool {
@@ -376,9 +383,27 @@ macro_rules! kotlin_type_renderer {
                 ""
             }
 
+            fn is_name_serializable(&self, name: &str) -> bool {
+                                    if self
+            							.config
+            							.skip_serializer_for()
+            							.contains(&name.to_string())
+            						{
+            							return false;
+            						}
+                                    true
+            				}
+
             // Helper to check if a record can be serialized
             // We only allow records that store primitive types or other records and enums
             fn is_serializable(&self, rec: &Record) -> bool {
+                if self
+                    .config
+                    .skip_serializer_for()
+                    .contains(&rec.name().to_string())
+                {
+                    return false;
+                }
                 for f in rec.fields() {
                     for inner_ty in f.iter_types() {
                         match inner_ty {
@@ -393,8 +418,28 @@ macro_rules! kotlin_type_renderer {
                 true
             }
             // Helper to check if a enum variant can be serialized
+                        // We only allow records that store primitive types or other records and enums
+			fn is_enum_serializable(&self, rec: &Enum) -> bool {
+				if self
+					.config
+					.skip_serializer_for()
+					.contains(&rec.name().to_string())
+				{
+					return false;
+				}
+				true
+			}
+
+            // Helper to check if a enum variant can be serialized
             // We only allow records that store primitive types or other records and enums
             fn is_variant_serializable(&self, rec: &Variant) -> bool {
+                if self
+                    .config
+                    .skip_serializer_for()
+                    .contains(&rec.name().to_string())
+                {
+                    return false;
+                }
                 for f in rec.fields() {
                     for inner_ty in f.iter_types() {
                         match inner_ty {
