@@ -16,8 +16,8 @@ cargo {
 
 uniffi {
     bindgenFromPath(
-        rootProject.layout.projectDirectory.dir("bindgen-bootstrap"),
-        packageName = "uniffi_bindgen_kotlin_multiplatform_bootstrap"
+        rootProject.layout.projectDirectory.dir("bindgen-common"),
+        features = listOf("runtime"),
     )
 
     addRuntime = false

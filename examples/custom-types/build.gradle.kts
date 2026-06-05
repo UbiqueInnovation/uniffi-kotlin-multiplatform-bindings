@@ -9,7 +9,7 @@ plugins {
 }
 
 uniffi {
-    bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen"))
+    bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen-common"))
     generateFromLibrary()
 }
 

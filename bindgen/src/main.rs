@@ -8,7 +8,7 @@ use std::{env, path::PathBuf};
 use anyhow::Context;
 use camino::Utf8PathBuf;
 use clap::Parser;
-use uniffi_bindgen_kotlin_multiplatform::KotlinBindingGenerator;
+use uniffi_bindgen_kotlin_multiplatform_old::KotlinBindingGenerator;
 
 #[derive(Parser)]
 #[clap(name = "uniffi-bindgen")]

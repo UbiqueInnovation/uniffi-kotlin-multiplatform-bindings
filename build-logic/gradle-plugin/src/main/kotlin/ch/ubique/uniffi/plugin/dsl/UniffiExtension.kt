@@ -60,8 +60,9 @@ abstract class UniffiExtension(internal val project: Project) {
         path: Directory,
         bindgenName: String? = Constants.BINDGEN_BIN_NAME,
         packageName: String? = Constants.BINDGEN_PACKAGE_NAME,
+        features: List<String> = emptyList(),
     ) {
-        bindgenSource.set(BindgenSource.Path(path.asFile.absolutePath, bindgenName, packageName))
+        bindgenSource.set(BindgenSource.Path(path.asFile.absolutePath, bindgenName, packageName, features))
     }
 
     /**
