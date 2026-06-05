@@ -11,7 +11,7 @@
 {%- call kt::docstring(e, 0) %}
 {% match e.variant_discr_type() %}
 {% when None %}
-{%- if config.generate_serializable_records() %}
+{%- if config.generate_serializable_records() && self.is_enum_serializable(e) %}
 @kotlinx.serialization.Serializable
 {% endif%}
 enum class {{ type_name }} {
@@ -22,7 +22,7 @@ enum class {{ type_name }} {
     companion object
 }
 {% when Some with (variant_discr_type) %}
-{%- if config.generate_serializable_records() %}
+{%- if config.generate_serializable_records() && self.is_enum_serializable(e) %}
 @kotlinx.serialization.Serializable
 {% endif%}
 enum class {{ type_name }}(val value: {{ variant_discr_type|type_name(ci) }}) {
@@ -35,7 +35,7 @@ enum class {{ type_name }}(val value: {{ variant_discr_type|type_name(ci) }}) {
 {% endmatch %}
 {% else %}
 
-{%- if !contains_object_references && config.generate_serializable_records() %}
+    {%- if !contains_object_references && config.generate_serializable_records() && self.is_enum_serializable(e) %}
 
 {%  for variant in e.variants() %}
 {% if variant.has_fields() && variant.fields().len() == 1 && variant.fields()[0].name()|var_name|unquote == "" %}
@@ -76,7 +76,7 @@ object {{ type_name }}PolySerializer : kotlinx.serialization.json.JsonContentPol
 
         {%- for variant in e.variants() -%}
         {% if variant.has_fields() %}
-        
+
         {%- for field in variant.fields() -%}
 
             {%- let fieldNameInternal = field.name()|var_name|unquote %}

@@ -3,15 +3,15 @@
 
 {%- if rec.has_fields() %}
 {%- call kt::docstring(rec, 0) %}
-{%- if config.generate_serializable_records() && self.is_serializable(rec) %}
+{%- if config.generate_serializable_records() && self.is_name_serializable(type_name) %}
 @kotlinx.serialization.Serializable
 {% endif%}
 data class {{ type_name }} (
     {%- for field in rec.fields() %}
     {%- call kt::docstring(field, 4) %}
-    {%- if config.generate_serializable_records() && self.is_serializable(rec) %}
+    {%- if config.generate_serializable_records() && self.is_name_serializable(type_name)  %}
     @kotlinx.serialization.json.JsonNames("{% call kt::field_name_unquoted_unescaped(field, loop.index) %}")
-    {%- if !field.name().is_empty() %}
+    {%- if !field.name().is_empty() && self.is_name_serializable(type_name)  %}
     @kotlinx.serialization.SerialName("{{ field.name() }}")
     {%- endif -%}
     {%- endif %}
