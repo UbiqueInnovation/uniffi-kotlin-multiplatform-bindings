@@ -108,6 +108,7 @@ pub struct Config {
     kotlin_target_version: Option<String>,
     #[serde(default)]
     disable_java_cleaner: bool,
+    skip_serializer_for: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -155,6 +156,13 @@ impl Config {
 
     pub(crate) fn use_enum_entries(&self) -> bool {
         self.get_kotlin_version() >= KotlinVersion::new(1, 9, 0)
+    }
+
+    pub fn skip_serializer_for(&self) -> Vec<String> {
+        self.skip_serializer_for
+            .as_ref()
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Returns a `Version` with the contents of `kotlin_target_version`.
