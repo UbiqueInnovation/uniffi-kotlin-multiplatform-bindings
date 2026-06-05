@@ -108,6 +108,7 @@ pub struct Config {
     kotlin_target_version: Option<String>,
     #[serde(default)]
     disable_java_cleaner: bool,
+    skip_serializer_for: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -155,6 +156,13 @@ impl Config {
 
     pub(crate) fn use_enum_entries(&self) -> bool {
         self.get_kotlin_version() >= KotlinVersion::new(1, 9, 0)
+    }
+
+    pub fn skip_serializer_for(&self) -> Vec<String> {
+        self.skip_serializer_for
+            .as_ref()
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Returns a `Version` with the contents of `kotlin_target_version`.
@@ -330,9 +338,19 @@ macro_rules! kotlin_type_renderer {
                 ""
             }
 
+            fn is_name_serializable(&self, name: &str) -> bool {
+                !self
+                    .config
+                    .skip_serializer_for()
+                    .contains(&name.to_string())
+            }
             // Helper to check if a record can be serialized
             // We only allow records that store primitive types or other records and enums
             fn is_serializable(&self, rec: &Record) -> bool {
+                if !self.is_name_serializable(rec.name()) {
+                    return false;
+                }
+
                 for f in rec.fields() {
                     for inner_ty in f.iter_types() {
                         match inner_ty {
@@ -348,7 +366,17 @@ macro_rules! kotlin_type_renderer {
             }
             // Helper to check if a enum variant can be serialized
             // We only allow records that store primitive types or other records and enums
+            fn is_enum_serializable(&self, rec: &Enum) -> bool {
+                self.is_name_serializable(rec.name())
+            }
+
+            // Helper to check if a enum variant can be serialized
+            // We only allow records that store primitive types or other records and enums
             fn is_variant_serializable(&self, rec: &Variant) -> bool {
+                if !self.is_name_serializable(rec.name()) {
+                    return false;
+                }
+
                 for f in rec.fields() {
                     for inner_ty in f.iter_types() {
                         match inner_ty {
