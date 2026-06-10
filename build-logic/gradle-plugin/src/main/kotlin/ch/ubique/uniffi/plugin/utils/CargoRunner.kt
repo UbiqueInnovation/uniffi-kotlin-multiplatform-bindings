@@ -6,6 +6,7 @@ import java.io.File
 import java.io.RandomAccessFile
 import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
+import kotlin.concurrent.thread
 
 class CargoRunner(
     private val logger: Logger,
@@ -51,10 +52,26 @@ class CargoRunner(
 
         val process = runCatching { builder.start() }.getOrNull()
 			?: throw GradleException("Failed to start $commandName. Is rust installed?")
+        
+        val stdout = StringBuilder()
+        val stderr = StringBuilder()
 
-        val stdout = process.inputStream.bufferedReader().readText()
-        val stderr = process.errorStream.bufferedReader().readText()
+        val stdoutThread = thread(name = "$commandName-stdout") {
+            process.inputStream.bufferedReader().forEachLine { line ->
+                logger.lifecycle(line)
+                synchronized(stdout) { stdout.appendLine(line) }
+            }
+        }
+        val stderrThread = thread(name = "$commandName-stderr") {
+            process.errorStream.bufferedReader().forEachLine { line ->
+                logger.lifecycle(line)
+                synchronized(stderr) { stderr.appendLine(line) }
+            }
+        }
+
         val exitCode = process.waitFor()
+        stdoutThread.join()   // make sure both streams are fully drained
+        stderrThread.join()
 
         // Check if maybe just a target is missing and install it using rustup
         val targetToInstall = stderr.lineSequence()
@@ -91,16 +108,16 @@ class CargoRunner(
         }
 
         check(exitCode == 0) {
-            println(stdout)
-            println(stderr)
+            println(stdout.toString())
+            println(stderr.toString())
             logger.error("Failed to run '$command ${arguments.joinToString(" ")}'")
             "Failed to run '$command ${arguments.joinToString(" ")}' with exit code $exitCode"
         }
 
         return if (redirectErrorStream) {
-            stdout + "\n" + stderr
+            stdout.toString() + "\n" + stderr.toString()
         } else {
-            stdout
+            stdout.toString()
         }
     }
 }

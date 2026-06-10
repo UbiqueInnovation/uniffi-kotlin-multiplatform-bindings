@@ -63,7 +63,12 @@ mavenPublishing {
     coordinates(property("GROUP").toString(), property("ARTIFACT_ID").toString(), project.version.toString())
 
     publishToMavenCentral(true)
-    signAllPublications()
+    
+    val disableSigning = hasProperty("disableSigning") && property("disableSigning") == "true"
+
+    if (!disableSigning) {
+        signAllPublications()
+    }
 }
 
 private fun getProjectVersion(): String {
