@@ -35,9 +35,18 @@ java {
 }
 
 dependencies {
+    // Bundled into the shadow jar and relocated (see shadowJar block) so it can't clash
+    // with the consumer project's kotlinx.serialization version.
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.kotlin.gradle.plugin)
-    implementation(libs.android.tools.gradle)
+
+    // AGP and the Kotlin Gradle plugin are part of the consumer's buildscript classpath at
+    // apply-time, so we only compile against them — we must NOT bundle them. Declaring them
+    // as `implementation` pulls full, un-relocated copies of AGP/KGP (and their transitive
+    // com.android.* / grpc / netty / bundletool classes) into the published uber jar, which
+    // then shadow the consumer's real, newer AGP and cause failures such as
+    // NoSuchMethodError ...ConfigurationOuterClass$Configuration$Builder.setSdkVersionMinor.
+    compileOnly(libs.kotlin.gradle.plugin)
+    compileOnly(libs.android.tools.gradle)
 }
 
 gradlePlugin {
