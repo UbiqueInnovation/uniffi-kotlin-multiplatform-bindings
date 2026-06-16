@@ -126,7 +126,9 @@ sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% e
     {% for variant in e.variants() -%}
     {%- call kt::docstring(variant, 4) %}
     {% if !variant.has_fields() -%}
+    {%- if !contains_object_references && config.generate_serializable_records() && self.is_variant_serializable(variant) %}
     @kotlinx.serialization.Serializable
+    {% endif %}
     object {{ variant|variant_type_name(ci) }} : {{ type_name }}() {% if contains_object_references %} {
         override fun destroy() = Unit
     } {% endif %}
