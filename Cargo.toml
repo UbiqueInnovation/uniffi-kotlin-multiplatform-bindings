@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "bindgen-common",
+    "bindgen",
 
     "runtime",
 

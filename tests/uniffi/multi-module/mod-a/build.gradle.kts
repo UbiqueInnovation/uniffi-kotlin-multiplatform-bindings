@@ -3,7 +3,7 @@ plugins {
 }
 
 uniffi {
-    bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen-common"))
+    bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen"))
 
     generateFromLibrary {
         namespace = "module_a"

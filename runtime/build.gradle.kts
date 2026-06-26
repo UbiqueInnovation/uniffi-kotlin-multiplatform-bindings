@@ -16,7 +16,7 @@ cargo {
 
 uniffi {
     bindgenFromPath(
-        rootProject.layout.projectDirectory.dir("bindgen-common"),
+        rootProject.layout.projectDirectory.dir("bindgen"),
         features = listOf("runtime"),
     )
 

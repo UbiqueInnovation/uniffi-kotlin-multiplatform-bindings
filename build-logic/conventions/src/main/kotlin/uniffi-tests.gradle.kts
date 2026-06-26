@@ -8,7 +8,7 @@ plugins {
 }
 
 uniffi {
-    bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen-common"))
+    bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen"))
 
     addRuntime = false
 }
