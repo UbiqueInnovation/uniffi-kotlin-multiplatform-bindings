@@ -31,6 +31,7 @@ toml = "0.5"
 uniffi_bindgen = { workspace = true }
 uniffi_meta = { workspace = true }
 which = "8.0.2"
+smawk = "=0.3.2"
 
 [features]
 runtime = []

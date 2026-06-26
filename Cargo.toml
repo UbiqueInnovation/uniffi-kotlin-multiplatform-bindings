@@ -1,7 +1,5 @@
 [workspace]
 members = [
-    "bindgen",
-    "bindgen-bootstrap",
     "bindgen-common",
 
     "runtime",

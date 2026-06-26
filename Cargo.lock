@@ -1076,49 +1076,6 @@ dependencies = [
  "home",
  "paste",
  "serde",
- "textwrap",
- "toml",
- "uniffi_bindgen",
- "uniffi_meta",
- "which",
-]
-
-[[package]]
-name = "uniffi_bindgen_kotlin_multiplatform_bootstrap"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "askama",
- "camino",
- "cargo_metadata",
- "clap",
- "fs-err",
- "heck",
- "home",
- "paste",
- "serde",
- "smawk",
- "textwrap",
- "toml",
- "uniffi_bindgen",
- "uniffi_meta",
- "which",
-]
-
-[[package]]
-name = "uniffi_bindgen_kotlin_multiplatform_old"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "askama",
- "camino",
- "cargo_metadata",
- "clap",
- "fs-err",
- "heck",
- "home",
- "paste",
- "serde",
  "smawk",
  "textwrap",
  "toml",
