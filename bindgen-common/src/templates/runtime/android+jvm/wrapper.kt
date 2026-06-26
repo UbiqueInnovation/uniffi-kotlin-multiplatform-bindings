@@ -24,4 +24,4 @@ import com.sun.jna.Library
 // and the FFI Function declarations in a com.sun.jna.Library.
 {% include "NamespaceLibraryTemplate.kt" %}
 
-{% import "runtime/macros.kt" as kt %}
+{% import "macros.kt" as kt %}

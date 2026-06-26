@@ -65,4 +65,4 @@ import platform.posix.memcpy
 // and the FFI Function declarations.
 {% include "NamespaceLibraryTemplate.kt" %}
 
-{% import "runtime/macros.kt" as kt %}
+{% import "macros.kt" as kt %}

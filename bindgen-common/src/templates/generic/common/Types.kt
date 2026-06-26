@@ -1,5 +1,5 @@
 
-{%- import "generic/macros.kt" as kt %}
+{%- import "macros.kt" as kt %}
 
 // Interface implemented by anything that can contain an object reference.
 //

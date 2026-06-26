@@ -84,4 +84,4 @@ import {{ ns }}.*
 {% include "generic/ffi/TopLevelFunctionTemplate.kt" %}
 {% endfor %}
 
-{% import "generic/macros.kt" as kt %}
+{% import "macros.kt" as kt %}

@@ -2,4 +2,4 @@
 
 package {{ config.package_name() }}
 
-{% import "runtime/macros.kt" as kt %}
+{% import "macros.kt" as kt %}

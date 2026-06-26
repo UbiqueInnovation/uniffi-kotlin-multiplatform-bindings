@@ -52,7 +52,7 @@ import {{ ns }}.*
 // Public interface members begin here.
 {{ type_helper_code }}
 
-{% import "generic/macros.kt" as kt %}
+{% import "macros.kt" as kt %}
 
 {%- for func in ci.function_definitions() %}
 {%- include "generic/ffi/TopLevelFunctionTemplate.kt" %}
