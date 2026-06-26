@@ -34,6 +34,11 @@ abstract class InstallBindgenTask : DefaultTask() {
                 is BindgenSource.Path -> {
                     argument("--path")
                     argument(source.path)
+
+                    if (source.features.isNotEmpty()) {
+                        argument("--features")
+                        argument(source.features.joinToString(","))
+                    }
                 }
 
                 is BindgenSource.Git -> {

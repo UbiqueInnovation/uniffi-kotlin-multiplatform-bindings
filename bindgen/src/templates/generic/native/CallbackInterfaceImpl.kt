@@ -1,4 +1,4 @@
-{% if self.include_once_check("ffi/CallbackInterfaceRuntime.kt") %}{% include "ffi/CallbackInterfaceRuntime.kt" %}{% endif %}
+{% if self.include_once_check("generic/ffi/CallbackInterfaceRuntime.kt") %}{% include "generic/ffi/CallbackInterfaceRuntime.kt" %}{% endif %}
 {{ self.add_import("kotlinx.cinterop.invoke") }}
 
 {%- let trait_impl=format!("uniffiCallbackInterface{}", name) %}
