@@ -1,6 +1,19 @@
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     `kotlin-dsl`
     alias(libs.plugins.kotlin.jvm)
+}
+
+// The `kotlin-dsl` plugin compiles the precompiled script plugins (incl. the special
+// `compilePluginsBlocks` task) with language/api version 1.8, which Kotlin 2.4.0 no longer
+// supports. Pin to KOTLIN_2_0 (mirrors :gradle-plugin) so the newer compiler accepts it.
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions {
+        languageVersion.set(KotlinVersion.KOTLIN_2_0)
+        apiVersion.set(KotlinVersion.KOTLIN_2_0)
+    }
 }
 
 dependencies {
