@@ -22,6 +22,10 @@ tasks.shadowJar {
 
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
+        // Must stay at 2.0 (not higher): :conventions consumes this module and is compiled by
+        // the Gradle-embedded Kotlin (2.0.21 in Gradle 8.14.4), which cannot read newer metadata.
+        // The "language version 2.0 is deprecated" warning is the accepted price until the
+        // embedded Kotlin is raised by bumping the Gradle wrapper.
         languageVersion.set(KotlinVersion.KOTLIN_2_0)
         apiVersion.set(KotlinVersion.KOTLIN_2_0)
         jvmTarget.set(JvmTarget.JVM_17)
