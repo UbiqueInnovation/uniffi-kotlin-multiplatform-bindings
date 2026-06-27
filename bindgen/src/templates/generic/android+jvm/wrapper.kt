@@ -3,7 +3,6 @@
 @file:Suppress(
     "NAME_SHADOWING",
     "INCOMPATIBLE_MATCHING",
-    "UNCHECKED_CAST",
     "RemoveRedundantBackticks",
     "KotlinRedundantDiagnosticSuppress",
     "UnusedImport",
@@ -11,8 +10,7 @@
     "RemoveRedundantQualifierName",
     "UnnecessaryOptInAnnotation"
 )
-@file:OptIn(ExperimentalForeignApi::class, kotlin.time.ExperimentalTime::class)
-
+@file:OptIn(kotlin.time.ExperimentalTime::class)
 
 package {{ config.package_name() }}
 
@@ -28,40 +26,14 @@ package {{ config.package_name() }}
 // compile the Rust component. The easiest way to ensure this is to bundle the Kotlin
 // helpers directly inline like we're doing here.
 
-import uniffi.runtime.*
+import uniffi.runtime.*;
 
-import kotlinx.cinterop.ByteVar
-import kotlinx.cinterop.COpaquePointerVar
-import kotlinx.cinterop.CPointer
-import kotlinx.cinterop.CValue
-import kotlinx.cinterop.DoubleVar
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.FloatVar
-import kotlinx.cinterop.IntVar
-import kotlinx.cinterop.LongVar
-import kotlinx.cinterop.ShortVar
-import kotlinx.cinterop.get
-import kotlinx.cinterop.pointed
-import kotlinx.cinterop.reinterpret
-import kotlinx.cinterop.set
-import kotlinx.cinterop.staticCFunction
-import kotlinx.cinterop.useContents
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.alloc
-import kotlinx.cinterop.cValue
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.plus
-import kotlinx.cinterop.ptr
-import kotlinx.cinterop.readValue
-import kotlinx.cinterop.toCPointer
-import kotlinx.cinterop.usePinned
-import kotlin.experimental.ExperimentalNativeApi
-import kotlinx.cinterop.nativeHeap
-import kotlinx.cinterop.value
-import kotlinx.cinterop.CFunction
-import kotlinx.cinterop.write
+import com.sun.jna.Library
+import com.sun.jna.Native
+import com.sun.jna.Structure
+import com.sun.jna.Callback
+import com.sun.jna.ptr.*
 import kotlin.coroutines.resume
-import platform.posix.memcpy
 
 {%- for req in self.imports() %}
 {{ req.render() }}
@@ -74,14 +46,14 @@ import {{ ns }}.*
 {% endif %}
 
 // Contains loading, initialization code,
-// and the FFI Function declarations.
+// and the FFI Function declarations in a com.sun.jna.Library.
 {% include "NamespaceLibraryTemplate.kt" %}
 
 // Public interface members begin here.
 {{ type_helper_code }}
 
-{% for func in ci.function_definitions() %}
-{% include "ffi/TopLevelFunctionTemplate.kt" %}
-{% endfor %}
-
 {% import "macros.kt" as kt %}
+
+{%- for func in ci.function_definitions() %}
+{%- include "generic/ffi/TopLevelFunctionTemplate.kt" %}
+{%- endfor %}

@@ -16,6 +16,7 @@ sealed class BindgenSource(
         val path: String,
         override val bindgenName: String? = null,
         override val packageName: String? = null,
+        val features: List<String> = emptyList(),
     ) : BindgenSource(bindgenName, packageName), Serializable
 
     data class Git(

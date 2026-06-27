@@ -49,6 +49,7 @@ const CPP_KEYWORDS: &[&str] = &[
 trait CodeType: Debug {
     /// The language specific label used to reference this type. This will be used in
     /// method signatures and property declarations.
+    #[cfg_attr(feature = "runtime", allow(dead_code))]
     fn type_label(&self, ci: &ComponentInterface) -> String;
 
     /// A representation of this type label that can be used as part of another
@@ -56,12 +57,16 @@ trait CodeType: Debug {
     ///
     /// This is especially useful when creating specialized objects or methods to deal
     /// with this type only.
+
+    #[cfg_attr(feature = "runtime", allow(dead_code))]
     fn canonical_name(&self) -> String;
 
+    #[cfg_attr(feature = "runtime", allow(dead_code))]
     fn literal(&self, _literal: &Literal, ci: &ComponentInterface) -> String {
         unimplemented!("Unimplemented for {}", self.type_label(ci))
     }
 
+    #[cfg_attr(feature = "runtime", allow(dead_code))]
     fn is_optional(&self) -> bool {
         false
     }
@@ -74,6 +79,7 @@ trait CodeType: Debug {
     /// This is the newer way of handling these methods and replaces the lower, write, lift, and
     /// read CodeType methods.  Currently only used by Kotlin, but the plan is to move other
     /// backends to using this.
+    #[cfg_attr(feature = "runtime", allow(dead_code))]
     fn ffi_converter_name(&self) -> String {
         format!("FfiConverter{}", self.canonical_name())
     }
@@ -159,6 +165,7 @@ impl Config {
             .unwrap_or_default()
     }
 
+    #[cfg_attr(feature = "runtime", allow(dead_code))]
     pub(crate) fn use_enum_entries(&self) -> bool {
         self.get_kotlin_version() >= KotlinVersion::new(1, 9, 0)
     }
@@ -166,6 +173,7 @@ impl Config {
     /// Returns a `Version` with the contents of `kotlin_target_version`.
     /// If `kotlin_target_version` is not defined, version `0.0.0` will be used as a fallback.
     /// If it's not valid, this function will panic.
+    #[cfg_attr(feature = "runtime", allow(dead_code))]
     fn get_kotlin_version(&self) -> KotlinVersion {
         self.kotlin_target_version
             .clone()
@@ -179,6 +187,7 @@ impl Config {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "runtime", allow(dead_code))]
 struct KotlinVersion((u16, u16, u16));
 
 impl KotlinVersion {
@@ -498,21 +507,66 @@ macro_rules! kotlin_wrapper {
     };
 }
 
-kotlin_type_renderer!(CommonTypeRenderer, "common/Types.kt");
-kotlin_wrapper!(CommonKotlinWrapper, CommonTypeRenderer, "common/wrapper.kt");
+#[cfg(not(feature = "runtime"))]
+kotlin_type_renderer!(CommonTypeRenderer, "generic/common/Types.kt");
+#[cfg(feature = "runtime")]
+kotlin_type_renderer!(CommonTypeRenderer, "runtime/common/Types.kt");
+#[cfg(not(feature = "runtime"))]
+kotlin_wrapper!(
+    CommonKotlinWrapper,
+    CommonTypeRenderer,
+    "generic/common/wrapper.kt"
+);
+#[cfg(feature = "runtime")]
+kotlin_wrapper!(
+    CommonKotlinWrapper,
+    CommonTypeRenderer,
+    "runtime/common/wrapper.kt"
+);
 
-kotlin_type_renderer!(AndroidJvmTypeRenderer, "android+jvm/Types.kt");
+#[cfg(not(feature = "runtime"))]
+kotlin_type_renderer!(AndroidJvmTypeRenderer, "generic/android+jvm/Types.kt");
+#[cfg(feature = "runtime")]
+kotlin_type_renderer!(AndroidJvmTypeRenderer, "runtime/android+jvm/Types.kt");
+#[cfg(not(feature = "runtime"))]
 kotlin_wrapper!(
     AndroidJvmKotlinWrapper,
     AndroidJvmTypeRenderer,
-    "android+jvm/wrapper.kt"
+    "generic/android+jvm/wrapper.kt"
+);
+#[cfg(feature = "runtime")]
+kotlin_wrapper!(
+    AndroidJvmKotlinWrapper,
+    AndroidJvmTypeRenderer,
+    "runtime/android+jvm/wrapper.kt"
 );
 
-kotlin_type_renderer!(NativeTypeRenderer, "native/Types.kt");
-kotlin_wrapper!(NativeKotlinWrapper, NativeTypeRenderer, "native/wrapper.kt");
+#[cfg(not(feature = "runtime"))]
+kotlin_type_renderer!(NativeTypeRenderer, "generic/native/Types.kt");
+#[cfg(feature = "runtime")]
+kotlin_type_renderer!(NativeTypeRenderer, "runtime/native/Types.kt");
+#[cfg(not(feature = "runtime"))]
+kotlin_wrapper!(
+    NativeKotlinWrapper,
+    NativeTypeRenderer,
+    "generic/native/wrapper.kt"
+);
+#[cfg(feature = "runtime")]
+kotlin_wrapper!(
+    NativeKotlinWrapper,
+    NativeTypeRenderer,
+    "runtime/native/wrapper.kt"
+);
 
 #[derive(Template)]
-#[template(syntax = "c", escape = "none", path = "headers/wrapper.h")]
+#[cfg_attr(
+    not(feature = "runtime"),
+    template(syntax = "c", escape = "none", path = "generic/headers/wrapper.h")
+)]
+#[cfg_attr(
+    feature = "runtime",
+    template(syntax = "c", escape = "none", path = "runtime/headers/wrapper.h")
+)]
 #[allow(dead_code)]
 pub struct HeaderKotlinWrapper<'ci> {
     #[allow(dead_code)]
@@ -525,6 +579,7 @@ impl<'ci> HeaderKotlinWrapper<'ci> {
         Self { config, ci }
     }
 
+    #[cfg_attr(feature = "runtime", allow(dead_code))]
     pub fn ffi_definitions_no_builtins(&self) -> impl Iterator<Item = FfiDefinition> + '_ {
         self.ci
             .ffi_definitions()
@@ -533,7 +588,14 @@ impl<'ci> HeaderKotlinWrapper<'ci> {
 }
 
 #[derive(Template)]
-#[template(syntax = "c", escape = "none", path = "headers/common.h")]
+#[cfg_attr(
+    not(feature = "runtime"),
+    template(syntax = "c", escape = "none", path = "generic/headers/common.h")
+)]
+#[cfg_attr(
+    feature = "runtime",
+    template(syntax = "c", escape = "none", path = "runtime/headers/common.h")
+)]
 #[allow(dead_code)]
 pub struct CommonHeaderKotlinWrapper<'ci> {
     #[allow(dead_code)]
@@ -546,6 +608,7 @@ impl<'ci> CommonHeaderKotlinWrapper<'ci> {
         Self { config, ci }
     }
 
+    #[cfg_attr(feature = "runtime", allow(dead_code))]
     pub fn ffi_definitions_builtins(&self) -> impl Iterator<Item = FfiDefinition> + '_ {
         self.ci
             .ffi_definitions()
@@ -861,6 +924,7 @@ impl<T: AsType> AsCodeType for T {
     }
 }
 
+#[cfg_attr(feature = "runtime", allow(dead_code))]
 mod filters {
     pub use uniffi_bindgen::backend::filters::*;
     use uniffi_meta::LiteralMetadata;

@@ -20,13 +20,13 @@
 {%- when Type::Enum { name, module_path } %}
 {%- let e = ci.get_enum_definition(name).unwrap() %}
 {%- if !ci.is_name_used_as_error(name) %}
-{% include "ffi/EnumTemplate.kt" %}
+{% include "generic/ffi/EnumTemplate.kt" %}
 {%- else %}
-{% include "ffi/ErrorTemplate.kt" %}
+{% include "generic/ffi/ErrorTemplate.kt" %}
 {%- endif -%}
 
 {%- when Type::Object { module_path, name, imp } %}
-{% include "ffi/ObjectTemplate.kt" %}
+{% include "generic/ffi/ObjectTemplate.kt" %}
 {%- let obj = ci|get_object_definition(name) %}
 {%- if obj.has_callback_interface() %}
 {%- let vtable = obj.vtable().expect("trait interface should have a vtable") %}
@@ -36,22 +36,22 @@
 {%- endif %}
 
 {%- when Type::Record { name, module_path } %}
-{% include "ffi/RecordTemplate.kt" %}
+{% include "generic/ffi/RecordTemplate.kt" %}
 
 {%- when Type::Optional { inner_type } %}
-{% include "ffi/OptionalTemplate.kt" %}
+{% include "generic/ffi/OptionalTemplate.kt" %}
 
 {%- when Type::Sequence { inner_type } %}
-{% include "ffi/SequenceTemplate.kt" %}
+{% include "generic/ffi/SequenceTemplate.kt" %}
 
 {%- when Type::Map { key_type, value_type } %}
-{% include "ffi/MapTemplate.kt" %}
+{% include "generic/ffi/MapTemplate.kt" %}
 
 {%- when Type::CallbackInterface { module_path, name } %}
 {% include "CallbackInterfaceTemplate.kt" %}
 
 {%- when Type::Custom { module_path, name, builtin } %}
-{% include "ffi/CustomTypeTemplate.kt" %}
+{% include "generic/ffi/CustomTypeTemplate.kt" %}
 
 {%- when Type::External { module_path, name, namespace, kind, tagged } %}
 {% include "ExternalTypeTemplate.kt" %}
