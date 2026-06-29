@@ -40,7 +40,13 @@
     {%- call docstring(callable, indent) %}
     {%- match callable.throws_type() -%}
     {%-     when Some(throwable) %}
+    {#- An override inherits its @Throws filter from the interface method it implements.
+        Repeating it is redundant and Kotlin/Native (2.4+) rejects it as a mismatched
+        '@Throws' filter, so only emit @Throws for non-override declarations (top-level
+        functions, constructors). #}
+    {%-         if !func_decl.contains("override") %}
     @Throws({{ throwable|type_name(ci) }}::class {%- if callable.is_async() -%},kotlin.coroutines.cancellation.CancellationException::class{%- endif -%})
+    {%-         endif %}
     {%-     else -%}
     {%- endmatch -%}
     {%- if callable.is_async() %}
@@ -63,7 +69,13 @@
     {%- call docstring(callable, indent) %}
     {%- match callable.throws_type() -%}
     {%-     when Some(throwable) %}
+    {#- An override inherits its @Throws filter from the interface method it implements.
+        Repeating it is redundant and Kotlin/Native (2.4+) rejects it as a mismatched
+        '@Throws' filter, so only emit @Throws for non-override declarations (top-level
+        functions, constructors). #}
+    {%-         if !func_decl.contains("override") %}
     @Throws({{ throwable|type_name(ci) }}::class {%- if callable.is_async() -%},kotlin.coroutines.cancellation.CancellationException::class{%- endif -%})
+    {%-         endif %}
     {%-     else -%}
     {%- endmatch -%}
     {%- if callable.is_async() %}
