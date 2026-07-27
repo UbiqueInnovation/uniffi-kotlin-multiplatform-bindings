@@ -3,8 +3,8 @@ name: Publish to Maven Central
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+-[a-zA-Z0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - "v[0-9]+.[0-9]+.[0-9]+-[a-zA-Z0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
   publish-plugin:
@@ -15,8 +15,8 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'zulu'
+          java-version: "17"
+          distribution: "zulu"
 
       - name: Grant permission to execute
         run: chmod +x gradlew
@@ -35,14 +35,15 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'zulu'
+          java-version: "17"
+          distribution: "zulu"
 
       - name: Grant permission to execute
         run: chmod +x gradlew
 
       - name: Install Linux-Toolchain
         run: |
+          brew trust messense/macos-cross-toolchains
           brew tap messense/macos-cross-toolchains
           # install x86_64-unknown-linux-gnu toolchain
           brew install x86_64-unknown-linux-gnu
@@ -53,7 +54,7 @@ jobs:
 
       - name: Upload
         env:
-          IPHONEOS_DEPLOYMENT_TARGET: '16.4'
+          IPHONEOS_DEPLOYMENT_TARGET: "16.4"
           CC_x86_64_unknown_linux_gnu: x86_64-linux-gnu-gcc
           CXX_x86_64_unknown_linux_gnu: x86_64-linux-gnu-g++
           AR_x86_64_unknown_linux_gnu: x86_64-linux-gnu-ar
