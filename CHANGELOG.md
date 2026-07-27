@@ -1,6 +1,61 @@
 # Changelog
 
-## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.0.0...HEAD)
+## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.0.16...HEAD)
+
+## [1.0.15](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.15) - 2026-07-27
+
+### Added
+
+- Consumer ProGuard rules for the runtime.
+
+### Changed
+
+- Update to Kotlin `2.4.0`.
+- Runtime and generated projects now share the same bindgen crate (`bindgen-bootstrap` was merged into `bindgen`).
+
+## [1.0.14](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.14) - 2026-06-16
+
+### Changed
+
+- Don't bundle AGP with the plugin.
+- Pin `smawk` version.
+
+## [1.0.13](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.13) - 2026-06-16
+
+### Fixed
+
+- Omit the `Serializable` attribute if `generate_serializable_records` is disabled for all types.
+
+## [1.0.12](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.12) - 2026-06-10
+
+### Fixed
+
+- Stream cargo output while building. This prevents occasional deadlogs around the output buffer.
+
+## [1.0.11](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.11) - 2026-06-05
+
+### Changed
+
+- Skip serializer generation when disabled in the config.
+
+## [1.0.10](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.10) - 2026-05-08
+
+### Changed
+
+- Use the UDL file for FFI generation as well.
+- Skip building the library when using UDL.
+
+## [1.0.8](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.8) - 2026-05-05
+
+### Changed
+
+- Set an explicit `minSdk` for the runtime.
+
+## [1.0.7](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.7) - 2026-04-23
+
+### Fixed
+
+- Fall back to `~/.cargo/bin/` in the plugin and bindgen when cargo/rustup are not on the `PATH`.
 
 ## [1.0.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.0) - 2026-04-03
 
