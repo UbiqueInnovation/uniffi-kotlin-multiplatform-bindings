@@ -55,7 +55,7 @@ abstract class BuildBindingsTask : DefaultTask() {
      * see [generatedDirectories].
      */
     @get:Internal
-    val bindingsDirectory = project.layout.buildDirectory.dir("generated/uniffi")
+    abstract val bindingsDirectory: DirectoryProperty
 
     /**
      * The generated sources, declared one directory per source set rather than as the
