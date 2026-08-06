@@ -1,9 +1,10 @@
 import ch.ubique.uniffi.plugin.extensions.useRustUpLinker
 import ch.ubique.uniffi.plugin.model.RustHost
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.kotlin.atomicfu)
     `maven-publish`
     alias(libs.plugins.maven.publish)
@@ -38,10 +39,6 @@ kotlin {
         }
     }
 
-    androidTarget {
-        publishLibraryVariants("release")
-    }
-
     linuxX64()
     linuxArm64()
 
@@ -64,6 +61,20 @@ kotlin {
         }
     }
 
+    android {
+        namespace = "uniffi.runtime"
+        compileSdk = 37
+        minSdk = 21
+
+        @Suppress("UnstableApiUsage")
+        optimization {
+            consumerKeepRules.apply {
+                publish = true
+                file("consumer-rules.pro")
+            }
+        }
+    }
+
     sourceSets {
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -76,17 +87,8 @@ kotlin {
     }
 }
 
-android {
-    namespace = "uniffi.runtime"
-    compileSdk = 34
-    defaultConfig {
-        minSdk = 21
-        consumerProguardFiles("consumer-rules.pro")
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
+atomicfu {
+    transformJvm = false
 }
 
 apply(from = "../gradle/artifactory.gradle")
