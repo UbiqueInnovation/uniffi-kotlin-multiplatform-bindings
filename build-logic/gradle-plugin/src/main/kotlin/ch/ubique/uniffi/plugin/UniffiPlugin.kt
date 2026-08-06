@@ -25,6 +25,7 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.Directory
+import org.gradle.api.file.FileCollection
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
@@ -50,25 +51,12 @@ class UniffiPlugin : Plugin<Project> {
     /**
      * Which cargo profile the rust libraries are built with.
      *
-     * Resolved once, at apply time, from `-Puniffi.profile` / `-PreleaseBuild`.
-     * Both are read through [org.gradle.api.provider.ProviderFactory], so they are
-     * tracked configuration-cache inputs — unlike the old implementation, which
-     * sniffed `gradle.startParameter.taskNames` and therefore silently produced a
-     * different task graph depending on what was typed on the command line.
-     *
-     * Kotlin/Native binaries do have a real DEBUG/RELEASE axis of their own, but the
-     * cinterop klib (which embeds the rust static library) is per *compilation*, not
-     * per binary, so it can only carry one profile. See the note in
-     * [configureNativeTarget].
+     * Resolved from `-Puniffi.profile` / `-PreleaseBuild`.
      */
     private var isRelease: Boolean = false
 
     /**
-     * True while the IDE is importing the project.
-     *
-     * `idea.sync.active` is the signal the Kotlin Gradle plugin itself uses
-     * (`org.jetbrains.kotlin.gradle.internal.isInIdeaSync`). Read through
-     * `providers.systemProperty`, so it is a tracked configuration input.
+     * The IDE sets `idea.sync.active` to true during a sync
      */
     private var isIdeSync: Boolean = false
 
@@ -82,18 +70,24 @@ class UniffiPlugin : Plugin<Project> {
     private lateinit var bindingsRootDir: Provider<Directory>
 
     /**
-     * Applies the plugin to the target project.
-     *
-     * Everything is wired here, at apply time. Nothing is deferred to
-     * `afterEvaluate` any more:
-     *
-     *  - AGP runs its `onVariants` callbacks inside *its* `afterEvaluate`, which is
-     *    registered before ours, so anything deferred arrives too late.
-     *  - `cargo metadata` is consumed as a `Provider`, so configuration (and every
-     *    IDE sync) no longer shells out to cargo.
-     *  - The set of Kotlin targets is read from a live collection
-     *    (`targets.configureEach`) instead of being enumerated after evaluation.
+     * The bindings task, kept so the generated source directories can be handed to the
+     * Kotlin source sets *as task outputs* rather than as bare paths. That is what makes
+     * the dependency implicit: see [bindingsSourceDir].
      */
+    private lateinit var buildBindingsTask: TaskProvider<BuildBindingsTask>
+
+    /**
+     * The generated source directory for [sourceSetName], as a provider that carries a
+     * dependency on [buildBindingsTask].
+     *
+     * Handing this to `srcDir` means Gradle infers "compiling this source set requires
+     * buildBindings" on its own, which is what lets the blanket
+     * `withType(KotlinCompilationTask).dependsOn(buildBindings)` wiring go away.
+     */
+    private fun bindingsSourceDir(project: Project, sourceSetName: String): FileCollection =
+        project.files(buildBindingsTask.flatMap { it.bindingsDirectory.dir(sourceSetName) })
+            .builtBy(buildBindingsTask)
+
     override fun apply(project: Project) {
         // Register Extensions
         uniffiExtension = project.extensions.create("uniffi", UniffiExtension::class.java)
@@ -130,7 +124,7 @@ class UniffiPlugin : Plugin<Project> {
 //            .orElse(libraryName)
 
         // Bingen & Bindings
-        registerBingenTasks(project)
+        buildBindingsTask = registerBingenTasks(project)
 
 
         // Configure Targets
@@ -161,11 +155,18 @@ class UniffiPlugin : Plugin<Project> {
             )
         }
 
+        // Captured by the onlyIf spec below, which Gradle serializes as part of the
+        // task's state. It has to be a plain Provider: a lambda that touches
+        // `uniffiExtension` would capture the UniffiPlugin instance instead, dragging
+        // every field it holds - including the buildBindings TaskProvider - into the
+        // configuration cache ("cannot serialize object of type BuildBindingsTask").
+        val generatesFromLibrary: Provider<Boolean> = uniffiExtension.bindingsGeneration
+            .map { it is BindingsGenerationFromLibrary }
+            .orElse(false)
+
         val buildLibForBindingsTask = project.tasks.register(Tasks.BUILD_LIB_FOR_BINDINGS, CargoBuildTask::class.java) { task ->
             // Only if the bindings are generated from the library
-            task.onlyIf {
-                uniffiExtension.bindingsGeneration.orNull is BindingsGenerationFromLibrary
-            }
+            task.onlyIf { generatesFromLibrary.get() }
 
             task.packageDirectory.set(cargoExtension.packageDirectory)
             task.release.set(false)
@@ -224,16 +225,13 @@ class UniffiPlugin : Plugin<Project> {
             }
         }
 
-        // Run build bindings on build
-        project.tasks.withType(KotlinCompilationTask::class.java).configureEach { task ->
-            task.dependsOn(buildBindingsTask)
-        }
-        project.tasks.withType(Jar::class.java).configureEach { task ->
-            task.dependsOn(buildBindingsTask)
-        }
-        project.tasks.withType(CInteropProcess::class.java).configureEach { task ->
-            task.dependsOn(buildBindingsTask)
-        }
+        // NOTE: there is deliberately no blanket
+        //   withType(KotlinCompilationTask/Jar/CInteropProcess).dependsOn(buildBindings)
+        // any more. The generated sources are attached to the Kotlin source sets as
+        // outputs of this task (see bindingsSourceDir), so every compile, jar and
+        // cinterop that consumes them picks the dependency up on its own. The only
+        // consumer that still needs an explicit edge is the IDE import above, which does
+        // not necessarily realise a compilation.
 
         return buildBindingsTask
     }
@@ -279,7 +277,7 @@ class UniffiPlugin : Plugin<Project> {
 
     private fun configureCommonMain(project: Project, kmpExtension: KotlinMultiplatformExtension) {
         kmpExtension.sourceSets.named("commonMain") { sourceSet ->
-            sourceSet.kotlin.srcDir(bindingsRootDir.map { it.dir("commonMain") })
+            sourceSet.kotlin.srcDir(bindingsSourceDir(project, "commonMain"))
 
             project.configurations.named(sourceSet.implementationConfigurationName) { configuration ->
                 configuration.dependencies.addIf(
@@ -299,31 +297,64 @@ class UniffiPlugin : Plugin<Project> {
     }
 
     private fun configureJvmTarget(project: Project, kmpExtension: KotlinMultiplatformExtension) {
-        kmpExtension.sourceSets.named("jvmMain") { sourceSet ->
-            sourceSet.kotlin.srcDir(bindingsRootDir.map { it.dir("jvmMain") })
+        // JNA looks the library up on the classpath under <jarLibraryPath>/, so all the
+        // per-triple copies have to sit under one root. Same shape as the android
+        // wiring: one merge task, consumed as a provider, so `jvmProcessResources` needs
+        // no explicit dependsOn.
+        val mergeResourcesTask = registerMergeNativeLibrariesTask(
+            project,
+            Tasks.MERGE_JVM_RESOURCES,
+            BuildTarget.Jvm,
+            project.layout.buildDirectory.dir("intermediates/rust/jvmMain/resources"),
+        )
 
-            sourceSet.resources.srcDir(
-                project.layout.buildDirectory.dir(
-                    "intermediates/rust/jvmMain/resources/${Strings.release(isRelease)}"
-                )
-            )
+        kmpExtension.sourceSets.named("jvmMain") { sourceSet ->
+            sourceSet.kotlin.srcDir(bindingsSourceDir(project, "jvmMain"))
+
+            sourceSet.resources.srcDir(mergeResourcesTask.flatMap { it.outputDirectory })
 
             sourceSet.dependencies {
                 implementation("net.java.dev.jna:jna:${Constants.JNA_VERSION}")
             }
         }
-
-        project.tasks.named("jvmProcessResources") { task ->
-            task.dependsOn(Tasks.copyNativeLibraries(BuildTarget.Jvm, isRelease, dynamic = true))
-        }
     }
+
+    /**
+     * Registers a task that regroups the per-rust-target copies of [buildTarget] under a
+     * single root, keeping each copy's own directory name (the ABI, or JNA's
+     * `jarLibraryPath`) as the sub directory.
+     *
+     * [outputDirectory] is left unset when AGP assigns it through
+     * `addGeneratedSourceDirectory`.
+     */
+    private fun registerMergeNativeLibrariesTask(
+        project: Project,
+        taskName: String,
+        buildTarget: BuildTarget,
+        outputDirectory: Provider<Directory>? = null,
+        rustTargets: List<BuildTarget.RustTarget> = buildTarget.rustTargets(isRelease),
+    ): TaskProvider<MergeNativeLibrariesTask> =
+        project.tasks.register(taskName, MergeNativeLibrariesTask::class.java) { task ->
+            outputDirectory?.let(task.outputDirectory::set)
+
+            rustTargets.forEach { rustTarget ->
+                task.sourceDirectories.from(
+                    project.tasks
+                        .named(
+                            Tasks.copyNativeLibraries(rustTarget, buildTarget),
+                            CopyNativeLibrariesTask::class.java,
+                        )
+                        .flatMap { it.outputDir }
+                )
+            }
+        }
 
     private fun configureAndroidSourceSets(
         project: Project,
         kmpExtension: KotlinMultiplatformExtension,
     ) {
         kmpExtension.sourceSets.named("androidMain") { sourceSet ->
-            sourceSet.kotlin.srcDir(project.layout.buildDirectory.dir("$GENERATED_ROOT/androidMain"))
+            sourceSet.kotlin.srcDir(bindingsSourceDir(project, "androidMain"))
 
             sourceSet.dependencies {
                 implementation("net.java.dev.jna:jna:${Constants.JNA_VERSION}@aar")
@@ -352,7 +383,7 @@ class UniffiPlugin : Plugin<Project> {
     ) {
         kmpExtension.sourceSets.maybeCreate("nativeMain")
             .kotlin
-            .srcDir(bindingsRootDir.map { it.dir("nativeMain") })
+            .srcDir(bindingsSourceDir(project, "nativeMain"))
 
         val defFileTask = registerGenerateDefFileTask(project, buildTarget, libraryName)
         val dummyDefFileTask = registerGenerateDummyDefFileTask(project)
@@ -360,19 +391,16 @@ class UniffiPlugin : Plugin<Project> {
         // Native targets are architecture specific, so there is exactly one rust
         // target per build target.
         val rustTarget = buildTarget.checkedNativeTarget
-        val dynamic = buildTarget.useDynamicLib == true
 
-        val copyNativeLibsTaskName =
-            Tasks.copyNativeLibraries(rustTarget, buildTarget, isRelease, dynamic)
+        // A native target maps to exactly one rust target, so it consumes that copy task
+        // directly - no merging, and no umbrella task.
+        val copyNativeLibsTaskName = Tasks.copyNativeLibraries(rustTarget, buildTarget)
 
-        // Mirrors registerCopyNativeLibrariesTask's output layout for a rust target
-        // without an abiName. Computed instead of read off the task, so the task is
-        // not realized during configuration.
+        // cinterop's -libraryPath wants a plain string at configuration time, so this
+        // mirrors registerCopyNativeLibrariesTask's layout rather than reading it off the
+        // task (which would realize it during configuration).
         val libraryIncludeDir = project.layout.buildDirectory
-            .dir(
-                "intermediates/rust/${buildTarget.sourceSetName}/resources/" +
-                        "${Strings.release(isRelease)}/${rustTarget.jarLibraryPath}"
-            )
+            .dir("intermediates/rust/${buildTarget.sourceSetName}/libs/${rustTarget.jarLibraryPath}")
             .get().asFile.path
 
         // Both def files now live at a fixed path. The old name embedded the crate's
@@ -456,49 +484,25 @@ class UniffiPlugin : Plugin<Project> {
             }
         }
 
-        // One task, one directory: that is what addGeneratedSourceDirectory wires.
-        // The per-ABI copy tasks each own `<...>/jniLibs/<Profile>/<abi>`; this
-        // regroups them under a single root that AGP assigns.
-        val mergeJniLibsTask =
-            project.tasks.register(
-                Tasks.MERGE_ANDROID_JNI_LIBS,
-                MergeNativeLibrariesTask::class.java,
-            ) { task ->
-                val rustTargets =
-                    if (isRelease) BuildTarget.Android.releaseTargets else BuildTarget.Android.debugTargets
+        // One task, one directory: that is what addGeneratedSourceDirectory wires. The
+        // output directory is left unset here because AGP assigns it.
+        val mergeJniLibsTask = registerMergeNativeLibrariesTask(
+            project,
+            Tasks.MERGE_ANDROID_JNI_LIBS,
+            BuildTarget.Android,
+            // Only the ABI targets belong in jniLibs; the host library (baseTargets) is
+            // for local tests and goes to resources instead.
+            rustTargets = BuildTarget.Android.rustTargets(isRelease).filter { it.abiName != null },
+        )
 
-                rustTargets
-                    // baseTargets (the host library, used by local tests) has no
-                    // abiName and lands under resources/, not jniLibs/.
-                    .filter { it.abiName != null }
-                    .forEach { rustTarget ->
-                        val copyTaskName = Tasks.copyNativeLibraries(
-                            rustTarget, BuildTarget.Android, isRelease, dynamic = true
-                        )
-                        task.sourceDirectories.from(
-                            project.tasks.named(copyTaskName, CopyNativeLibrariesTask::class.java)
-                                .flatMap { it.outputDir }
-                        )
-                    }
-            }
-
-        // Local android tests run on the host JVM and load the library through JNA,
-        // so they need the host build laid out exactly like the jvm target's resources.
-        val mergeHostTestResourcesTask =
-            project.tasks.register(
-                Tasks.MERGE_ANDROID_TEST_RESOURCES,
-                MergeNativeLibrariesTask::class.java,
-            ) { task ->
-                BuildTarget.Android.baseTargets.forEach { rustTarget ->
-                    val copyTaskName = Tasks.copyNativeLibraries(
-                        rustTarget, BuildTarget.Android, isRelease, dynamic = true
-                    )
-                    task.sourceDirectories.from(
-                        project.tasks.named(copyTaskName, CopyNativeLibrariesTask::class.java)
-                            .flatMap { it.outputDir }
-                    )
-                }
-            }
+        // Local android tests run on the host JVM and load the library through JNA, so
+        // they need the host build laid out exactly like the jvm target's resources.
+        val mergeHostTestResourcesTask = registerMergeNativeLibrariesTask(
+            project,
+            Tasks.MERGE_ANDROID_TEST_RESOURCES,
+            BuildTarget.Android,
+            rustTargets = BuildTarget.Android.baseTargets,
+        )
 
         androidComponents.onVariants { variant ->
             // AGP 9's KMP library plugin produces exactly one variant ("androidMain")
@@ -531,46 +535,25 @@ class UniffiPlugin : Plugin<Project> {
      * Rust targets are shared between build targets (the host triple backs jvm, the
      * matching native target and android's local tests), hence [maybeRegister].
      */
+    /**
+     * Registers the rust tasks [buildTarget] needs: one cargo build per rust target, and
+     * one copy task per (rust target, build target).
+     *
+     * Previously this registered the full
+     * `rustTarget x profile x linkage (x umbrella)` cross product - 22 cargo tasks and 96
+     * copy tasks for :runtime, of which 9 and 12 were reachable. Two of those three axes
+     * were never real choices: the profile is one global build input, and the linkage
+     * follows from the build target.
+     *
+     * Rust targets are shared between build targets (the host triple backs jvm, the
+     * matching native target and android's local tests), hence [maybeRegister].
+     */
     private fun registerRustTasksFor(project: Project, buildTarget: BuildTarget) {
-        buildTarget.targets.forEach { rustTarget ->
-            listOf(true, false).forEach { release ->
-                registerCargoBuildTask(project, rustTarget, release, buildOutputDir)
-            }
-        }
-
-        listOf(true, false).forEach { dynamic ->
-            buildTarget.debugTargetsAll.forEach { rustTarget ->
-                registerCopyNativeLibrariesTask(
-                    project, buildTarget, rustTarget, release = false, dynamic = dynamic
-                )
-            }
-            buildTarget.releaseTargetsAll.forEach { rustTarget ->
-                registerCopyNativeLibrariesTask(
-                    project, buildTarget, rustTarget, release = true, dynamic = dynamic
-                )
-            }
-
-            // Umbrella tasks, so consumers can depend on "everything for this target".
-            // TODO: `android.defaultConfig.ndk.abiFilters` used to narrow the release
-            //       ABI list here. The new KMP android DSL has no equivalent, so this
-            //       now always builds all three ABIs. If that matters, it needs a
-            //       property on `cargo { }` instead.
-            project.tasks.maybeRegister(
-                Tasks.copyNativeLibraries(buildTarget, false, dynamic),
-                Task::class.java,
-            ) { task ->
-                task.dependsOn(buildTarget.debugTargetsAll.map {
-                    Tasks.copyNativeLibraries(it, buildTarget, false, dynamic)
-                })
-            }
-            project.tasks.maybeRegister(
-                Tasks.copyNativeLibraries(buildTarget, true, dynamic),
-                Task::class.java,
-            ) { task ->
-                task.dependsOn(buildTarget.releaseTargetsAll.map {
-                    Tasks.copyNativeLibraries(it, buildTarget, true, dynamic)
-                })
-            }
+        buildTarget.rustTargets(isRelease).forEach { rustTarget ->
+            // The profile stays in the cargo task name, so it is visible from the task
+            // list whether a binary is built in debug or release.
+            registerCargoBuildTask(project, rustTarget, isRelease, buildOutputDir)
+            registerCopyNativeLibrariesTask(project, buildTarget, rustTarget)
         }
     }
 
@@ -605,34 +588,24 @@ class UniffiPlugin : Plugin<Project> {
         project: Project,
         buildTarget: BuildTarget,
         rustTarget: BuildTarget.RustTarget,
-        release: Boolean,
-        dynamic: Boolean,
     ) {
-        val profile = Strings.release(release).lowercase()
+        val profile = Strings.release(isRelease).lowercase()
         val sourceDir = buildOutputDir.map { it.dir("${rustTarget.rustTriple}/$profile") }
 
-        // Android ABIs go to jniLibs/<Profile>/<abi>; everything else is laid out the
-        // way JNA expects to find it on the classpath. MergeNativeLibrariesTask relies
-        // on the last path segment being the abi / jarLibraryPath.
-        val outputDirectory = if (rustTarget.abiName != null) {
-            project.layout.buildDirectory.dir(
-                "intermediates/rust/${buildTarget.sourceSetName}/jniLibs/" +
-                        "${Strings.release(release)}/${rustTarget.abiName}"
-            )
-        } else {
-            project.layout.buildDirectory.dir(
-                "intermediates/rust/${buildTarget.sourceSetName}/resources/" +
-                        "${Strings.release(release)}/${rustTarget.jarLibraryPath}"
-            )
-        }
+        // Each copy owns exactly one leaf directory, named after the ABI (android jniLibs)
+        // or after JNA's jarLibraryPath (everything else). The merge tasks rely on that
+        // name, and keeping the copies out of the merged roots avoids overlapping outputs.
+        val leafName = rustTarget.abiName ?: rustTarget.jarLibraryPath
+        val outputDirectory = project.layout.buildDirectory
+            .dir("intermediates/rust/${buildTarget.sourceSetName}/libs/$leafName")
 
         project.tasks.maybeRegister(
-            Tasks.copyNativeLibraries(rustTarget, buildTarget, release, dynamic),
+            Tasks.copyNativeLibraries(rustTarget, buildTarget),
             CopyNativeLibrariesTask::class.java,
         ) { task ->
             task.libraryFile.set(
                 libraryName.flatMap { name ->
-                    val fileName = if (dynamic) {
+                    val fileName = if (buildTarget.usesDynamicLibrary) {
                         rustTarget.dynamicLibraryName(name)
                     } else {
                         rustTarget.staticLibraryName(name)
@@ -643,7 +616,7 @@ class UniffiPlugin : Plugin<Project> {
             )
             task.outputDir.set(outputDirectory)
 
-            task.dependsOn(Tasks.cargoBuild(rustTarget, release))
+            task.dependsOn(Tasks.cargoBuild(rustTarget, isRelease))
         }
     }
 

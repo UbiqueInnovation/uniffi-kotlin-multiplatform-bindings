@@ -25,11 +25,6 @@ enum class BuildTarget(
      * An additional set of targets to always build.
      */
     val baseTargets: List<RustTarget> = listOf(),
-
-    /**
-     * Build with the dynamic library
-     */
-    val useDynamicLib: Boolean? = null,
 ) {
     Jvm(
         sourceSetName = "jvmMain",
@@ -291,6 +286,27 @@ enum class BuildTarget(
 
     val releaseTargetsAll: List<RustTarget>
         get() = baseTargets + releaseTargets
+
+    /**
+     * The rust targets that have to be built for this build target in the given profile.
+     */
+    fun rustTargets(release: Boolean): List<RustTarget> =
+        if (release) releaseTargetsAll else debugTargetsAll
+
+    /**
+     * Whether the rust library is loaded dynamically at runtime (jvm and android go
+     * through JNA/JNI and ship a shared object) or linked statically into the binary
+     * (Kotlin/Native, through cinterop).
+     *
+     * This replaces the former `useDynamicLib` constructor parameter, which no enum
+     * constant ever set - so `useDynamicLib == true` was dead and every target silently
+     * used the static library.
+     */
+    val usesDynamicLibrary: Boolean
+        get() = when (this) {
+            Jvm, Android -> true
+            else -> false
+        }
 
     val checkedNativeTarget: RustTarget
         get() {

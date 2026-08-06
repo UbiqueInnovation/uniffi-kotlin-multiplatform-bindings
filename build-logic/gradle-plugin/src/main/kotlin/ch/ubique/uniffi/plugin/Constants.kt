@@ -33,6 +33,7 @@ internal object Tasks {
     const val BUILD_BINDINGS = "buildBindings"
     const val GENERATE_DUMMY_DEF = "generateDummyDefFile"
 
+    const val MERGE_JVM_RESOURCES = "mergeUniffiJvmResources"
     const val MERGE_ANDROID_JNI_LIBS = "mergeUniffiAndroidJniLibs"
     const val MERGE_ANDROID_TEST_RESOURCES = "mergeUniffiAndroidHostTestResources"
 
@@ -45,20 +46,18 @@ internal object Tasks {
         buildTarget: BuildTarget
     ): String = "generateDefFileFor${buildTarget.name}"
 
+    /**
+     * Neither the profile nor the linkage appear here any more:
+     *  - the profile is a global build input (`-Puniffi.profile`), so only one of the
+     *    two ever existed in a given build; it stays visible on [cargoBuild], which is
+     *    the task that actually compiles rust.
+     *  - the linkage follows from the build target ([BuildTarget.usesDynamicLibrary]),
+     *    so a (rustTarget, buildTarget) pair has exactly one copy task.
+     */
     fun copyNativeLibraries(
         rustTarget: BuildTarget.RustTarget,
         buildTarget: BuildTarget,
-        release: Boolean,
-        dynamic: Boolean,
-    ): String =
-        "copyNative${Strings.dynamic(dynamic)}Libs${rustTarget.name}${Strings.release(release)}For${buildTarget.name}"
-
-    fun copyNativeLibraries(
-        buildTarget: BuildTarget,
-        release: Boolean,
-        dynamic: Boolean,
-    ): String =
-        "copyNative${Strings.dynamic(dynamic)}Libs${Strings.release(release)}${buildTarget.name}"
+    ): String = "copyNativeLibs${rustTarget.name}For${buildTarget.name}"
 }
 
 internal object Strings {
