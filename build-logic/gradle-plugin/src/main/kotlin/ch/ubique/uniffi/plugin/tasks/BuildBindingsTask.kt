@@ -27,10 +27,10 @@ abstract class BuildBindingsTask : DefaultTask() {
 
     @get:InputFiles
     val rustSources: FileTree
-        get() = packageDirectory.get().asFileTree.matching {
-            exclude("build")
-            include("**/*.rs")
-            include("Cargo.toml", "Cargo.lock")
+        get() = packageDirectory.get().asFileTree.matching { pattern ->
+            pattern.exclude("build")
+            pattern.include("**/*.rs")
+            pattern.include("Cargo.toml", "Cargo.lock")
         }
 
     @get:InputFile

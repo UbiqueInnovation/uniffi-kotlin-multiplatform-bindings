@@ -48,16 +48,16 @@ abstract class MergeNativeLibrariesTask : DefaultTask() {
         val output = outputDirectory.get()
 
         // Stale ABIs must not survive a target list change.
-        fileSystemOperations.delete {
-            delete(output.asFile.listFiles().orEmpty())
+        fileSystemOperations.delete { spec ->
+            spec.delete(output.asFile.listFiles().orEmpty())
         }
 
         sourceDirectories.files
             .filter { it.isDirectory }
             .forEach { directory ->
-                fileSystemOperations.copy {
-                    from(directory)
-                    into(output.dir(directory.name))
+                fileSystemOperations.copy { spec ->
+                    spec.from(directory)
+                    spec.into(output.dir(directory.name))
                 }
             }
     }

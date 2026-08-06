@@ -73,6 +73,8 @@ kotlin {
                 file("consumer-rules.pro")
             }
         }
+
+        withHostTest {}
     }
 
     sourceSets {

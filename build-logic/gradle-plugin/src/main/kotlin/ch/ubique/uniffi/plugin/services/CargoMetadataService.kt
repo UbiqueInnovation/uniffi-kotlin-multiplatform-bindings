@@ -23,10 +23,10 @@ abstract class CargoMetadataService : ValueSource<String, CargoMetadataParams> {
     override fun obtain(): String {
         val stdout = ByteArrayOutputStream()
         val cargoCommand = RustLocator.findRustExecutable("cargo")
-        execOperations.exec {
-            commandLine(cargoCommand.path, "metadata", "--format-version", "1")
-            workingDir = parameters.packageDirectory.asFile.get()
-            standardOutput = stdout
+        execOperations.exec { spec ->
+            spec.commandLine(cargoCommand.path, "metadata", "--format-version", "1")
+            spec.workingDir = parameters.packageDirectory.asFile.get()
+            spec.standardOutput = stdout
         }
 
         return String(stdout.toByteArray(), Charset.defaultCharset())

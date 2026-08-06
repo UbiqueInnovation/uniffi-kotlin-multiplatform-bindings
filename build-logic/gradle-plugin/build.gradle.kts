@@ -1,11 +1,9 @@
 import com.vanniktech.maven.publish.GradlePublishPlugin
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.shadow)
-    `kotlin-dsl`
     `java-gradle-plugin`
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlinx.serialization)
@@ -20,14 +18,19 @@ tasks.shadowJar {
     isZip64 = true
 }
 
+// This module is a published, standalone Gradle plugin: plain .kt sources, no
+// precompiled script plugins. It therefore does NOT apply `kotlin-dsl`, which exists
+// for build scripts and precompiled script plugins, and which pins the module to the
+// Kotlin version embedded in the current Gradle release ("the `embedded-kotlin` and
+// `kotlin-dsl` plugins rely on features of Kotlin X that might work differently than in
+// the requested version Y"). The plugin sources use the plain Gradle API with explicit
+// lambda parameters instead of the `org.gradle.kotlin.dsl` helpers, the same way AGP and
+// the Kotlin Gradle Plugin are written.
+//
+// :conventions keeps `kotlin-dsl` - it has real precompiled script plugins, which is
+// exactly what that plugin is for.
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
-        // Must stay at 2.0 (not higher): :conventions consumes this module and is compiled by
-        // the Gradle-embedded Kotlin (2.0.21 in Gradle 8.14.4), which cannot read newer metadata.
-        // The "language version 2.0 is deprecated" warning is the accepted price until the
-        // embedded Kotlin is raised by bumping the Gradle wrapper.
-        languageVersion.set(KotlinVersion.KOTLIN_2_0)
-        apiVersion.set(KotlinVersion.KOTLIN_2_0)
         jvmTarget.set(JvmTarget.JVM_17)
     }
 }

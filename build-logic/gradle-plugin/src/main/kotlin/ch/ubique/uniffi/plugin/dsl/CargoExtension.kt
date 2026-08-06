@@ -6,7 +6,6 @@ import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
-import org.gradle.kotlin.dsl.property
 
 abstract class CargoExtension(project: Project) {
     /**
@@ -25,10 +24,10 @@ abstract class CargoExtension(project: Project) {
      * default version happens to be installed. When this is left unset the plugin
      * falls back to the newest NDK under `<sdk>/ndk`, then to `$ANDROID_NDK_ROOT`.
      */
-    val ndkVersion: Property<String> = project.objects.property<String>()
+    val ndkVersion: Property<String> = project.objects.property(String::class.java)
 
     val compilations: NamedDomainObjectContainer<CargoBuildConfig> =
-        project.container<CargoBuildConfig>(CargoBuildConfig::class.java).apply {
+        project.objects.domainObjectContainer(CargoBuildConfig::class.java).apply {
             BuildTarget.RustTarget.entries.forEach {
                 maybeCreate(it.name)
             }

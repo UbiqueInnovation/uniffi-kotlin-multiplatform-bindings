@@ -12,7 +12,6 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.mapProperty
 import java.io.File
 import kotlin.String
 
@@ -27,10 +26,10 @@ abstract class CargoBuildTask : DefaultTask() {
 
     @get:InputFiles
     val rustSources: FileTree
-        get() = packageDirectory.get().asFileTree.matching {
-            exclude("build")
-            include("**/*.rs")
-            include("Cargo.toml", "Cargo.lock")
+        get() = packageDirectory.get().asFileTree.matching { pattern ->
+            pattern.exclude("build")
+            pattern.include("**/*.rs")
+            pattern.include("Cargo.toml", "Cargo.lock")
         }
 
     @get:Optional
@@ -42,7 +41,7 @@ abstract class CargoBuildTask : DefaultTask() {
 
     @Input
     val additionalEnvironment: MapProperty<String, String> =
-        project.objects.mapProperty<String, String>().convention(emptyMap<String, String>())
+        project.objects.mapProperty(String::class.java, String::class.java).convention(emptyMap<String, String>())
 
     @get:Input
     abstract val packageName: Property<String>

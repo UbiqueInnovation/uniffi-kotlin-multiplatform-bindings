@@ -20,8 +20,8 @@ fun KotlinNativeCompilation.useRustUpLinker() {
         .resolve("bin/gcc-ld/ld.lld")
 
     for (target in BuildTarget.fromTargetName(target.name)?.targets ?: listOf()) {
-        compileTaskProvider.configure {
-            compilerOptions.freeCompilerArgs.add(
+        compileTaskProvider.configure { compileTask ->
+            compileTask.compilerOptions.freeCompilerArgs.add(
                 "-Xoverride-konan-properties=linker.${currentTarget.konanName}-${target.konanName}=${rustUpLinker.absolutePath}"
             )
         }
@@ -31,8 +31,8 @@ fun KotlinNativeCompilation.useRustUpLinker() {
 private fun getRustUpHome(project: Project, withPrefix: Boolean = true): String {
     val rustup = RustLocator.findRustExecutable("rustup")
     try {
-        return project.providers.exec {
-            commandLine(rustup, "show", "home")
+        return project.providers.exec { spec ->
+            spec.commandLine(rustup, "show", "home")
         }.standardOutput.asText.get().trim()
     } catch(e: IOException) {
         if(withPrefix) {
@@ -46,8 +46,8 @@ private fun getRustUpHome(project: Project, withPrefix: Boolean = true): String 
 private fun getActiveToolchain(project: Project, withPrefix: Boolean = true): String {
     val rustup = RustLocator.findRustExecutable("rustup")
     try {
-        val output = project.providers.exec {
-            commandLine(rustup, "show", "active-toolchain")
+        val output = project.providers.exec { spec ->
+            spec.commandLine(rustup, "show", "active-toolchain")
         }.standardOutput.asText.get().trim()
         val activeToolchains = output.trim().split("\n")
         val toolchain = activeToolchains.firstNotNullOf {

@@ -20,13 +20,13 @@ import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtensi
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Action
 import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
-import org.gradle.kotlin.dsl.*
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.tasks.CInteropProcess
@@ -96,8 +96,8 @@ class UniffiPlugin : Plugin<Project> {
      */
     override fun apply(project: Project) {
         // ─── 1. Extensions ────────────────────────────────────────────────────
-        uniffiExtension = project.extensions.create<UniffiExtension>("uniffi")
-        cargoExtension = project.extensions.create<CargoExtension>("cargo")
+        uniffiExtension = project.extensions.create("uniffi", UniffiExtension::class.java)
+        cargoExtension = project.extensions.create("cargo", CargoExtension::class.java)
 
         // ─── 2. Tracked configuration inputs ──────────────────────────────────
         isRelease = project.providers.gradleProperty("uniffi.profile").map { it == "release" }
@@ -113,8 +113,8 @@ class UniffiPlugin : Plugin<Project> {
 
         // ─── 3. Lazy facts. Nothing below calls .get() on these. ───────────────
         val metadataString: Provider<String> =
-            project.providers.of(CargoMetadataService::class.java) {
-                parameters.packageDirectory.set(cargoExtension.packageDirectory)
+            project.providers.of(CargoMetadataService::class.java) { spec ->
+                spec.parameters.packageDirectory.set(cargoExtension.packageDirectory)
             }
         val metadata: Provider<CargoMetadata> = metadataString.map(CargoMetadata::fromJsonString)
 
@@ -135,38 +135,40 @@ class UniffiPlugin : Plugin<Project> {
         val bindgenLibsDir = project.layout.buildDirectory.dir("bindgen-libs")
 
         val installBindgenTask =
-            project.tasks.register<InstallBindgenTask>(INSTALL_BINDGEN_TASK_NAME) {
-                source.set(uniffiExtension.bindgenSource)
-                bindgenPath.set(project.layout.buildDirectory.dir("bindgen-install"))
-                bindgenTmpPath.set(project.rootProject.layout.buildDirectory.dir("bindgen-install/target"))
+            project.tasks.register(INSTALL_BINDGEN_TASK_NAME, InstallBindgenTask::class.java) { task ->
+                task.source.set(uniffiExtension.bindgenSource)
+                task.bindgenPath.set(project.layout.buildDirectory.dir("bindgen-install"))
+                task.bindgenTmpPath.set(
+                    project.rootProject.layout.buildDirectory.dir("bindgen-install/target")
+                )
             }
 
         // Only needed for `generateFromLibrary`; gated at execution time so the
         // decision does not have to be known while the task graph is being built.
         val buildBindingsLibTask =
-            project.tasks.register<CargoBuildTask>(BUILD_LIB_FOR_BINDINGS_TASK_NAME) {
-                onlyIf {
+            project.tasks.register(BUILD_LIB_FOR_BINDINGS_TASK_NAME, CargoBuildTask::class.java) { task ->
+                task.onlyIf {
                     uniffiExtension.bindingsGeneration.orNull is BindingsGenerationFromLibrary
                 }
 
-                this.packageDirectory.set(cargoExtension.packageDirectory)
-                this.release.set(false)
-                this.packageName.set(packageName)
-                this.libraryName.set(libraryName)
-                this.cargoOutputDirectory.set(cargoTargetDir.map { it.dir("debug") })
-                this.outputDirectory.set(bindgenLibsDir)
-                this.useCross.set(false)
+                task.packageDirectory.set(cargoExtension.packageDirectory)
+                task.release.set(false)
+                task.packageName.set(packageName)
+                task.libraryName.set(libraryName)
+                task.cargoOutputDirectory.set(cargoTargetDir.map { it.dir("debug") })
+                task.outputDirectory.set(bindgenLibsDir)
+                task.useCross.set(false)
             }
 
         val buildBindingsTask =
-            project.tasks.register<BuildBindingsTask>(BUILD_BINDINGS_TASK_NAME) {
-                dependsOn(installBindgenTask, buildBindingsLibTask)
+            project.tasks.register(BUILD_BINDINGS_TASK_NAME, BuildBindingsTask::class.java) { task ->
+                task.dependsOn(installBindgenTask, buildBindingsLibTask)
 
-                packageDirectory.set(cargoExtension.packageDirectory)
-                cargoMetadata.set(metadataString)
-                generateBindingsForExternalCrates.set(uniffiExtension.generateBindingsForExternalCrates)
+                task.packageDirectory.set(cargoExtension.packageDirectory)
+                task.cargoMetadata.set(metadataString)
+                task.generateBindingsForExternalCrates.set(uniffiExtension.generateBindingsForExternalCrates)
 
-                bindgen.set(
+                task.bindgen.set(
                     project.layout.buildDirectory.file(
                         uniffiExtension.bindgenSource.map {
                             "bindgen-install/bin/${it.bindgenName ?: Constants.BINDGEN_BIN_NAME}"
@@ -174,7 +176,7 @@ class UniffiPlugin : Plugin<Project> {
                     )
                 )
 
-                libraryFile.set(
+                task.libraryFile.set(
                     uniffiExtension.bindingsGeneration
                         .filter { it is BindingsGenerationFromLibrary }
                         .flatMap {
@@ -190,7 +192,7 @@ class UniffiPlugin : Plugin<Project> {
                         }
                 )
 
-                udlFile.set(
+                task.udlFile.set(
                     uniffiExtension.bindingsGeneration
                         .filter { it is BindingsGenerationFromUdl }
                         .flatMap { (it as BindingsGenerationFromUdl).udlFile }
@@ -203,33 +205,33 @@ class UniffiPlugin : Plugin<Project> {
             // hooking `commonize`, and with it the GradleException that used to
             // demand `kotlin.mpp.enableCInteropCommonization=true`.
             if ("prepareKotlinIdeaImport" in project.tasks.names) {
-                project.tasks.named("prepareKotlinIdeaImport") {
-                    dependsOn(buildBindingsTask)
+                project.tasks.named("prepareKotlinIdeaImport") { task ->
+                    task.dependsOn(buildBindingsTask)
                 }
             }
         }
 
         // ─── 6. Requirement: bindings exist before anything compiles ──────────
-        project.tasks.withType<KotlinCompilationTask<*>>().configureEach {
-            dependsOn(buildBindingsTask)
+        project.tasks.withType(KotlinCompilationTask::class.java).configureEach { task ->
+            task.dependsOn(buildBindingsTask)
         }
-        project.tasks.withType<Jar>().configureEach {
-            dependsOn(buildBindingsTask)
+        project.tasks.withType(Jar::class.java).configureEach { task ->
+            task.dependsOn(buildBindingsTask)
         }
-        project.tasks.withType<CInteropProcess>().configureEach {
-            dependsOn(buildBindingsTask)
+        project.tasks.withType(CInteropProcess::class.java).configureEach { task ->
+            task.dependsOn(buildBindingsTask)
         }
 
         // ─── 7. Per-target rust tasks and wiring ──────────────────────────────
         project.pluginManager.withPlugin(KOTLIN_MULTIPLATFORM_PLUGIN_ID) {
-            val kmpExtension = project.extensions.getByType<KotlinMultiplatformExtension>()
+            val kmpExtension = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
 
             configureCommonMain(project, kmpExtension)
 
             // Live collection: fires as `kotlin { jvm(); iosArm64(); ... }` is
             // evaluated, so the target list never has to be read after evaluation.
-            kmpExtension.targets.configureEach {
-                val buildTarget = BuildTarget.fromTargetName(name) ?: return@configureEach
+            kmpExtension.targets.configureEach { target ->
+                val buildTarget = BuildTarget.fromTargetName(target.name) ?: return@configureEach
 
                 registerRustTasksFor(project, buildTarget, libraryName, packageName, cargoTargetDir)
 
@@ -244,7 +246,7 @@ class UniffiPlugin : Plugin<Project> {
                         configureNativeTarget(
                             project,
                             buildTarget,
-                            this as KotlinNativeTarget,
+                            target as KotlinNativeTarget,
                             kmpExtension,
                             libraryName,
                         )
@@ -261,8 +263,8 @@ class UniffiPlugin : Plugin<Project> {
         }
 
         // ─── 9. Validation only — no wiring happens here ──────────────────────
-        project.afterEvaluate {
-            if (!plugins.hasPlugin(KOTLIN_MULTIPLATFORM_PLUGIN_ID)) {
+        project.afterEvaluate { evaluated ->
+            if (!evaluated.plugins.hasPlugin(KOTLIN_MULTIPLATFORM_PLUGIN_ID)) {
                 throw GradleException("Kotlin Multiplatform Plugin is required!")
             }
             if (!uniffiExtension.bindingsGeneration.isPresent) {
@@ -276,8 +278,8 @@ class UniffiPlugin : Plugin<Project> {
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun configureCommonMain(project: Project, kmpExtension: KotlinMultiplatformExtension) {
-        kmpExtension.sourceSets.named("commonMain") {
-            kotlin.srcDir(project.layout.buildDirectory.dir("$GENERATED_ROOT/commonMain"))
+        kmpExtension.sourceSets.named("commonMain") { sourceSet ->
+            sourceSet.kotlin.srcDir(project.layout.buildDirectory.dir("$GENERATED_ROOT/commonMain"))
         }
 
         // `addRuntime` / `addDependencies` are set from the build script's `uniffi { }`
@@ -285,8 +287,8 @@ class UniffiPlugin : Plugin<Project> {
         // with .get() inside the source set configuration would therefore be a race
         // (the old code got away with it only because it ran in afterEvaluate).
         // addAllLater defers the read to dependency resolution.
-        project.configurations.named("commonMainImplementation") {
-            dependencies.addAllLater(
+        project.configurations.named("commonMainImplementation") { configuration ->
+            configuration.dependencies.addAllLater(
                 uniffiExtension.addRuntime.map { enabled ->
                     if (enabled) {
                         listOf(project.dependencies.create("ch.ubique.uniffi:runtime:${Constants.RUNTIME_VERSION}"))
@@ -295,7 +297,7 @@ class UniffiPlugin : Plugin<Project> {
                     }
                 }
             )
-            dependencies.addAllLater(
+            configuration.dependencies.addAllLater(
                 uniffiExtension.addDependencies.map { enabled ->
                     if (enabled) {
                         listOf(
@@ -313,22 +315,22 @@ class UniffiPlugin : Plugin<Project> {
     }
 
     private fun configureJvmTarget(project: Project, kmpExtension: KotlinMultiplatformExtension) {
-        kmpExtension.sourceSets.named("jvmMain") {
-            kotlin.srcDir(project.layout.buildDirectory.dir("$GENERATED_ROOT/jvmMain"))
+        kmpExtension.sourceSets.named("jvmMain") { sourceSet ->
+            sourceSet.kotlin.srcDir(project.layout.buildDirectory.dir("$GENERATED_ROOT/jvmMain"))
 
-            resources.srcDir(
+            sourceSet.resources.srcDir(
                 project.layout.buildDirectory.dir(
                     "intermediates/rust/jvmMain/resources/${releaseString(isRelease)}"
                 )
             )
 
-            dependencies {
+            sourceSet.dependencies {
                 implementation("net.java.dev.jna:jna:${Constants.JNA_VERSION}")
             }
         }
 
-        project.tasks.named("jvmProcessResources") {
-            dependsOn(copyNativeLibrariesTaskName(BuildTarget.Jvm, isRelease, dynamic = true))
+        project.tasks.named("jvmProcessResources") { task ->
+            task.dependsOn(copyNativeLibrariesTaskName(BuildTarget.Jvm, isRelease, dynamic = true))
         }
     }
 
@@ -336,11 +338,11 @@ class UniffiPlugin : Plugin<Project> {
         project: Project,
         kmpExtension: KotlinMultiplatformExtension,
     ) {
-        kmpExtension.sourceSets.named("androidMain") {
-            kotlin.srcDir(project.layout.buildDirectory.dir("$GENERATED_ROOT/androidMain"))
+        kmpExtension.sourceSets.named("androidMain") { sourceSet ->
+            sourceSet.kotlin.srcDir(project.layout.buildDirectory.dir("$GENERATED_ROOT/androidMain"))
 
             // The aar flavour of JNA, for code running on a device.
-            dependencies {
+            sourceSet.dependencies {
                 implementation("net.java.dev.jna:jna:${Constants.JNA_VERSION}@aar")
             }
         }
@@ -351,10 +353,10 @@ class UniffiPlugin : Plugin<Project> {
         // which silently created a source set attached to no compilation
         // ("The Kotlin source set androidUnitTest was configured but not added to any
         // Kotlin compilation"). configureEach only fires if the source set is real.
-        kmpExtension.sourceSets.configureEach {
-            if (name == "androidHostTest") {
+        kmpExtension.sourceSets.configureEach { sourceSet ->
+            if (sourceSet.name == "androidHostTest") {
                 // Host tests run on the JVM, so they need the plain jar, not the aar.
-                dependencies {
+                sourceSet.dependencies {
                     implementation("net.java.dev.jna:jna:${Constants.JNA_VERSION}")
                 }
             }
@@ -387,6 +389,7 @@ class UniffiPlugin : Plugin<Project> {
         val copyNativeLibsTaskName =
             copyNativeLibrariesTaskName(rustTarget, buildTarget, isRelease, dynamic)
 
+
         // Mirrors registerCopyNativeLibrariesTask's output layout for a rust target
         // without an abiName. Computed instead of read off the task, so the task is
         // not realised during configuration.
@@ -406,9 +409,9 @@ class UniffiPlugin : Plugin<Project> {
         val dummyDefFile = project.layout.buildDirectory
             .file("$CINTEROP_ROOT/dummy.def").get().asFile
 
-        nativeTarget.compilations.getByName("main") {
-            cinterops.register(CINTEROP_NAME) {
-                packageName("cinterop")
+        nativeTarget.compilations.getByName("main") { compilation ->
+            compilation.cinterops.register(CINTEROP_NAME) { cinterop ->
+                cinterop.packageName("cinterop")
 
                 if (isIdeSync) {
                     // During an import the headers are enough to produce a klib; the
@@ -416,21 +419,21 @@ class UniffiPlugin : Plugin<Project> {
                     // wait for cargo. This is the same trade-off the previous code
                     // made, but keyed off `idea.sync.active` rather than an empty
                     // startParameter.taskNames.
-                    defFile(dummyDefFile)
+                    cinterop.defFile(dummyDefFile)
                 } else {
-                    defFile(defFile)
+                    cinterop.defFile(defFile)
 
-                    extraOpts("-libraryPath", libraryIncludeDir)
+                    cinterop.extraOpts("-libraryPath", libraryIncludeDir)
                 }
 
-                project.tasks.named(interopProcessingTaskName) {
-                    dependsOn(BUILD_BINDINGS_TASK_NAME)
+                project.tasks.named(cinterop.interopProcessingTaskName) { task ->
+                    task.dependsOn(BUILD_BINDINGS_TASK_NAME)
 
                     if (isIdeSync) {
-                        dependsOn(dummyDefFileTask)
+                        task.dependsOn(dummyDefFileTask)
                     } else {
-                        dependsOn(defFileTask)
-                        dependsOn(copyNativeLibsTaskName)
+                        task.dependsOn(defFileTask)
+                        task.dependsOn(copyNativeLibsTaskName)
                     }
                 }
             }
@@ -444,8 +447,8 @@ class UniffiPlugin : Plugin<Project> {
         // `framework { isStatic = true }` outputs, so it needs to be validated
         // against a real iOS consumer before being switched over.
 
-        nativeTarget.compilerOptions {
-            optIn.add("kotlinx.cinterop.ExperimentalForeignApi")
+        nativeTarget.compilerOptions { options ->
+            options.optIn.add("kotlinx.cinterop.ExperimentalForeignApi")
         }
     }
 
@@ -455,7 +458,7 @@ class UniffiPlugin : Plugin<Project> {
 
     private fun configureAndroidVariants(project: Project, libraryName: Provider<String>) {
         val androidComponents =
-            project.extensions.getByType<KotlinMultiplatformAndroidComponentsExtension>()
+            project.extensions.getByType(KotlinMultiplatformAndroidComponentsExtension::class.java)
 
         // `KotlinMultiplatformAndroidLibraryExtension` has no sdkDirectory / ndkPath /
         // ndkVersion / defaultConfig.ndk.abiFilters — all of that lived on the removed
@@ -490,9 +493,9 @@ class UniffiPlugin : Plugin<Project> {
             listOf(true, false).forEach { release ->
                 val taskName = cargoBuildTaskName(rustTarget, release)
                 if (taskName in project.tasks.names) {
-                    project.tasks.named<CargoBuildTask>(taskName) {
+                    project.tasks.named(taskName, CargoBuildTask::class.java) { task ->
                         // When cross is used it manages the environment itself.
-                        additionalEnvironment.set(
+                        task.additionalEnvironment.set(
                             config.useCross.flatMap { useCross ->
                                 if (useCross) {
                                     project.provider { emptyMap<String, String>() }
@@ -510,7 +513,10 @@ class UniffiPlugin : Plugin<Project> {
         // The per-ABI copy tasks each own `<...>/jniLibs/<Profile>/<abi>`; this
         // regroups them under a single root that AGP assigns.
         val mergeJniLibsTask =
-            project.tasks.register<MergeNativeLibrariesTask>(MERGE_ANDROID_JNI_LIBS_TASK_NAME) {
+            project.tasks.register(
+                MERGE_ANDROID_JNI_LIBS_TASK_NAME,
+                MergeNativeLibrariesTask::class.java,
+            ) { task ->
                 val rustTargets =
                     if (isRelease) BuildTarget.Android.releaseTargets else BuildTarget.Android.debugTargets
 
@@ -522,8 +528,8 @@ class UniffiPlugin : Plugin<Project> {
                         val copyTaskName = copyNativeLibrariesTaskName(
                             rustTarget, BuildTarget.Android, isRelease, dynamic = true
                         )
-                        sourceDirectories.from(
-                            project.tasks.named<CopyNativeLibrariesTask>(copyTaskName)
+                        task.sourceDirectories.from(
+                            project.tasks.named(copyTaskName, CopyNativeLibrariesTask::class.java)
                                 .flatMap { it.outputDir }
                         )
                     }
@@ -532,13 +538,16 @@ class UniffiPlugin : Plugin<Project> {
         // Local android tests run on the host JVM and load the library through JNA,
         // so they need the host build laid out exactly like the jvm target's resources.
         val mergeHostTestResourcesTask =
-            project.tasks.register<MergeNativeLibrariesTask>(MERGE_ANDROID_TEST_RESOURCES_TASK_NAME) {
+            project.tasks.register(
+                MERGE_ANDROID_TEST_RESOURCES_TASK_NAME,
+                MergeNativeLibrariesTask::class.java,
+            ) { task ->
                 BuildTarget.Android.baseTargets.forEach { rustTarget ->
                     val copyTaskName = copyNativeLibrariesTaskName(
                         rustTarget, BuildTarget.Android, isRelease, dynamic = true
                     )
-                    sourceDirectories.from(
-                        project.tasks.named<CopyNativeLibrariesTask>(copyTaskName)
+                    task.sourceDirectories.from(
+                        project.tasks.named(copyTaskName, CopyNativeLibrariesTask::class.java)
                             .flatMap { it.outputDir }
                     )
                 }
@@ -616,17 +625,19 @@ class UniffiPlugin : Plugin<Project> {
             //       ABI list here. The new KMP android DSL has no equivalent, so this
             //       now always builds all three ABIs. If that matters, it needs a
             //       property on `cargo { }` instead.
-            project.tasks.maybeRegister<Task>(
-                copyNativeLibrariesTaskName(buildTarget, false, dynamic)
-            ) {
-                dependsOn(buildTarget.debugTargetsAll.map {
+            project.tasks.maybeRegister(
+                copyNativeLibrariesTaskName(buildTarget, false, dynamic),
+                Task::class.java,
+            ) { task ->
+                task.dependsOn(buildTarget.debugTargetsAll.map {
                     copyNativeLibrariesTaskName(it, buildTarget, false, dynamic)
                 })
             }
-            project.tasks.maybeRegister<Task>(
-                copyNativeLibrariesTaskName(buildTarget, true, dynamic)
-            ) {
-                dependsOn(buildTarget.releaseTargetsAll.map {
+            project.tasks.maybeRegister(
+                copyNativeLibrariesTaskName(buildTarget, true, dynamic),
+                Task::class.java,
+            ) { task ->
+                task.dependsOn(buildTarget.releaseTargetsAll.map {
                     copyNativeLibrariesTaskName(it, buildTarget, true, dynamic)
                 })
             }
@@ -644,19 +655,22 @@ class UniffiPlugin : Plugin<Project> {
     ) {
         val profile = cargoProfileDirectory(release)
 
-        project.tasks.maybeRegister<CargoBuildTask>(cargoBuildTaskName(rustTarget, release)) {
-            this.packageDirectory.set(cargoExtension.packageDirectory)
-            this.triple.set(rustTarget.rustTriple)
-            this.release.set(release)
-            this.packageName.set(packageName)
-            this.libraryName.set(libraryName)
-            this.cargoOutputDirectory.set(
+        project.tasks.maybeRegister(
+            cargoBuildTaskName(rustTarget, release),
+            CargoBuildTask::class.java,
+        ) { task ->
+            task.packageDirectory.set(cargoExtension.packageDirectory)
+            task.triple.set(rustTarget.rustTriple)
+            task.release.set(release)
+            task.packageName.set(packageName)
+            task.libraryName.set(libraryName)
+            task.cargoOutputDirectory.set(
                 cargoTargetDir.map { it.dir("${rustTarget.rustTriple}/$profile") }
             )
-            this.outputDirectory.set(
+            task.outputDirectory.set(
                 buildOutputDir.map { it.dir("${rustTarget.rustTriple}/$profile") }
             )
-            this.useCross.set(cargoExtension.compilations.getByName(rustTarget.name).useCross)
+            task.useCross.set(cargoExtension.compilations.getByName(rustTarget.name).useCross)
         }
     }
 
@@ -687,10 +701,11 @@ class UniffiPlugin : Plugin<Project> {
             )
         }
 
-        project.tasks.maybeRegister<CopyNativeLibrariesTask>(
-            copyNativeLibrariesTaskName(rustTarget, buildTarget, release, dynamic)
-        ) {
-            this.libraryFile.set(
+        project.tasks.maybeRegister(
+            copyNativeLibrariesTaskName(rustTarget, buildTarget, release, dynamic),
+            CopyNativeLibrariesTask::class.java,
+        ) { task ->
+            task.libraryFile.set(
                 libraryName.flatMap { name ->
                     val fileName = if (dynamic) {
                         rustTarget.dynamicLibraryName(name)
@@ -701,9 +716,9 @@ class UniffiPlugin : Plugin<Project> {
                     sourceDir.map { it.file(fileName) }
                 }
             )
-            this.outputDir.set(outputDirectory)
+            task.outputDir.set(outputDirectory)
 
-            dependsOn(cargoBuildTaskName(rustTarget, release))
+            task.dependsOn(cargoBuildTaskName(rustTarget, release))
         }
     }
 
@@ -715,31 +730,37 @@ class UniffiPlugin : Plugin<Project> {
         val rustTarget = buildTarget.checkedNativeTarget
         val config = cargoExtension.compilations.getByName(rustTarget.name)
 
-        return project.tasks.maybeRegister<GenerateDefFileTask>(generateDefFileTaskName(buildTarget)) {
-            this.libraryName.set(
+        return project.tasks.maybeRegister(
+            generateDefFileTaskName(buildTarget),
+            GenerateDefFileTask::class.java,
+        ) { task ->
+            task.libraryName.set(
                 libraryName.map {
                     rustTarget.staticLibraryName(it)
                         ?: throw GradleException("Could not determine library file name!")
                 }
             )
-            this.outputFile.set(
+            task.outputFile.set(
                 project.layout.buildDirectory.file("$CINTEROP_ROOT/uniffi-${buildTarget.name}.def")
             )
-            this.packageDirectory.set(cargoExtension.packageDirectory)
-            this.targetString.set(rustTarget.rustTriple)
-            this.headersDir.set(project.layout.buildDirectory.dir("$CINTEROP_ROOT/headers/"))
-            this.useCross.set(config.useCross)
+            task.packageDirectory.set(cargoExtension.packageDirectory)
+            task.targetString.set(rustTarget.rustTriple)
+            task.headersDir.set(project.layout.buildDirectory.dir("$CINTEROP_ROOT/headers/"))
+            task.useCross.set(config.useCross)
 
-            dependsOn(BUILD_BINDINGS_TASK_NAME)
+            task.dependsOn(BUILD_BINDINGS_TASK_NAME)
         }
     }
 
     private fun registerGenerateDummyDefFileTask(project: Project): TaskProvider<GenerateDummyDefFileTask> =
-        project.tasks.maybeRegister<GenerateDummyDefFileTask>(GENERATE_DUMMY_DEF_FILE) {
-            this.outputFile.set(project.layout.buildDirectory.file("$CINTEROP_ROOT/dummy.def"))
-            this.headersDir.set(project.layout.buildDirectory.dir("$CINTEROP_ROOT/headers/"))
+        project.tasks.maybeRegister(
+            GENERATE_DUMMY_DEF_FILE,
+            GenerateDummyDefFileTask::class.java,
+        ) { task ->
+            task.outputFile.set(project.layout.buildDirectory.file("$CINTEROP_ROOT/dummy.def"))
+            task.headersDir.set(project.layout.buildDirectory.dir("$CINTEROP_ROOT/headers/"))
 
-            dependsOn(BUILD_BINDINGS_TASK_NAME)
+            task.dependsOn(BUILD_BINDINGS_TASK_NAME)
         }
 
     /**
@@ -748,11 +769,12 @@ class UniffiPlugin : Plugin<Project> {
      *
      * `names` does not realise tasks, so this stays lazy.
      */
-    private inline fun <reified T : Task> TaskContainer.maybeRegister(
+    private fun <T : Task> TaskContainer.maybeRegister(
         name: String,
-        noinline configure: T.() -> Unit,
+        type: Class<T>,
+        configure: Action<T>,
     ): TaskProvider<T> =
-        if (name in names) named<T>(name) else register<T>(name, configure)
+        if (name in names) named(name, type) else register(name, type, configure)
 
     // ─────────────────────────────────────────────────────────────────────────
     // Naming helpers
@@ -821,8 +843,8 @@ class UniffiPlugin : Plugin<Project> {
 //
 //    override fun apply(project: Project) {
 //        // Create the extensions
-//        uniffiExtension = project.extensions.create<UniffiExtension>("uniffi")
-//        cargoExtension = project.extensions.create<CargoExtension>("cargo")
+//        uniffiExtension = project.extensions.create("uniffi", UniffiExtension::class.java)
+//        cargoExtension = project.extensions.create("cargo", CargoExtension::class.java)
 //
 //        // Register tasks
 //        registerBindgenTasks(project)
@@ -836,7 +858,7 @@ class UniffiPlugin : Plugin<Project> {
 //    }
 //
 //    private fun doAndroidStuff(project: Project) {
-//        val androidComponents = project.extensions.getByType<KotlinMultiplatformAndroidComponentsExtension>()
+//        val androidComponents = project.extensions.getByType(KotlinMultiplatformAndroidComponentsExtension::class.java)
 //
 //        androidComponents.onVariants { variant ->
 //            // 1. Get your Copy task for the main release build

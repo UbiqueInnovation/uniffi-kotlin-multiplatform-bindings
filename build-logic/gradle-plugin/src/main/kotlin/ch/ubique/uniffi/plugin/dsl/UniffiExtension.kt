@@ -8,8 +8,6 @@ import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import org.gradle.kotlin.dsl.newInstance
-import org.gradle.kotlin.dsl.property
 import javax.inject.Inject
 
 // NOTE: this used to be `UniffiExtension(internal val project: Project)`. Holding a
@@ -19,7 +17,7 @@ import javax.inject.Inject
 // ObjectFactory is the injectable service that was actually being used.
 abstract class UniffiExtension @Inject internal constructor(private val objects: ObjectFactory) {
     internal var bindgenSource: Property<BindgenSource> =
-        objects.property<BindgenSource>().convention(Constants.BINDGEN_SOURCE)
+        objects.property(BindgenSource::class.java).convention(Constants.BINDGEN_SOURCE)
 
     internal abstract val bindingsGeneration: Property<BindingsGeneration>
 
@@ -27,7 +25,7 @@ abstract class UniffiExtension @Inject internal constructor(private val objects:
      * Runs `ktlint` on the generated bindings. `ktlint` needs to be in PATH.
      */
     val formatCode: Property<Boolean> =
-        objects.property<Boolean>().convention(false)
+        objects.property(Boolean::class.javaObjectType).convention(false)
 
     /**
      * Add the runtime dependency to commonMain.
@@ -35,16 +33,16 @@ abstract class UniffiExtension @Inject internal constructor(private val objects:
      * TODO: Allow for configuration like bindgen source
      */
     val addRuntime: Property<Boolean> =
-        objects.property<Boolean>().convention(true)
+        objects.property(Boolean::class.javaObjectType).convention(true)
 
 	val addDependencies: Property<Boolean> =
-		objects.property<Boolean>().convention(true)
+		objects.property(Boolean::class.javaObjectType).convention(true)
 
 	/**
 	 * Whether bindings for external crates should be generated. Default: false
 	 */
 	val generateBindingsForExternalCrates: Property<Boolean> =
-		objects.property<Boolean>().convention(false)
+		objects.property(Boolean::class.javaObjectType).convention(false)
 
     /**
      * Install the bindgen of the given [version] from the given [registry]. If [registry] is not specified, this will
@@ -123,7 +121,7 @@ abstract class UniffiExtension @Inject internal constructor(private val objects:
      * Generate bindings using a UDL file.
      */
     fun generateFromUdl(configure: Action<BindingsGenerationFromUdl> = Action { }) {
-        val generation = bindingsGeneration.orNull ?: objects.newInstance<BindingsGenerationFromUdl>()
+        val generation = bindingsGeneration.orNull ?: objects.newInstance(BindingsGenerationFromUdl::class.java)
             .also { bindingsGeneration.set(it) }
 
         generation as? BindingsGenerationFromUdl
@@ -138,7 +136,7 @@ abstract class UniffiExtension @Inject internal constructor(private val objects:
      */
     fun generateFromLibrary(configure: Action<BindingsGenerationFromLibrary> = Action { }) {
         val generation =
-            bindingsGeneration.orNull ?: objects.newInstance<BindingsGenerationFromLibrary>()
+            bindingsGeneration.orNull ?: objects.newInstance(BindingsGenerationFromLibrary::class.java)
                 .also { bindingsGeneration.set(it) }
 
         generation as? BindingsGenerationFromLibrary

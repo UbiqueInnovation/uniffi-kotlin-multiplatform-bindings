@@ -26,9 +26,9 @@ abstract class CopyNativeLibrariesTask : DefaultTask() {
 
     @TaskAction
     fun doCopy() {
-        fileSystemOperations.copy {
-            from(libraryFile)
-            into(outputDir)
+        fileSystemOperations.copy { spec ->
+            spec.from(libraryFile)
+            spec.into(outputDir)
         }
     }
 
