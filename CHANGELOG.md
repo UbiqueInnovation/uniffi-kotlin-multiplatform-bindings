@@ -2,10 +2,22 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.0.16...HEAD)
 
+### Changed
+
+- Android support now requires the Android Kotlin Multiplatform library plugin (`com.android.kotlin.multiplatform.library`)
+  and AGP `9`, replacing `com.android.library` with `androidTarget { }`.
+- Update to Gradle `9.6.1`.
+- The native libraries are handed to AGP through the variant API instead of by hooking into its task names. The
+  per library `copyNativeLibs*` tasks are replaced by `mergeUniffiJvmResources`, `mergeUniffiAndroidJniLibs` and
+  `mergeUniffiAndroidHostTestResources`.
+- Update `jna` to `5.19.1`, `okio` to `3.18.1`, `kotlinx-coroutines` to `1.11.0` and `atomicfu` to `0.33.0`.
+
 ### Removed
 
 - The `macosX64` Kotlin/Native target, which Kotlin deprecated ([native target tiers](https://kotl.in/native-targets-tiers)).
   The `x86_64-apple-darwin` rust target is still built for the jvm artifact, so intel macs keep working there.
+- `kotlinx-datetime` from the dependencies added to `commonMain`. The generated bindings use `kotlin.time.Instant`
+  and `kotlin.time.Duration` from the standard library.
 
 ## [1.0.15](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.15) - 2026-07-27
 
