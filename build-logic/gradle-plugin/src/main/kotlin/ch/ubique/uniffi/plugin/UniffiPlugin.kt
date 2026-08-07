@@ -494,7 +494,7 @@ class UniffiPlugin : Plugin<Project> {
                     tasks.named(cinterop.interopProcessingTaskName) { task ->
                         task.inputs.file(staticLibrary)
                             .withPropertyName("uniffiStaticLibrary")
-                            .withPathSensitivity(PathSensitivity.NAME_ONLY)
+                            .withPathSensitivity(PathSensitivity.ABSOLUTE)
                     }
                 }
             }

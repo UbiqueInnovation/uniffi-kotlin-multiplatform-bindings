@@ -62,4 +62,5 @@ jobs:
           export ANDROID_HOME=$HOME/android-sdk
 
           cargo test
+          ./gradlew -p build-logic check
           ./gradlew build --no-configuration-cache

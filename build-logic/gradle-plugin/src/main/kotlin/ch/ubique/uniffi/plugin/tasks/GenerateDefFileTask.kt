@@ -27,7 +27,7 @@ abstract class GenerateDefFileTask : DefaultTask() {
      * the cargo build.
      */
     @get:InputFile
-    @get:PathSensitive(PathSensitivity.NAME_ONLY)
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     abstract val staticLibrary: RegularFileProperty
 
     @get:OutputFile
@@ -40,6 +40,7 @@ abstract class GenerateDefFileTask : DefaultTask() {
     abstract val targetString: Property<String>
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     abstract val headersDir: DirectoryProperty
 
     @get:Input

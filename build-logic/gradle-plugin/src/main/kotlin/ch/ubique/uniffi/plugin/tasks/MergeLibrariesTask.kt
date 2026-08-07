@@ -39,7 +39,7 @@ abstract class MergeLibrariesTask : DefaultTask() {
         val directoryName: Property<String>
 
         @get:InputFiles
-        @get:PathSensitive(PathSensitivity.NAME_ONLY)
+        @get:PathSensitive(PathSensitivity.ABSOLUTE)
         val files: ConfigurableFileCollection
     }
 

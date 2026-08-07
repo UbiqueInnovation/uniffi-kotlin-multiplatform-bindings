@@ -14,14 +14,12 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 import javax.inject.Inject
 
-// Caching this would be worthwhile - bindgen is slow and the bindings are small text
-// files - but only once every input is declared: `uniffi.toml` is currently not part of
-// [rustSources], so a cache hit could hand out bindings generated with a different
-// configuration.
 @DisableCachingByDefault(because = "Not every input that affects the bindings is declared yet")
 abstract class BuildBindingsTask : DefaultTask() {
 
@@ -29,6 +27,7 @@ abstract class BuildBindingsTask : DefaultTask() {
     abstract val packageDirectory: DirectoryProperty
 
     @get:InputFiles
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     val rustSources: FileTree
         get() = packageDirectory.get().asFileTree.matching { pattern ->
             pattern.exclude("build")
@@ -38,13 +37,16 @@ abstract class BuildBindingsTask : DefaultTask() {
         }
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     abstract val bindgen: RegularFileProperty
 
     @get:InputFile
 	@get:Optional
+	@get:PathSensitive(PathSensitivity.ABSOLUTE)
     abstract val libraryFile: RegularFileProperty
 	@get:InputFile
 	@get:Optional
+	@get:PathSensitive(PathSensitivity.ABSOLUTE)
 	abstract val udlFile: RegularFileProperty
 
 
