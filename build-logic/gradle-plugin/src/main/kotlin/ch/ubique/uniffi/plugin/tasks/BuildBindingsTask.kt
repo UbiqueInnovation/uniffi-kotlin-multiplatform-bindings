@@ -71,6 +71,9 @@ abstract class BuildBindingsTask : DefaultTask() {
     @get:OutputDirectory
     abstract val nativeInteropDir: DirectoryProperty
 
+    @get:OutputDirectory
+    abstract val nativeInteropHeadersDir: DirectoryProperty
+
     init {
         // Need to be set like that, otherwise the generation dependency is not preserved
         commonMainDir.convention(bindingsDirectory.dir("commonMain"))
@@ -78,6 +81,7 @@ abstract class BuildBindingsTask : DefaultTask() {
         androidMainDir.convention(bindingsDirectory.dir("androidMain"))
         nativeMainDir.convention(bindingsDirectory.dir("nativeMain"))
         nativeInteropDir.convention(bindingsDirectory.dir("nativeInterop"))
+        nativeInteropHeadersDir.convention(bindingsDirectory.dir("nativeInterop/cinterop/headers"))
     }
 
     @TaskAction

@@ -10,6 +10,8 @@ import ch.ubique.uniffi.plugin.model.CargoMetadata
 import ch.ubique.uniffi.plugin.services.CargoMetadataService
 import ch.ubique.uniffi.plugin.tasks.BuildBindingsTask
 import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
+import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
+import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
 import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
 import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
 import ch.ubique.uniffi.plugin.utils.NdkUtil
@@ -25,8 +27,10 @@ import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
@@ -52,6 +56,15 @@ class UniffiPlugin : Plugin<Project> {
         /** The merged library directory of a source set, relative to the project */
         private fun librariesPath(sourceSetName: String): String =
             "$PREFIX/build/intermediates/$sourceSetName/libs"
+
+        /** C-Interop name for native targets */
+        private const val CINTEROP_NAME: String = "$PREFIX-cinterop"
+
+        /** C-Interop name for native targets */
+        private const val CINTEROP_PACKAGE_NAME: String = "cinterop"
+
+        /** Where the generated def files are written, relative to the project */
+        private const val CINTEROP_DEF_PATH: String = "$PREFIX/cinterop"
     }
 
     private lateinit var uniffiExtension: UniffiExtension
@@ -94,6 +107,14 @@ class UniffiPlugin : Plugin<Project> {
         project.pluginManager.withPlugin(Constants.Plugins.KMP_PLUGIN) {
             val kmpExtension =
                 project.extensions.getByType(KotlinMultiplatformExtension::class.java)
+
+            // The generated bindings declare `expect`/`actual` classes for every type that
+            // crosses the FFI, which is still flagged as Beta (KT-61573). Without this every
+            // consumer gets a warning per declaration for code they did not write.
+            @OptIn(ExperimentalKotlinGradlePluginApi::class)
+            kmpExtension.compilerOptions {
+                freeCompilerArgs.add("-Xexpect-actual-classes")
+            }
 
             // Run build bindings on sync
             if ("prepareKotlinIdeaImport" in project.tasks.names) {
@@ -147,7 +168,26 @@ class UniffiPlugin : Plugin<Project> {
                             )
                         )
 
-                    in BuildTarget.nativeTargets -> project.configureNativeTarget(target as KotlinNativeTarget)
+                    in BuildTarget.nativeTargets ->
+                        project.configureNativeTarget(
+                            nativeMain = kmpExtension.sourceSets.maybeCreate("nativeMain"),
+                            nativeTarget = target as KotlinNativeTarget,
+                            bindingsDir = buildBindingsTask.flatMap { it.nativeMainDir },
+                            defFile = project.registerDefFileTask(
+                                buildTarget = buildTarget,
+                                cargoInfo = cargoInfo,
+                                isRelease = isRelease,
+                                isSync = isSync,
+                                headersDir = buildBindingsTask.flatMap { it.nativeInteropHeadersDir },
+                            ),
+                            staticLibrary = if (isSync) {
+                                null
+                            } else {
+                                project.registerCargoBuildTask(
+                                    buildTarget.checkedNativeTarget, isRelease, cargoInfo
+                                ).flatMap { it.staticLibraryFile }
+                            },
+                        )
 
                     else -> throw GradleException("Unhandled target: $buildTarget")
                 }
@@ -331,6 +371,60 @@ class UniffiPlugin : Plugin<Project> {
         }
     }
 
+    /**
+     * Registers a [GenerateDefFileTask] (or [GenerateDummyDefFileTask] during sync) and returns the
+     * output file.
+     */
+    private fun Project.registerDefFileTask(
+        buildTarget: BuildTarget,
+        cargoInfo: CargoInfo,
+        isRelease: Boolean,
+        isSync: Boolean,
+        headersDir: Provider<Directory>,
+    ): Provider<RegularFile> = if (isSync) {
+        registerGenerateDummyDefFileTask(headersDir).flatMap { it.outputFile }
+    } else {
+        registerGenerateDefFileTask(buildTarget, cargoInfo, isRelease, headersDir)
+            .flatMap { it.outputFile }
+    }
+
+    private fun Project.registerGenerateDefFileTask(
+        buildTarget: BuildTarget,
+        cargoInfo: CargoInfo,
+        isRelease: Boolean,
+        headersDir: Provider<Directory>,
+    ): TaskProvider<GenerateDefFileTask> {
+        val rustTarget = buildTarget.checkedNativeTarget
+        val config = cargoExtension.compilations.getByName(rustTarget.name)
+        val cargoBuild = registerCargoBuildTask(rustTarget, isRelease, cargoInfo)
+
+        return tasks.maybeRegister(
+            Tasks.generateDefFile(buildTarget),
+            GenerateDefFileTask::class.java,
+        ) { task ->
+            task.staticLibrary.set(cargoBuild.flatMap { it.staticLibraryFile })
+            task.outputFile.set(
+                project.layout.buildDirectory.file("$CINTEROP_DEF_PATH/uniffi-${buildTarget.name}.def")
+            )
+            task.packageDirectory.set(cargoExtension.packageDirectory)
+            task.targetString.set(rustTarget.rustTriple)
+            // Carries the dependency on the bindings.
+            task.headersDir.set(headersDir)
+            task.useCross.set(config.useCross)
+        }
+    }
+
+    private fun Project.registerGenerateDummyDefFileTask(
+        headersDir: Provider<Directory>,
+    ): TaskProvider<GenerateDummyDefFileTask> =
+        tasks.maybeRegister(
+            Tasks.GENERATE_DUMMY_DEF,
+            GenerateDummyDefFileTask::class.java,
+        ) { task ->
+            task.outputFile.set(project.layout.buildDirectory.file("$CINTEROP_DEF_PATH/dummy.def"))
+            task.headersDir.set(headersDir)
+        }
+
     private fun Project.configureCommonMain(
         commonMain: KotlinSourceSet,
         bindingsDir: Provider<Directory>,
@@ -419,297 +513,37 @@ class UniffiPlugin : Plugin<Project> {
         }
     }
 
-//    private fun configureAndroidVariants(project: Project) {
-//        BuildTarget.RustTarget.entries.filter { it.isAndroid }.forEach { rustTarget ->
-//            val config = cargoExtension.compilations.getByName(rustTarget.name)
-//
-//            val targetEnvironment: Provider<Map<String, String>> = androidComponents.sdkComponents
-//                .sdkDirectory
-//                .zip(cargoExtension.ndkVersion.orElse("")) { sdk, ndkVersion ->
-//                    NdkUtil.ndkEnvVariables(
-//                        sdkRoot = sdk.asFile,
-//                        // The KMP android extension's minSdk is not readable this early
-//                        // in the lifecycle; 21 matches the previous `?: 21` fallback.
-//                        apiLevel = 21,
-//                        ndkVersion = ndkVersion.takeIf(String::isNotEmpty),
-//                        ndkRoot = null,
-//                        rustTriple = rustTarget.rustTriple,
-//                        ndkLlvmTriple = rustTarget.ndkLlvmTriple,
-//                    )
-//                }
-//
-//            listOf(true, false).forEach { release ->
-//                val taskName = Tasks.cargoBuild(rustTarget, release)
-//                if (taskName in project.tasks.names) {
-//                    project.tasks.named(taskName, CargoBuildTask::class.java) { task ->
-//                        // When cross is used it manages the environment itself.
-//                        task.additionalEnvironment.set(
-//                            config.useCross.flatMap { useCross ->
-//                                if (useCross) {
-//                                    project.provider { emptyMap() }
-//                                } else {
-//                                    targetEnvironment
-//                                }
-//                            }
-//                        )
-//                    }
-//                }
-//            }
-//        }
-//
-//        // One task, one directory: that is what addGeneratedSourceDirectory wires. The
-//        // output directory is left unset here because AGP assigns it.
-//        val mergeJniLibsTask = registerMergeNativeLibrariesTask(
-//            project,
-//            Tasks.MERGE_ANDROID_JNI_LIBS,
-//            BuildTarget.Android,
-//            // Only the ABI targets belong in jniLibs; the host library (baseTargets) is
-//            // for local tests and goes to resources instead.
-//            rustTargets = BuildTarget.Android.rustTargets(isRelease).filter { it.abiName != null },
-//        )
-//
-//        // Local android tests run on the host JVM and load the library through JNA, so
-//        // they need the host build laid out exactly like the jvm target's resources.
-//        val mergeHostTestResourcesTask = registerMergeNativeLibrariesTask(
-//            project,
-//            Tasks.MERGE_ANDROID_TEST_RESOURCES,
-//            BuildTarget.Android,
-//            rustTargets = BuildTarget.Android.baseTargets,
-//        )
-//
-//        androidComponents.onVariants { variant ->
-//            // AGP 9's KMP library plugin produces exactly one variant ("androidMain")
-//            // and one aar, so there is no build type to read here — the profile comes
-//            // from `isRelease`. The old debug/release jniLibs source sets, and the
-//            // packageDebugResources / packageReleaseResources tasks the plugin used to
-//            // hook, no longer exist.
-//            variant.sources.jniLibs?.addGeneratedSourceDirectory(
-//                mergeJniLibsTask,
-//                MergeNativeLibrariesTask::outputDirectory,
-//            )
-//
-//            // Empty unless the build script opts in with `withHostTest { }`.
-//            variant.hostTests.forEach { (_, hostTest) ->
-//                hostTest.sources.resources?.addGeneratedSourceDirectory(
-//                    mergeHostTestResourcesTask,
-//                    MergeNativeLibrariesTask::outputDirectory,
-//                )
-//            }
-//        }
-//    }
+    private fun Project.configureNativeTarget(
+        nativeMain: KotlinSourceSet,
+        nativeTarget: KotlinNativeTarget,
+        bindingsDir: Provider<Directory>,
+        defFile: Provider<RegularFile>,
+        staticLibrary: Provider<RegularFile>?,
+    ) {
+        nativeMain.kotlin.srcDir(bindingsDir)
 
-    private fun Project.configureNativeTarget(target: KotlinNativeTarget) {
-        // TODO
+        nativeTarget.compilations.getByName("main") { compilation ->
+            compilation.cinterops.register(CINTEROP_NAME) { cinterop ->
+                cinterop.packageName(CINTEROP_PACKAGE_NAME)
+
+                cinterop.definitionFile.set(defFile)
+
+                if (staticLibrary != null) {
+                    // Add the static library as an input to the cinterop task, otherwise cinterop
+                    // won't re-run on a new build of the library.
+                    tasks.named(cinterop.interopProcessingTaskName) { task ->
+                        task.inputs.file(staticLibrary)
+                            .withPropertyName("uniffiStaticLibrary")
+                            .withPathSensitivity(PathSensitivity.NAME_ONLY)
+                    }
+                }
+            }
+        }
+
+        nativeTarget.compilerOptions { options ->
+            options.optIn.add("kotlinx.cinterop.ExperimentalForeignApi")
+        }
     }
-
-//
-//    // ─────────────────────────────────────────────────────────────────────────
-//    // Native targets
-//    // ─────────────────────────────────────────────────────────────────────────
-//
-//    private fun configureNativeTarget(
-//        project: Project,
-//        buildTarget: BuildTarget,
-//        nativeTarget: KotlinNativeTarget,
-//        kmpExtension: KotlinMultiplatformExtension,
-//    ) {
-//        kmpExtension.sourceSets.maybeCreate("nativeMain")
-//            .kotlin
-//            .srcDir(bindingsSourceDir(project, "nativeMain"))
-//
-//        val defFileTask = registerGenerateDefFileTask(project, buildTarget, libraryName)
-//        val dummyDefFileTask = registerGenerateDummyDefFileTask(project)
-//
-//        // Native targets are architecture specific, so there is exactly one rust
-//        // target per build target.
-//        val rustTarget = buildTarget.checkedNativeTarget
-//
-//        // A native target maps to exactly one rust target, so it consumes that copy task
-//        // directly - no merging, and no umbrella task.
-//        val copyNativeLibsTaskName = Tasks.copyNativeLibraries(rustTarget, buildTarget)
-//
-//        // cinterop's -libraryPath wants a plain string at configuration time, so this
-//        // mirrors registerCopyNativeLibrariesTask's layout rather than reading it off the
-//        // task (which would realize it during configuration).
-//        val libraryIncludeDir = project.layout.buildDirectory
-//            .dir("intermediates/rust/${buildTarget.sourceSetName}/libs/${rustTarget.jarLibraryPath}")
-//            .get().asFile.path
-//
-//        // Both def files now live at a fixed path. The old name embedded the crate's
-//        // library name, which is only known from `cargo metadata` — i.e. it forced a
-//        // blocking cargo invocation during configuration just to name a file. The
-//        // library name is still written *into* the file, at execution time.
-//        val defFile = project.layout.buildDirectory
-//            .file("$CINTEROP_ROOT/uniffi-${buildTarget.name}.def").get().asFile
-//        val dummyDefFile = project.layout.buildDirectory
-//            .file("$CINTEROP_ROOT/dummy.def").get().asFile
-//
-//        nativeTarget.compilations.getByName("main") { compilation ->
-//            compilation.cinterops.register(CINTEROP_NAME) { cinterop ->
-//                cinterop.packageName("cinterop")
-//
-//                if (isIdeSync) {
-//                    // During an import the headers are enough to produce a klib
-//                    cinterop.defFile(dummyDefFile)
-//                } else {
-//                    cinterop.defFile(defFile)
-//
-//                    cinterop.extraOpts("-libraryPath", libraryIncludeDir)
-//                }
-//
-//                project.tasks.named(cinterop.interopProcessingTaskName) { task ->
-//                    task.dependsOn(Tasks.BUILD_BINDINGS)
-//
-//                    if (isIdeSync) {
-//                        task.dependsOn(dummyDefFileTask)
-//                    } else {
-//                        task.dependsOn(defFileTask)
-//                        task.dependsOn(copyNativeLibsTaskName)
-//                    }
-//                }
-//            }
-//        }
-//
-//        nativeTarget.compilerOptions { options ->
-//            options.optIn.add("kotlinx.cinterop.ExperimentalForeignApi")
-//        }
-//    }
-//
-//    // ─────────────────────────────────────────────────────────────────────────
-//    // Task registration
-//    // ─────────────────────────────────────────────────────────────────────────
-//
-//    /**
-//     * Registers the cargo build and copy tasks needed by [buildTarget].
-//     *
-//     * Rust targets are shared between build targets (the host triple backs jvm, the
-//     * matching native target and android's local tests), hence [maybeRegister].
-//     */
-//    /**
-//     * Registers the rust tasks [buildTarget] needs: one cargo build per rust target, and
-//     * one copy task per (rust target, build target).
-//     *
-//     * Previously this registered the full
-//     * `rustTarget x profile x linkage (x umbrella)` cross product - 22 cargo tasks and 96
-//     * copy tasks for :runtime, of which 9 and 12 were reachable. Two of those three axes
-//     * were never real choices: the profile is one global build input, and the linkage
-//     * follows from the build target.
-//     *
-//     * Rust targets are shared between build targets (the host triple backs jvm, the
-//     * matching native target and android's local tests), hence [maybeRegister].
-//     */
-//    private fun registerRustTasksFor(project: Project, buildTarget: BuildTarget) {
-//        buildTarget.rustTargets(isRelease).forEach { rustTarget ->
-//            // The profile stays in the cargo task name, so it is visible from the task
-//            // list whether a binary is built in debug or release.
-//            registerCargoBuildTask(project, rustTarget, isRelease, buildOutputDir)
-//            registerCopyNativeLibrariesTask(project, buildTarget, rustTarget)
-//        }
-//    }
-//
-//    private fun registerCargoBuildTask(
-//        project: Project,
-//        rustTarget: BuildTarget.RustTarget,
-//        release: Boolean,
-//        buildOutputDir: Provider<Directory>,
-//    ) {
-//        val profile = Strings.release(release).lowercase()
-//
-//        project.tasks.maybeRegister(
-//            Tasks.cargoBuild(rustTarget, release),
-//            CargoBuildTask::class.java,
-//        ) { task ->
-//            task.packageDirectory.set(cargoExtension.packageDirectory)
-//            task.triple.set(rustTarget.rustTriple)
-//            task.release.set(release)
-//            task.packageName.set(packageName)
-//            task.libraryName.set(libraryName)
-//            task.cargoOutputDirectory.set(
-//                cargoTargetDir.map { it.dir("${rustTarget.rustTriple}/$profile") }
-//            )
-//            task.outputDirectory.set(
-//                buildOutputDir.map { it.dir("${rustTarget.rustTriple}/$profile") }
-//            )
-//            task.useCross.set(cargoExtension.compilations.getByName(rustTarget.name).useCross)
-//        }
-//    }
-//
-//    private fun registerCopyNativeLibrariesTask(
-//        project: Project,
-//        buildTarget: BuildTarget,
-//        rustTarget: BuildTarget.RustTarget,
-//    ) {
-//        val profile = Strings.release(isRelease).lowercase()
-//        val sourceDir = buildOutputDir.map { it.dir("${rustTarget.rustTriple}/$profile") }
-//
-//        // Each copy owns exactly one leaf directory, named after the ABI (android jniLibs)
-//        // or after JNA's jarLibraryPath (everything else). The merge tasks rely on that
-//        // name, and keeping the copies out of the merged roots avoids overlapping outputs.
-//        val leafName = rustTarget.abiName ?: rustTarget.jarLibraryPath
-//        val outputDirectory = project.layout.buildDirectory
-//            .dir("intermediates/rust/${buildTarget.sourceSetName}/libs/$leafName")
-//
-//        project.tasks.maybeRegister(
-//            Tasks.copyNativeLibraries(rustTarget, buildTarget),
-//            CopyNativeLibrariesTask::class.java,
-//        ) { task ->
-//            task.libraryFile.set(
-//                libraryName.flatMap { name ->
-//                    val fileName = if (buildTarget.usesDynamicLibrary) {
-//                        rustTarget.dynamicLibraryName(name)
-//                    } else {
-//                        rustTarget.staticLibraryName(name)
-//                    } ?: throw GradleException("Could not determine library file name!")
-//
-//                    sourceDir.map { it.file(fileName) }
-//                }
-//            )
-//            task.outputDir.set(outputDirectory)
-//
-//            task.dependsOn(Tasks.cargoBuild(rustTarget, isRelease))
-//        }
-//    }
-//
-//    private fun registerGenerateDefFileTask(
-//        project: Project,
-//        buildTarget: BuildTarget,
-//        libraryName: Provider<String>,
-//    ): TaskProvider<GenerateDefFileTask> {
-//        val rustTarget = buildTarget.checkedNativeTarget
-//        val config = cargoExtension.compilations.getByName(rustTarget.name)
-//
-//        return project.tasks.maybeRegister(
-//            Tasks.generateDefFile(buildTarget),
-//            GenerateDefFileTask::class.java,
-//        ) { task ->
-//            task.libraryName.set(
-//                libraryName.map {
-//                    rustTarget.staticLibraryName(it)
-//                        ?: throw GradleException("Could not determine library file name!")
-//                }
-//            )
-//            task.outputFile.set(
-//                project.layout.buildDirectory.file("$CINTEROP_ROOT/uniffi-${buildTarget.name}.def")
-//            )
-//            task.packageDirectory.set(cargoExtension.packageDirectory)
-//            task.targetString.set(rustTarget.rustTriple)
-//            task.headersDir.set(project.layout.buildDirectory.dir("$CINTEROP_ROOT/headers/"))
-//            task.useCross.set(config.useCross)
-//
-//            task.dependsOn(Tasks.BUILD_BINDINGS)
-//        }
-//    }
-//
-//    private fun registerGenerateDummyDefFileTask(project: Project): TaskProvider<GenerateDummyDefFileTask> =
-//        project.tasks.maybeRegister(
-//            Tasks.GENERATE_DUMMY_DEF,
-//            GenerateDummyDefFileTask::class.java,
-//        ) { task ->
-//            task.outputFile.set(project.layout.buildDirectory.file("$CINTEROP_ROOT/dummy.def"))
-//            task.headersDir.set(project.layout.buildDirectory.dir("$CINTEROP_ROOT/headers/"))
-//
-//            task.dependsOn(Tasks.BUILD_BINDINGS)
-//        }
 
     /**
      * Registers [name] if it is not registered yet, otherwise returns the existing
