@@ -3,12 +3,11 @@ package ch.ubique.uniffi.plugin.tasks
 import ch.ubique.uniffi.plugin.model.CargoMetadata
 import ch.ubique.uniffi.plugin.utils.targetPackage
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.file.FileTree
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
@@ -17,6 +16,7 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
+import javax.inject.Inject
 
 // Caching this would be worthwhile - bindgen is slow and the bindings are small text
 // files - but only once every input is declared: `uniffi.toml` is currently not part of
@@ -34,6 +34,7 @@ abstract class BuildBindingsTask : DefaultTask() {
             pattern.exclude("build")
             pattern.include("**/*.rs")
             pattern.include("Cargo.toml", "Cargo.lock")
+            pattern.include("uniffi.toml")
         }
 
     @get:InputFile
@@ -74,6 +75,9 @@ abstract class BuildBindingsTask : DefaultTask() {
     @get:OutputDirectory
     abstract val nativeInteropHeadersDir: DirectoryProperty
 
+    @get:Inject
+    abstract val fileSystemOperations: FileSystemOperations
+
     init {
         // Need to be set like that, otherwise the generation dependency is not preserved
         commonMainDir.convention(bindingsDirectory.dir("commonMain"))
@@ -86,6 +90,13 @@ abstract class BuildBindingsTask : DefaultTask() {
 
     @TaskAction
     fun action() {
+        fileSystemOperations.delete { spec ->
+            spec.delete(bindingsDirectory)
+        }
+
+        val outputDirectory = bindingsDirectory.get().asFile
+        outputDirectory.mkdirs()
+
         val metadata = CargoMetadata.fromJsonString(cargoMetadata.get())
 
         val targetPackage = metadata.targetPackage

@@ -4,6 +4,7 @@ import ch.ubique.uniffi.plugin.dsl.BindingsGenerationFromLibrary
 import ch.ubique.uniffi.plugin.dsl.BindingsGenerationFromUdl
 import ch.ubique.uniffi.plugin.dsl.CargoExtension
 import ch.ubique.uniffi.plugin.dsl.UniffiExtension
+import ch.ubique.uniffi.plugin.android.AndroidSupport
 import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.model.CargoInfo
 import ch.ubique.uniffi.plugin.model.CargoMetadata
@@ -14,9 +15,7 @@ import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
 import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
 import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
 import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
-import ch.ubique.uniffi.plugin.utils.NdkUtil
 import ch.ubique.uniffi.plugin.utils.targetPackage
-import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -299,40 +298,17 @@ class UniffiPlugin : Plugin<Project> {
         val useCross = cargoExtension.compilations.getByName(rustTarget.name).useCross
         task.useCross.set(useCross)
 
+        // An android rust target can only be requested once the android plugin created the
+        // android build target, so touching AndroidSupport - and with it AGP - is safe here.
         if (rustTarget.isAndroid) {
-            task.additionalEnvironment.set(project.cargoNdkEnvironment(rustTarget, useCross))
-        }
-    }
-
-    /**
-     * Returns the environmental variables for the android ndk. Returns an empty environment if
-     * [useCross] evaluates to true
-     */
-    private fun Project.cargoNdkEnvironment(
-        rustTarget: BuildTarget.RustTarget,
-        useCross: Provider<Boolean>,
-    ): Provider<Map<String, String>> {
-        val sdkDirectory = extensions
-            .getByType(KotlinMultiplatformAndroidComponentsExtension::class.java)
-            .sdkComponents
-            .sdkDirectory
-
-        val ndkEnvironment = sdkDirectory
-            .zip(cargoExtension.ndkVersion.orElse("")) { sdk, ndkVersion ->
-                NdkUtil.ndkEnvVariables(
-                    sdkRoot = sdk.asFile,
-                    // The KMP android extension's minSdk is not readable this early in the
-                    // lifecycle; 21 matches what :runtime declares.
-                    apiLevel = 21,
-                    ndkVersion = ndkVersion.takeIf(String::isNotEmpty),
-                    ndkRoot = null,
-                    rustTriple = rustTarget.rustTriple,
-                    ndkLlvmTriple = rustTarget.ndkLlvmTriple,
+            task.additionalEnvironment.set(
+                AndroidSupport(project).ndkEnvironment(
+                    rustTarget = rustTarget,
+                    useCross = useCross,
+                    ndkVersion = cargoExtension.ndkVersion,
                 )
-            }
-
-        val empty = providers.provider { emptyMap<String, String>() }
-        return useCross.flatMap { useCross -> if (useCross) empty else ndkEnvironment }
+            )
+        }
     }
 
     /**
@@ -494,22 +470,7 @@ class UniffiPlugin : Plugin<Project> {
         }
 
         pluginManager.withPlugin(Constants.Plugins.ANDROID_PLUGIN) {
-            val androidComponents =
-                project.extensions.getByType(KotlinMultiplatformAndroidComponentsExtension::class.java)
-
-            androidComponents.onVariants { variant ->
-                variant.sources.jniLibs?.addGeneratedSourceDirectory(
-                    jniLibrariesTask,
-                    MergeLibrariesTask::outputDirectory
-                )
-
-                variant.hostTests.forEach { (_, hostTest) ->
-                    hostTest.sources.resources?.addGeneratedSourceDirectory(
-                        hostLibrariesTask,
-                        MergeLibrariesTask::outputDirectory
-                    )
-                }
-            }
+            AndroidSupport(project).wireVariants(jniLibrariesTask, hostLibrariesTask)
         }
     }
 
