@@ -73,6 +73,7 @@ kotlin {
             }
         }
 
+        withDeviceTest {}
         withHostTest {}
     }
 
@@ -84,6 +85,10 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.androidx.annotation)
+        }
+
+        getByName("androidDeviceTest").dependencies {
+            implementation(libs.androidx.test.runner)
         }
     }
 }
