@@ -45,6 +45,13 @@ jobs:
           echo "[target.aarch64-unknown-linux-gnu]
           linker = \"$HOME/zig/aarch64-unknown-linux-gnu-cc.sh\"" > $HOME/.cargo/config.toml
 
+      - name: Install ktlint
+        run: |
+          export KTLINT_VERSION=1.8.0
+          curl -sSLO https://github.com/pinterest/ktlint/releases/download/$KTLINT_VERSION/ktlint
+          chmod +x ktlint
+          mv ktlint /usr/local/bin/
+
       - name: Install rust
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
