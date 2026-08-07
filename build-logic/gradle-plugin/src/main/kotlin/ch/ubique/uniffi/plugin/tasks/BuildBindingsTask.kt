@@ -16,7 +16,13 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
+// Caching this would be worthwhile - bindgen is slow and the bindings are small text
+// files - but only once every input is declared: `uniffi.toml` is currently not part of
+// [rustSources], so a cache hit could hand out bindings generated with a different
+// configuration.
+@DisableCachingByDefault(because = "Not every input that affects the bindings is declared yet")
 abstract class BuildBindingsTask : DefaultTask() {
 
     @get:Internal

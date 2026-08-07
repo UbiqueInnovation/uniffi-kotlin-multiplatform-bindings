@@ -5,20 +5,25 @@ import ch.ubique.uniffi.plugin.dsl.BindingsGenerationFromUdl
 import ch.ubique.uniffi.plugin.dsl.CargoExtension
 import ch.ubique.uniffi.plugin.dsl.UniffiExtension
 import ch.ubique.uniffi.plugin.model.BuildTarget
+import ch.ubique.uniffi.plugin.model.CargoInfo
 import ch.ubique.uniffi.plugin.model.CargoMetadata
 import ch.ubique.uniffi.plugin.services.CargoMetadataService
 import ch.ubique.uniffi.plugin.tasks.BuildBindingsTask
 import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
 import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
+import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
 import ch.ubique.uniffi.plugin.utils.targetPackage
+import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
@@ -28,13 +33,6 @@ import java.io.File
 
 @Suppress("UnstableApiUsage")
 class UniffiPlugin : Plugin<Project> {
-    //    companion object {
-//        private const val CINTEROP_NAME = "uniffi"
-//        private const val GENERATED_ROOT = "generated/uniffi"
-//        private const val CINTEROP_ROOT = "$GENERATED_ROOT/nativeInterop/cinterop"
-//    }
-//
-
     private companion object {
         private const val PREFIX: String = "uniffi"
 
@@ -47,53 +45,17 @@ class UniffiPlugin : Plugin<Project> {
         /** The output directory of the bindgen */
         private const val BINDINGS_PATH: String = "$PREFIX/bindings"
 
-        /** The directory where the built libraries will be copied to */
-        private const val LIBS_OUTPUT_PATH: String = "$PREFIX/build/intermediates/libs"
+        /** The root of the per rust target library copies */
+        private const val RUST_LIBS_PATH: String = "$PREFIX/build/rust"
+
+        /** The merged library directory of a source set, relative to the project */
+        private fun librariesPath(sourceSetName: String): String =
+            "$PREFIX/build/intermediates/$sourceSetName/libs"
     }
 
     private lateinit var uniffiExtension: UniffiExtension
 
     private lateinit var cargoExtension: CargoExtension
-//
-//    /**
-//     * Which cargo profile the rust libraries are built with.
-//     *
-//     * Resolved from `-Puniffi.profile` / `-PreleaseBuild`.
-//     */
-//    private var isRelease: Boolean = false
-//
-//    /**
-//     * The IDE sets `idea.sync.active` to true during a sync
-//     */
-//    private var isIdeSync: Boolean = false
-//
-//    private lateinit var metadataJson: Provider<String>
-//    private lateinit var libraryName: Provider<String>
-//    private lateinit var packageName: Provider<String>
-//    private lateinit var cargoTargetDir: Provider<Directory>
-//    private lateinit var bindgenLibsDir: Provider<Directory>
-//    private lateinit var buildOutputDir: Provider<Directory>
-//
-//    private lateinit var bindingsRootDir: Provider<Directory>
-//
-//    /**
-//     * The bindings task, kept so the generated source directories can be handed to the
-//     * Kotlin source sets *as task outputs* rather than as bare paths. That is what makes
-//     * the dependency implicit: see [bindingsSourceDir].
-//     */
-//    private lateinit var buildBindingsTask: TaskProvider<BuildBindingsTask>
-//
-//    /**
-//     * The generated source directory for [sourceSetName], as a provider that carries a
-//     * dependency on [buildBindingsTask].
-//     *
-//     * Handing this to `srcDir` means Gradle infers "compiling this source set requires
-//     * buildBindings" on its own, which is what lets the blanket
-//     * `withType(KotlinCompilationTask).dependsOn(buildBindings)` wiring go away.
-//     */
-//    private fun bindingsSourceDir(project: Project, sourceSetName: String): FileCollection =
-//        project.files(buildBindingsTask.flatMap { it.bindingsDirectory.dir(sourceSetName) })
-//            .builtBy(buildBindingsTask)
 
     override fun apply(project: Project) {
         // Create the DSL extensions
@@ -107,29 +69,24 @@ class UniffiPlugin : Plugin<Project> {
         val isSync = project.providers.systemProperty("idea.sync.active").map { it.toBoolean() }
             .getOrElse(false)
 
+        // Collect the cargo metadata
         val metadataJsonProvider = project.providers.of(CargoMetadataService::class.java) { spec ->
             spec.parameters.packageDirectory.set(cargoExtension.packageDirectory)
         }
         val metadata = metadataJsonProvider.map { CargoMetadata.fromJsonString(it) }
         val targetPackage = metadata.map { it.targetPackage }
-        val packageName = targetPackage.map { it.name }
-        val libraryName = targetPackage.map { it.targets.first().name }
-
-        val installBindgenTask = project.registerInstallBindgenTask()
-        val buildLibraryForBindingsTask = project.registerBuildLibraryForBindingsTask(
-            packageName = packageName,
-            libraryName = libraryName,
-            targetDirectory = metadata.map { it.targetDirectory },
+        val cargoInfo = CargoInfo(
+            packageName = targetPackage.map { it.name },
+            libraryName = targetPackage.map { it.targets.first().name },
+            targetDirectory = project.layout.dir(metadata.map { File(it.targetDirectory) }),
         )
-        val libraryForBindings = buildLibraryForBindingsTask.flatMap {
-            it.outputDirectory.file(it.libraryName.map { name ->
-                BuildTarget.RustTarget.forCurrentPlatform.dynamicLibraryName(name)
-                    ?: throw GradleException("Could not determine library file name!")
-            })
-        }
+
+        // Set up the bindings tasks
+        val installBindgenTask = project.registerInstallBindgenTask()
+        val buildLibraryForBindingsTask = project.registerBuildLibraryForBindingsTask(cargoInfo)
         val buildBindingsTask = project.registerBuildBindingsTask(
             bindgenBin = installBindgenTask.flatMap { it.bindgenBinPath },
-            libraryForBindings = libraryForBindings,
+            libraryForBindings = buildLibraryForBindingsTask.flatMap { it.dynamicLibraryFile },
             metadataJson = metadataJsonProvider,
         )
 
@@ -154,7 +111,15 @@ class UniffiPlugin : Plugin<Project> {
                     BuildTarget.Jvm -> project.configureJvmTarget(
                         jvmMain = kmpExtension.sourceSets.maybeCreate("jvmMain"),
                         bindingsDir = buildBindingsTask.flatMap { it.jvmMainDir },
-                        librariesDir = buildBindingsTask.flatMap { it.jvmMainDir }, // TODO
+                        librariesDir = project.registerMergeLibrariesTask(
+                            taskName = Tasks.MERGE_JVM_RESOURCES,
+                            buildTarget = BuildTarget.Jvm,
+                            cargoInfo = cargoInfo,
+                            isRelease = isRelease,
+                            outputDirectory = project.layout.buildDirectory.dir(
+                                librariesPath(BuildTarget.Jvm.sourceSetName)
+                            ),
+                        ).flatMap { it.outputDirectory },
                     )
 
                     BuildTarget.Android -> project.configureAndroidTarget(target)
@@ -167,12 +132,24 @@ class UniffiPlugin : Plugin<Project> {
         }
 
         project.afterEvaluate { evaluated ->
+            // Make sure the KMP Plugin is applied
             if (!evaluated.plugins.hasPlugin(Constants.Plugins.KMP_PLUGIN)) {
                 throw GradleException("Kotlin Multiplatform Plugin is required")
+            }
+
+            // Make sure the binding generation source is specified
+            if (!uniffiExtension.bindingsGeneration.isPresent) {
+                throw GradleException("Please call either 'generateFromLibrary' or 'generateFromUdl'.")
             }
         }
     }
 
+    /**
+     * Installs the bindgen for the project in the relative path [BINDGEN_INSTALL_PATH]. Sets the
+     * `CARGO_TARGET_DIR` to the path [BINDGEN_BUILD_PATH] relative to the **root project**, so that
+     * cargo can reuse the build files if the root project has multiple subprojects where the
+     * bindgen needs to be installed to.
+     */
     private fun Project.registerInstallBindgenTask(): TaskProvider<InstallBindgenTask> =
         project.tasks.register(Tasks.INSTALL_BINDGEN, InstallBindgenTask::class.java) { task ->
             task.source.set(uniffiExtension.bindgenSource)
@@ -183,25 +160,34 @@ class UniffiPlugin : Plugin<Project> {
             task.defaultBindgenBinName.set(Constants.BINDGEN_BIN_NAME)
         }
 
+    /**
+     * Register a [CargoBuildTask] for the host native target (by not setting the `rustTarget`).
+     * This library will be used to generate the bindings from (in case the bindings are not
+     * generated from a UDL file).
+     *
+     * NOTE: Maybe it would be worth to specify the `rustTarget` to [BuildTarget.RustTarget.forCurrentPlatform]
+     * so that rust can reuse the built library. Alternatively, it would be nice if we could figure
+     * out which libraries are already being built and use one of them for the bindings.
+     */
     private fun Project.registerBuildLibraryForBindingsTask(
-        packageName: Provider<String>,
-        libraryName: Provider<String>,
-        targetDirectory: Provider<String>,
+        cargoInfo: CargoInfo,
     ): TaskProvider<CargoBuildTask> =
         project.tasks.register(Tasks.BUILD_LIB_FOR_BINDINGS, CargoBuildTask::class.java) { task ->
             task.packageDirectory.set(cargoExtension.packageDirectory)
             task.release.set(false)
-            task.packageName.set(packageName)
-            task.libraryName.set(libraryName)
-            task.cargoOutputDirectory.set(
-                project.layout.dir(targetDirectory.map { File(it, "debug") })
-            )
+            task.packageName.set(cargoInfo.packageName)
+            task.libraryName.set(cargoInfo.libraryName)
+            task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
             task.outputDirectory.set(
-                project.layout.buildDirectory.dir(LIBS_OUTPUT_PATH)
+                project.layout.buildDirectory.dir("$RUST_LIBS_PATH/host")
             )
             task.useCross.set(false)
         }
 
+    /**
+     * Register the [BuildBindingsTask], the [libraryForBindings] will not be used if bindings are
+     * generated from a UDL file.
+     */
     private fun Project.registerBuildBindingsTask(
         bindgenBin: Provider<RegularFile>,
         libraryForBindings: Provider<RegularFile>,
@@ -221,6 +207,70 @@ class UniffiPlugin : Plugin<Project> {
             task.udlFile.set(uniffiExtension.bindingsGeneration.filter { it is BindingsGenerationFromUdl }
                 .flatMap { (it as BindingsGenerationFromUdl).udlFile })
         }
+
+    /**
+     * Register a [CargoBuildTask] for the [rustTarget] and [release].
+     *
+     * NOTE: Only ever one task for a combination of [rustTarget] and [release] is registered.
+     */
+    private fun Project.registerCargoBuildTask(
+        rustTarget: BuildTarget.RustTarget,
+        release: Boolean,
+        cargoInfo: CargoInfo,
+    ): TaskProvider<CargoBuildTask> =
+        tasks.maybeRegister(
+            Tasks.cargoBuild(rustTarget, release),
+            CargoBuildTask::class.java,
+        ) { task ->
+            task.packageDirectory.set(cargoExtension.packageDirectory)
+            task.rustTarget.set(rustTarget)
+            task.release.set(release)
+            task.packageName.set(cargoInfo.packageName)
+            task.libraryName.set(cargoInfo.libraryName)
+            task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
+            task.outputDirectory.set(
+                layout.buildDirectory.dir(
+                    "$RUST_LIBS_PATH/${rustTarget.rustTriple}/${Strings.release(release)}"
+                )
+            )
+            task.useCross.set(cargoExtension.compilations.getByName(rustTarget.name).useCross)
+        }
+
+    /**
+     * JVM / Android targets need multiple libraries to be in the correct directory structure.
+     *
+     * The [MergeLibrariesTask] combines outputs from multiple [CargoBuildTask]s and copies the
+     * libraries into the correct directory structure.
+     */
+    private fun Project.registerMergeLibrariesTask(
+        taskName: String,
+        buildTarget: BuildTarget,
+        cargoInfo: CargoInfo,
+        isRelease: Boolean,
+        rustTargets: List<BuildTarget.RustTarget> = buildTarget.rustTargets(isRelease),
+        outputDirectory: Provider<Directory>? = null,
+        leafName: (BuildTarget.RustTarget) -> String = { it.jarLibraryPath },
+    ): TaskProvider<MergeLibrariesTask> {
+        val cargoBuilds = rustTargets.map { rustTarget ->
+            rustTarget to registerCargoBuildTask(rustTarget, isRelease, cargoInfo)
+        }
+        return tasks.register(taskName, MergeLibrariesTask::class.java) { task ->
+            outputDirectory?.let(task.outputDirectory::set)
+
+            cargoBuilds.forEach { (rustTarget, cargoBuild) ->
+                task.library(
+                    directoryName = leafName(rustTarget),
+                    files = cargoBuild.flatMap {
+                        if (buildTarget.usesDynamicLibrary) {
+                            it.dynamicLibraryFile
+                        } else {
+                            it.staticLibraryFile
+                        }
+                    },
+                )
+            }
+        }
+    }
 
     private fun Project.configureCommonMain(
         commonMain: KotlinSourceSet,
@@ -266,152 +316,6 @@ class UniffiPlugin : Plugin<Project> {
         // TODO
     }
 
-
-//        // Register Extensions
-
-    //
-//        // Current Configuration
-//        isRelease = project.providers.gradleProperty("uniffi.profile").map { it == "release" }
-//            .orElse(project.providers.gradleProperty("releaseBuild").map { it == "true" })
-//            .getOrElse(false)
-//
-//        isIdeSync = project.providers.systemProperty("idea.sync.active")
-//            .map { it.toBoolean() }
-//            .getOrElse(false)
-//            && project.providers.gradleProperty("forceBuildNativeLibs")
-//                .map { it != "true" }
-//                .getOrElse(true)
-//
-//        metadataJson = project.providers
-//            .of(CargoMetadataService::class.java) { spec ->
-//                spec.parameters.packageDirectory.set(cargoExtension.packageDirectory)
-//            }
-//        val metadata: Provider<CargoMetadata> = metadataJson.map(CargoMetadata::fromJsonString)
-//
-//        libraryName = metadata.map { it.targetPackage.targets.first().name }
-//        packageName = metadata.map { it.targetPackage.name }
-//        cargoTargetDir = project.layout.dir(metadata.map { File(it.targetDirectory) })
-//        bindgenLibsDir = project.layout.buildDirectory.dir("bindgen-libs")
-//        buildOutputDir = project.layout.buildDirectory.dir("target")
-//
-//        bindingsRootDir = project.layout.buildDirectory.dir(GENERATED_ROOT)
-//
-////        val namespace: Provider<String> = uniffiExtension.bindingsGeneration
-////            .flatMap { it.namespace }
-////            .orElse(libraryName)
-//
-//        // Bingen & Bindings
-//        buildBindingsTask = registerBingenTasks(project)
-//
-//
-//        // Configure Targets
-//        configureTargets(project)
-//
-//        // Validation after configuration
-//        project.afterEvaluate { evaluated ->
-//            if (!evaluated.plugins.hasPlugin(Constants.Plugins.KMP_PLUGIN)) {
-//                throw GradleException("Kotlin Multiplatform Plugin is required!")
-//            }
-//            if (!uniffiExtension.bindingsGeneration.isPresent) {
-//                throw GradleException("Please call either 'generateFromLibrary' or 'generateFromUdl'.")
-//            }
-//        }
-//
-//    /**
-//     * Registers the [InstallBindgenTask], BuildLibraryForBindings ([CargoBuildTask]), and
-//     * [BuildBindingsTask]. Configures the task dependencies and hooks the [BuildBindingsTask] into
-//     * the build process.
-//     */
-//    private fun registerBingenTasks(project: Project): TaskProvider<BuildBindingsTask> {
-//        val installBindgenTask = project.tasks.register(Tasks.INSTALL_BINDGEN, InstallBindgenTask::class.java) { task ->
-//            task.source.set(uniffiExtension.bindgenSource)
-//            task.bindgenPath.set(project.layout.buildDirectory.dir("bindgen-install"))
-//            task.bindgenTmpPath.set(
-//                project.rootProject.layout.buildDirectory.dir("bindgen-install/target")
-//            )
-//        }
-//
-//        // Captured by the onlyIf spec below, which Gradle serializes as part of the
-//        // task's state. It has to be a plain Provider: a lambda that touches
-//        // `uniffiExtension` would capture the UniffiPlugin instance instead, dragging
-//        // every field it holds - including the buildBindings TaskProvider - into the
-//        // configuration cache ("cannot serialize object of type BuildBindingsTask").
-//        val generatesFromLibrary: Provider<Boolean> = uniffiExtension.bindingsGeneration
-//            .map { it is BindingsGenerationFromLibrary }
-//            .orElse(false)
-//
-//        val buildLibForBindingsTask = project.tasks.register(Tasks.BUILD_LIB_FOR_BINDINGS, CargoBuildTask::class.java) { task ->
-//            // Only if the bindings are generated from the library
-//            task.onlyIf { generatesFromLibrary.get() }
-//
-//            task.packageDirectory.set(cargoExtension.packageDirectory)
-//            task.release.set(false)
-//            task.packageName.set(packageName)
-//            task.libraryName.set(libraryName)
-//            task.cargoOutputDirectory.set(cargoTargetDir.map { it.dir("debug") })
-//            task.outputDirectory.set(bindgenLibsDir)
-//            task.useCross.set(false)
-//        }
-//
-//        val buildBindingsTask = project.tasks.register(Tasks.BUILD_BINDINGS, BuildBindingsTask::class.java) { task ->
-//            task.dependsOn(installBindgenTask, buildLibForBindingsTask)
-//
-//            task.packageDirectory.set(cargoExtension.packageDirectory)
-//            task.cargoMetadata.set(metadataJson)
-//            task.generateBindingsForExternalCrates.set(uniffiExtension.generateBindingsForExternalCrates)
-//            task.bindingsDirectory.set(bindingsRootDir)
-//
-//            task.bindgen.set(
-//                project.layout.buildDirectory.file(
-//                    uniffiExtension.bindgenSource.map {
-//                        "bindgen-install/bin/${it.bindgenName ?: Constants.BINDGEN_BIN_NAME}"
-//                    }
-//                )
-//            )
-//
-//            task.libraryFile.set(
-//                uniffiExtension.bindingsGeneration
-//                    .filter { it is BindingsGenerationFromLibrary }
-//                    .flatMap {
-//                        libraryName.flatMap { name ->
-//                            bindgenLibsDir.map { dir ->
-//                                dir.file(
-//                                    BuildTarget.RustTarget.forCurrentPlatform
-//                                        .dynamicLibraryName(name)
-//                                        ?: throw GradleException("Could not determine library file name!")
-//                                )
-//                            }
-//                        }
-//                    }
-//            )
-//
-//            task.udlFile.set(
-//                uniffiExtension.bindingsGeneration
-//                    .filter { it is BindingsGenerationFromUdl }
-//                    .flatMap { (it as BindingsGenerationFromUdl).udlFile }
-//            )
-//        }
-//
-//        // Run build bindings on sync
-//        project.pluginManager.withPlugin(Constants.Plugins.KMP_PLUGIN) {
-//            if ("prepareKotlinIdeaImport" in project.tasks.names) {
-//                project.tasks.named("prepareKotlinIdeaImport") { task ->
-//                    task.dependsOn(buildBindingsTask)
-//                }
-//            }
-//        }
-//
-//        // NOTE: there is deliberately no blanket
-//        //   withType(KotlinCompilationTask/Jar/CInteropProcess).dependsOn(buildBindings)
-//        // any more. The generated sources are attached to the Kotlin source sets as
-//        // outputs of this task (see bindingsSourceDir), so every compile, jar and
-//        // cinterop that consumes them picks the dependency up on its own. The only
-//        // consumer that still needs an explicit edge is the IDE import above, which does
-//        // not necessarily realise a compilation.
-//
-//        return buildBindingsTask
-//    }
-//
 //    /**
 //     * Configures the KMP build targets
 //     */
@@ -450,80 +354,6 @@ class UniffiPlugin : Plugin<Project> {
 //            configureAndroidVariants(project)
 //        }
 //    }
-//
-//    private fun configureCommonMain(project: Project, kmpExtension: KotlinMultiplatformExtension) {
-//        kmpExtension.sourceSets.named("commonMain") { sourceSet ->
-//            sourceSet.kotlin.srcDir(bindingsSourceDir(project, "commonMain"))
-//
-//            project.configurations.named(sourceSet.implementationConfigurationName) { configuration ->
-//                configuration.dependencies.addIf(
-//                    condition = uniffiExtension.addRuntime,
-//                    project.dependencies.create("ch.ubique.uniffi:runtime:${Constants.RUNTIME_VERSION}")
-//                )
-//
-//                configuration.dependencies.addIf(
-//                    condition = uniffiExtension.addDependencies,
-//                    project.dependencies.create("com.squareup.okio:okio:${Constants.OKIO_VERSION}"),
-//                    project.dependencies.create("org.jetbrains.kotlinx:atomicfu:${Constants.ATOMICFU_VERSION}"),
-//                    project.dependencies.create("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Constants.COROUTINES_VERSION}"),
-//                    project.dependencies.create("org.jetbrains.kotlinx:kotlinx-datetime:${Constants.DATETIME_VERSION}"),
-//                )
-//            }
-//        }
-//    }
-//
-//    private fun configureJvmTarget(project: Project, kmpExtension: KotlinMultiplatformExtension) {
-//        // JNA looks the library up on the classpath under <jarLibraryPath>/, so all the
-//        // per-triple copies have to sit under one root. Same shape as the android
-//        // wiring: one merge task, consumed as a provider, so `jvmProcessResources` needs
-//        // no explicit dependsOn.
-//        val mergeResourcesTask = registerMergeNativeLibrariesTask(
-//            project,
-//            Tasks.MERGE_JVM_RESOURCES,
-//            BuildTarget.Jvm,
-//            project.layout.buildDirectory.dir("intermediates/rust/jvmMain/resources"),
-//        )
-//
-//        kmpExtension.sourceSets.named("jvmMain") { sourceSet ->
-//            sourceSet.kotlin.srcDir(bindingsSourceDir(project, "jvmMain"))
-//
-//            sourceSet.resources.srcDir(mergeResourcesTask.flatMap { it.outputDirectory })
-//
-//            sourceSet.dependencies {
-//                implementation("net.java.dev.jna:jna:${Constants.JNA_VERSION}")
-//            }
-//        }
-//    }
-//
-//    /**
-//     * Registers a task that regroups the per-rust-target copies of [buildTarget] under a
-//     * single root, keeping each copy's own directory name (the ABI, or JNA's
-//     * `jarLibraryPath`) as the sub directory.
-//     *
-//     * [outputDirectory] is left unset when AGP assigns it through
-//     * `addGeneratedSourceDirectory`.
-//     */
-//    private fun registerMergeNativeLibrariesTask(
-//        project: Project,
-//        taskName: String,
-//        buildTarget: BuildTarget,
-//        outputDirectory: Provider<Directory>? = null,
-//        rustTargets: List<BuildTarget.RustTarget> = buildTarget.rustTargets(isRelease),
-//    ): TaskProvider<MergeNativeLibrariesTask> =
-//        project.tasks.register(taskName, MergeNativeLibrariesTask::class.java) { task ->
-//            outputDirectory?.let(task.outputDirectory::set)
-//
-//            rustTargets.forEach { rustTarget ->
-//                task.sourceDirectories.from(
-//                    project.tasks
-//                        .named(
-//                            Tasks.copyNativeLibraries(rustTarget, buildTarget),
-//                            CopyNativeLibrariesTask::class.java,
-//                        )
-//                        .flatMap { it.outputDir }
-//                )
-//            }
-//        }
 //
 //    private fun configureAndroidSourceSets(
 //        project: Project,
@@ -836,20 +666,17 @@ class UniffiPlugin : Plugin<Project> {
 //
 //            task.dependsOn(Tasks.BUILD_BINDINGS)
 //        }
-//
-//    /**
-//     * Registers [name] if it is not registered yet, otherwise returns the existing
-//     * provider without configuring it a second time.
-//     *
-//     * `names` does not realise tasks, so this stays lazy.
-//     */
-//    private fun <T : Task> TaskContainer.maybeRegister(
-//        name: String,
-//        type: Class<T>,
-//        configure: Action<T>,
-//    ): TaskProvider<T> =
-//        if (name in names) named(name, type) else register(name, type, configure)
-//
+
+    /**
+     * Registers [name] if it is not registered yet, otherwise returns the existing
+     * provider without configuring it a second time.
+     */
+    private fun <T : Task> TaskContainer.maybeRegister(
+        name: String,
+        type: Class<T>,
+        configure: Action<T>,
+    ): TaskProvider<T> = if (name in names) named(name, type) else register(name, type, configure)
+
     private fun DependencySet.addIf(condition: Provider<Boolean>, vararg dependencies: Dependency) =
         addAllLater(
             condition.map { enabled ->

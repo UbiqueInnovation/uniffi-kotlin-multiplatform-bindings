@@ -2,6 +2,7 @@ package ch.ubique.uniffi.plugin
 
 import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.utils.BindgenSource
+import org.gradle.internal.extensions.stdlib.capitalized
 
 internal object Constants {
     object Plugins {
@@ -40,7 +41,7 @@ internal object Tasks {
     fun cargoBuild(
         target: BuildTarget.RustTarget,
         release: Boolean
-    ): String = "cargoBuild${target.name}${Strings.release(release)}"
+    ): String = "cargoBuild${target.name}${Strings.Release(release)}"
 
     fun generateDefFile(
         buildTarget: BuildTarget
@@ -62,12 +63,15 @@ internal object Tasks {
 
 internal object Strings {
     fun release(release: Boolean) = if (release) {
-        "Release"
+        "release"
     } else {
-        "Debug"
+        "debug"
     }
 
-    fun dynamic(dynamic: Boolean) = if (dynamic) {
+    @Suppress("FunctionName")
+    fun Release(release: Boolean) = release(release).capitalized()
+
+    fun Dynamic(dynamic: Boolean) = if (dynamic) {
         "Dynamic"
     } else {
         "Static"

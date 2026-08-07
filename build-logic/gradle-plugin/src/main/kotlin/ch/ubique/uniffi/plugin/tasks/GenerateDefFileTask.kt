@@ -10,8 +10,10 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 import kotlin.String
 
+@DisableCachingByDefault(because = "Generating the def file is cheaper than fetching it from the build cache")
 abstract class GenerateDefFileTask : DefaultTask() {
     @get:Input
     abstract val libraryName: Property<String>
