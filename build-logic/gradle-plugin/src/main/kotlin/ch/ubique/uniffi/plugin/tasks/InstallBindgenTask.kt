@@ -4,29 +4,43 @@ import ch.ubique.uniffi.plugin.utils.BindgenSource
 import ch.ubique.uniffi.plugin.utils.CargoRunner
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-@CacheableTask
+import org.gradle.work.DisableCachingByDefault
+
+@DisableCachingByDefault(because = "The rust toolchain and the resolved bindgen revision are not declared inputs")
 abstract class InstallBindgenTask : DefaultTask() {
-
-    @get:OutputDirectory
-    abstract val bindgenPath: DirectoryProperty
-
-    @get:OutputDirectory
-    abstract val bindgenTmpPath: DirectoryProperty
-
     @get:Input
     abstract val source: Property<BindgenSource>
+
+    @get:Internal
+    abstract val defaultBindgenBinName: Property<String>
+
+    @get:OutputDirectory
+    abstract val bindgenInstallPath: DirectoryProperty
+
+    @get:Internal
+    val bindgenBinPath: Provider<RegularFile> =
+        bindgenInstallPath.file(
+            source.map { it.bindgenName }
+                .orElse(defaultBindgenBinName)
+                .map { "bin/$it" }
+        )
+
+    @get:OutputDirectory
+    abstract val bindgenBuildPath: DirectoryProperty
 
     @TaskAction
     fun action() {
         CargoRunner(logger) {
             argument("install")
             argument("--root")
-            argument(bindgenPath.asFile.get().path)
+            argument(bindgenInstallPath.asFile.get().path)
             argument("--force")
 
             val source = source.get()
@@ -78,7 +92,7 @@ abstract class InstallBindgenTask : DefaultTask() {
                 argument(it)
             }
 
-            env("CARGO_TARGET_DIR", bindgenTmpPath.asFile.get().path)
+            env("CARGO_TARGET_DIR", bindgenBuildPath.asFile.get().path)
         }.run()
     }
 }

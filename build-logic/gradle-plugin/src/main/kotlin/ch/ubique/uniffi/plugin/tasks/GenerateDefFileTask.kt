@@ -7,14 +7,28 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 import kotlin.String
 
+@DisableCachingByDefault(because = "Generating the def file is cheaper than fetching it from the build cache")
 abstract class GenerateDefFileTask : DefaultTask() {
-    @get:Input
-    abstract val libraryName: Property<String>
+    /**
+     * The static library cinterop links against.
+     *
+     * This is the [ch.ubique.uniffi.plugin.tasks.CargoBuildTask] output rather than a name,
+     * so it does three things at once: it names the library, it locates it (both end up in
+     * the def file), and it makes this task - and through the def file, cinterop - depend on
+     * the cargo build.
+     */
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
+    abstract val staticLibrary: RegularFileProperty
 
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
@@ -26,6 +40,7 @@ abstract class GenerateDefFileTask : DefaultTask() {
     abstract val targetString: Property<String>
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     abstract val headersDir: DirectoryProperty
 
     @get:Input
@@ -35,16 +50,20 @@ abstract class GenerateDefFileTask : DefaultTask() {
     fun generateDefFile() {
         val output = outputFile.get().asFile
 
-        val libraryName = libraryName.get()
+        val library = staticLibrary.get().asFile
 
         val allHeaders = headersDir.get().asFile.walkTopDown()
             .filter { it.isFile && it.extension == "h" }
             .toList()
             .joinToString(" ")
 
+        // `libraryPaths` goes in here rather than being passed to cinterop as
+        // `-libraryPath`: extraOpts wants a plain string during configuration, which would
+        // mean guessing the cargo build's output location instead of reading it off the task.
         output.writeText(
             """
-			staticLibraries = $libraryName
+			staticLibraries = ${library.name}
+			libraryPaths = ${library.parentFile.path}
 			headers = $allHeaders
 			compilerOpts = -I${headersDir.get().asFile.path}
 			""".trimIndent()

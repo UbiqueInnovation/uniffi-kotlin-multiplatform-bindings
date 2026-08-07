@@ -63,7 +63,7 @@ class ChronologicalTest {
         add(Instant.MAX, Duration.ZERO) shouldBe Instant.MAX
 
         // Test Instant is clamped to the upper bound, and don't check for the exception as in upstream.
-        // While Java's Instant.plus throws DateTimeException for overflow, kotlinx-datetime Instant just coerces the
+        // While Java's Instant.plus throws DateTimeException for overflow, kotlin.time.Instant just coerces the
         // value to the upper bound.
         add(Instant.MAX, 1.seconds) shouldBe Instant.MAX
 
@@ -102,7 +102,7 @@ class ChronologicalTest {
 }
 
 
-// This is to mock java.time.Instant.MAX, which does not exist as a public API in kotlinx-datetime.
+// This is to mock java.time.Instant.MAX, which does not exist as a public API in kotlin.time.
 // Since `Instant.fromEpochSeconds` clamps the given value to the platform-specific boundaries, passing `Long.MAX_VALUE`
 // is okay to get the maximum value.
 private val Instant.Companion.MAX: Instant

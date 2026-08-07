@@ -38,6 +38,7 @@ members = [
 
     "examples/custom-types",
     "examples/quickstart",
+    "examples/jvm-only",
 ]
 resolver = "2"
 

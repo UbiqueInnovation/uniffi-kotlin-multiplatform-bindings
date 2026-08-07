@@ -5,8 +5,8 @@ publishing {
 			name = "Ubique"
 			url = project.findProperty('ubiqueMavenUrl') ?: ""
 			credentials {
-				username project.findProperty('ubiqueMavenUser') ?: ""
-				password project.findProperty('ubiqueMavenPass') ?: ""
+				username = project.findProperty('ubiqueMavenUser') ?: ""
+				password = project.findProperty('ubiqueMavenPass') ?: ""
 			}
 		}
 	}

@@ -9,7 +9,7 @@ enum class BuildTarget(
     /**
      * The name of the kotlin build target
      */
-    val targetName: String,
+    val targetName: String?,
 
     /**
      * Targets to build and include for a debug build
@@ -25,11 +25,6 @@ enum class BuildTarget(
      * An additional set of targets to always build.
      */
     val baseTargets: List<RustTarget> = listOf(),
-
-    /**
-     * Build with the dynamic library
-     */
-    val useDynamicLib: Boolean? = null,
 ) {
     Jvm(
         sourceSetName = "jvmMain",
@@ -49,10 +44,6 @@ enum class BuildTarget(
     Android(
         sourceSetName = "androidMain",
         targetName = "android",
-        baseTargets = listOf(
-            // For executing "android (local)" tests
-            RustTarget.forCurrentPlatform,
-        ),
         debugTargets = RustTarget.androidTargetForCurrentPlatform,
         releaseTargets = listOf(
             RustTarget.Aarch64Android,
@@ -61,18 +52,22 @@ enum class BuildTarget(
         ),
     ),
 
+    AndroidLocal(
+        sourceSetName = "androidHostTest",
+        targetName = null,
+        baseTargets = listOf(
+            RustTarget.forCurrentPlatform
+        ),
+        debugTargets = listOf(),
+        releaseTargets = listOf()
+    ),
+
     // The native targets are architecture specific
     MacosArm64(
         sourceSetName = "macosArm64Main",
         targetName = "macosArm64",
         debugTargets = listOf(RustTarget.Aarch64AppleDarwin),
         releaseTargets = listOf(RustTarget.Aarch64AppleDarwin)
-    ),
-    MacosX64(
-        sourceSetName = "macosX64Main",
-        targetName = "macosX64",
-        debugTargets = listOf(RustTarget.X64AppleDarwin),
-        releaseTargets = listOf(RustTarget.X64AppleDarwin)
     ),
 
     LinuxAarch64(
@@ -292,6 +287,27 @@ enum class BuildTarget(
     val releaseTargetsAll: List<RustTarget>
         get() = baseTargets + releaseTargets
 
+    /**
+     * The rust targets that have to be built for this build target in the given profile.
+     */
+    fun rustTargets(release: Boolean): List<RustTarget> =
+        if (release) releaseTargetsAll else debugTargetsAll
+
+    /**
+     * Whether the rust library is loaded dynamically at runtime (jvm and android go
+     * through JNA/JNI and ship a shared object) or linked statically into the binary
+     * (Kotlin/Native, through cinterop).
+     *
+     * This replaces the former `useDynamicLib` constructor parameter, which no enum
+     * constant ever set - so `useDynamicLib == true` was dead and every target silently
+     * used the static library.
+     */
+    val usesDynamicLibrary: Boolean
+        get() = when (this) {
+            Jvm, Android, AndroidLocal -> true
+            else -> false
+        }
+
     val checkedNativeTarget: RustTarget
         get() {
             check(debugTargets.size == 1) {
@@ -317,7 +333,7 @@ enum class BuildTarget(
             BuildTarget.entries.find { it.targetName == name }
 
         val nativeTargets: List<BuildTarget> = listOf(
-            MacosArm64, MacosX64,
+            MacosArm64,
             LinuxAarch64, LinuxX64,
             WindowsX64,
             IosSimulatorArm64, IosArm64, IosX64

@@ -1,10 +1,11 @@
 package ch.ubique.uniffi.plugin.tasks
 
 import ch.ubique.uniffi.plugin.model.CargoMetadata
-import ch.ubique.uniffi.plugin.utils.CargoRunner
 import ch.ubique.uniffi.plugin.utils.targetPackage
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.file.FileTree
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -14,30 +15,40 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import java.io.File
+import org.gradle.work.DisableCachingByDefault
+import java.io.IOException
+import javax.inject.Inject
 
+@DisableCachingByDefault(because = "Not every input that affects the bindings is declared yet")
 abstract class BuildBindingsTask : DefaultTask() {
 
     @get:Internal
     abstract val packageDirectory: DirectoryProperty
 
     @get:InputFiles
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     val rustSources: FileTree
-        get() = packageDirectory.get().asFileTree.matching {
-            exclude("build")
-            include("**/*.rs")
-            include("Cargo.toml", "Cargo.lock")
+        get() = packageDirectory.get().asFileTree.matching { pattern ->
+            pattern.exclude("build")
+            pattern.include("**/*.rs")
+            pattern.include("Cargo.toml", "Cargo.lock")
+            pattern.include("uniffi.toml")
         }
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     abstract val bindgen: RegularFileProperty
 
     @get:InputFile
 	@get:Optional
+	@get:PathSensitive(PathSensitivity.ABSOLUTE)
     abstract val libraryFile: RegularFileProperty
 	@get:InputFile
 	@get:Optional
+	@get:PathSensitive(PathSensitivity.ABSOLUTE)
 	abstract val udlFile: RegularFileProperty
 
 
@@ -47,16 +58,81 @@ abstract class BuildBindingsTask : DefaultTask() {
 	@get:Input
 	abstract val generateBindingsForExternalCrates: Property<Boolean>
 
-    @OutputDirectory
-    val bindingsDirectory = project.layout.buildDirectory.dir("generated/uniffi")
+    /** Run `ktlint --format` over the generated bindings. Needs `ktlint` in PATH. */
+    @get:Input
+    abstract val formatCode: Property<Boolean>
+
+    @get:Internal
+    abstract val bindingsDirectory: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val commonMainDir: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val jvmMainDir: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val androidMainDir: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val nativeMainDir: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val nativeInteropHeadersDir: DirectoryProperty
+
+    @get:Inject
+    abstract val fileSystemOperations: FileSystemOperations
+
+    init {
+        // Need to be set like that, otherwise the generation dependency is not preserved
+        commonMainDir.convention(bindingsDirectory.dir("commonMain"))
+        jvmMainDir.convention(bindingsDirectory.dir("jvmMain"))
+        androidMainDir.convention(bindingsDirectory.dir("androidMain"))
+        nativeMainDir.convention(bindingsDirectory.dir("nativeMain"))
+        nativeInteropHeadersDir.convention(bindingsDirectory.dir("nativeInterop/cinterop/headers"))
+    }
 
     @TaskAction
     fun action() {
+        fileSystemOperations.delete { spec ->
+            spec.delete(bindingsDirectory)
+        }
+
+        val outputDirectory = bindingsDirectory.get().asFile
+        outputDirectory.mkdirs()
+
         val metadata = CargoMetadata.fromJsonString(cargoMetadata.get())
 
         val targetPackage = metadata.targetPackage
 
         buildBindings(targetPackage.targets[0].name)
+
+        if (formatCode.get()) {
+            formatBindings()
+        }
+    }
+
+    private fun formatBindings() {
+        val bindings = bindingsDirectory.get().asFile
+
+        val process = try {
+            ProcessBuilder("ktlint", "--format", "**/*.kt")
+                .directory(bindings)
+                .redirectErrorStream(true)
+                .start()
+        } catch (e: IOException) {
+            throw GradleException(
+                "'uniffi.formatCode' is enabled but 'ktlint' could not be executed. " +
+                    "Make sure it is installed and in PATH.",
+                e
+            )
+        }
+
+        val output = process.inputStream.bufferedReader().readText()
+
+        if (process.waitFor() != 0) {
+            logger.warn("ktlint could not format all generated bindings:\n$output")
+        }
     }
 
     private fun buildBindings(crateName: String) {

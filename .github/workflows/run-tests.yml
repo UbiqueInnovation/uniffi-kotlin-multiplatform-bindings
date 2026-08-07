@@ -45,6 +45,13 @@ jobs:
           echo "[target.aarch64-unknown-linux-gnu]
           linker = \"$HOME/zig/aarch64-unknown-linux-gnu-cc.sh\"" > $HOME/.cargo/config.toml
 
+      - name: Install ktlint
+        run: |
+          export KTLINT_VERSION=1.8.0
+          curl -sSLO https://github.com/pinterest/ktlint/releases/download/$KTLINT_VERSION/ktlint
+          chmod +x ktlint
+          mv ktlint /usr/local/bin/
+
       - name: Install rust
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -53,7 +60,7 @@ jobs:
         run: |
           mkdir -p $HOME/android-sdk
           export ANDROID_HOME=$HOME/android-sdk
-          yes | sdkmanager --install "build-tools;34.0.0" "platforms;android-34" "ndk;28.1.13356709"
+          yes | sdkmanager --install "build-tools;36.0.0" "platforms;android-37.0" "ndk;28.1.13356709"
           yes | sdkmanager --licenses
 
       - name: Build and Test
@@ -62,4 +69,5 @@ jobs:
           export ANDROID_HOME=$HOME/android-sdk
 
           cargo test
-          ./gradlew build --no-configuration-cache
+          ./gradlew -p build-logic check
+          ./gradlew build

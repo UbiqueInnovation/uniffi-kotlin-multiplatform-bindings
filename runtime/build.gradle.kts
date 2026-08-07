@@ -3,7 +3,7 @@ import ch.ubique.uniffi.plugin.model.RustHost
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.kotlin.atomicfu)
     `maven-publish`
     alias(libs.plugins.maven.publish)
@@ -38,10 +38,6 @@ kotlin {
         }
     }
 
-    androidTarget {
-        publishLibraryVariants("release")
-    }
-
     linuxX64()
     linuxArm64()
 
@@ -51,7 +47,6 @@ kotlin {
             iosSimulatorArm64(),
             iosX64(),
             macosArm64(),
-            macosX64(),
         ).forEach { iosTarget ->
             iosTarget.binaries.framework {
                 baseName = "uniffi-runtime"
@@ -64,6 +59,25 @@ kotlin {
         }
     }
 
+    android {
+        namespace = "uniffi.runtime"
+        compileSdk = 37
+        minSdk = 21
+
+        @Suppress("UnstableApiUsage")
+        optimization {
+            consumerKeepRules.apply {
+                publish = true
+                file("consumer-rules.pro")
+            }
+        }
+
+        withDeviceTest {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
+        withHostTest {}
+    }
+
     sourceSets {
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -73,20 +87,15 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.annotation)
         }
+
+        getByName("androidDeviceTest").dependencies {
+            implementation(libs.androidx.test.runner)
+        }
     }
 }
 
-android {
-    namespace = "uniffi.runtime"
-    compileSdk = 34
-    defaultConfig {
-        minSdk = 21
-        consumerProguardFiles("consumer-rules.pro")
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
+atomicfu {
+    transformJvm = false
 }
 
 apply(from = "../gradle/artifactory.gradle")

@@ -31,7 +31,6 @@ kotlin {
             iosSimulatorArm64(),
             iosX64(),
             macosArm64(),
-            macosX64(),
         ).forEach { target ->
             target.compilations.getByName("main") {
                 useRustUpLinker()

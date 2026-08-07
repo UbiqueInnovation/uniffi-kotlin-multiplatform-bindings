@@ -4,17 +4,20 @@ import ch.ubique.uniffi.plugin.Constants
 import ch.ubique.uniffi.plugin.utils.BindgenSource
 import org.gradle.api.Action
 import org.gradle.api.GradleException
-import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import org.gradle.kotlin.dsl.newInstance
-import org.gradle.kotlin.dsl.property
 import javax.inject.Inject
 
-abstract class UniffiExtension(internal val project: Project) {
+// NOTE: this used to be `UniffiExtension(internal val project: Project)`. Holding a
+// Project made every provider rooted in `bindingsGeneration` un-serialisable, which
+// the configuration cache rejects with
+// "cannot serialize object of type 'DefaultProject' ... as these are not supported".
+// ObjectFactory is the injectable service that was actually being used.
+abstract class UniffiExtension @Inject internal constructor(private val objects: ObjectFactory) {
     internal var bindgenSource: Property<BindgenSource> =
-        project.objects.property<BindgenSource>().convention(Constants.BINDGEN_SOURCE)
+        objects.property(BindgenSource::class.java).convention(Constants.BINDGEN_SOURCE)
 
     internal abstract val bindingsGeneration: Property<BindingsGeneration>
 
@@ -22,7 +25,7 @@ abstract class UniffiExtension(internal val project: Project) {
      * Runs `ktlint` on the generated bindings. `ktlint` needs to be in PATH.
      */
     val formatCode: Property<Boolean> =
-        project.objects.property<Boolean>().convention(false)
+        objects.property(Boolean::class.javaObjectType).convention(false)
 
     /**
      * Add the runtime dependency to commonMain.
@@ -30,16 +33,16 @@ abstract class UniffiExtension(internal val project: Project) {
      * TODO: Allow for configuration like bindgen source
      */
     val addRuntime: Property<Boolean> =
-        project.objects.property<Boolean>().convention(true)
+        objects.property(Boolean::class.javaObjectType).convention(true)
 
 	val addDependencies: Property<Boolean> =
-		project.objects.property<Boolean>().convention(true)
+		objects.property(Boolean::class.javaObjectType).convention(true)
 
 	/**
 	 * Whether bindings for external crates should be generated. Default: false
 	 */
 	val generateBindingsForExternalCrates: Property<Boolean> =
-		project.objects.property<Boolean>().convention(false)
+		objects.property(Boolean::class.javaObjectType).convention(false)
 
     /**
      * Install the bindgen of the given [version] from the given [registry]. If [registry] is not specified, this will
@@ -118,7 +121,7 @@ abstract class UniffiExtension(internal val project: Project) {
      * Generate bindings using a UDL file.
      */
     fun generateFromUdl(configure: Action<BindingsGenerationFromUdl> = Action { }) {
-        val generation = bindingsGeneration.orNull ?: project.objects.newInstance<BindingsGenerationFromUdl>(project)
+        val generation = bindingsGeneration.orNull ?: objects.newInstance(BindingsGenerationFromUdl::class.java)
             .also { bindingsGeneration.set(it) }
 
         generation as? BindingsGenerationFromUdl
@@ -133,7 +136,7 @@ abstract class UniffiExtension(internal val project: Project) {
      */
     fun generateFromLibrary(configure: Action<BindingsGenerationFromLibrary> = Action { }) {
         val generation =
-            bindingsGeneration.orNull ?: project.objects.newInstance<BindingsGenerationFromLibrary>(project)
+            bindingsGeneration.orNull ?: objects.newInstance(BindingsGenerationFromLibrary::class.java)
                 .also { bindingsGeneration.set(it) }
 
         generation as? BindingsGenerationFromLibrary
@@ -143,20 +146,21 @@ abstract class UniffiExtension(internal val project: Project) {
     }
 }
 
-sealed class BindingsGeneration(internal val project: Project) {
+// `project` was never read by either subclass; it only served to drag a Project
+// reference into task state via the `bindingsGeneration` providers.
+sealed class BindingsGeneration {
     /**
      * The UDL namespace. Defaults to `"$libraryName"`.
      */
     abstract val namespace: Property<String>
 }
 
-abstract class BindingsGenerationFromUdl @Inject internal constructor(project: Project) : BindingsGeneration(project) {
+abstract class BindingsGenerationFromUdl @Inject internal constructor() : BindingsGeneration() {
     /**
      * The UDL file. Defaults to `"${crateDirectory}/src/${crateName}.udl"`.
      */
     abstract val udlFile: RegularFileProperty
 }
 
-abstract class BindingsGenerationFromLibrary @Inject internal constructor(project: Project) :
-    BindingsGeneration(project)
+abstract class BindingsGenerationFromLibrary @Inject internal constructor() : BindingsGeneration()
 

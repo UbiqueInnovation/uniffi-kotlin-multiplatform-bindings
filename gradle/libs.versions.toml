@@ -1,32 +1,34 @@
 [versions]
-agp = "8.8.2"
+agp = "9.3.1"
 kotlin = "2.4.0"
 
 androidx-annotation = "1.8.2"
 buildconfig = "4.1.2"
 gradle-publish = "1.2.1"
 kotest = "5.8.0"
-kotlinx-coroutines = "1.9.0"
-kotlinx-serialization = "1.9.0"
+kotlinx-coroutines = "1.11.0"
+kotlinx-serialization = "1.11.0"
 maven-publish = "0.33.0"
-shadow = "8.1.1"
+shadow = "9.6.1"
 ktor = "3.2.3"
-atomicfu = "0.32.1"
+atomicfu = "0.33.0"
+androidx-test-runner = "1.7.0"
 
 [plugins]
-android-library = { id = "com.android.library", version.ref = "agp" }
 buildconfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildconfig" }
 gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish" }
 kotlin-atomicfu = { id = "org.jetbrains.kotlinx.atomicfu", version.ref = "atomicfu" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
-shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 
 [libraries]
 android-tools-gradle = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidx-test-runner" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }

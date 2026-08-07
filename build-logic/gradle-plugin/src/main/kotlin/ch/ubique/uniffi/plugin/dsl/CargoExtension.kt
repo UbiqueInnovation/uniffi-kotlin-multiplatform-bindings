@@ -5,6 +5,7 @@ import ch.ubique.uniffi.plugin.model.CargoBuildConfig
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
 
 abstract class CargoExtension(project: Project) {
     /**
@@ -14,8 +15,19 @@ abstract class CargoExtension(project: Project) {
         project.objects.directoryProperty()
             .convention(project.layout.projectDirectory)
 
+    /**
+     * The Android NDK version to build the android targets with, e.g. `"28.1.13356709"`.
+     *
+     * `com.android.kotlin.multiplatform.library` has no `ndkVersion` of its own (it was
+     * a property of the removed `com.android.build.gradle.BaseExtension`), and
+     * `sdkComponents.ndkDirectory` fails with "NDK is not installed" unless AGP's
+     * default version happens to be installed. When this is left unset the plugin
+     * falls back to the newest NDK under `<sdk>/ndk`, then to `$ANDROID_NDK_ROOT`.
+     */
+    val ndkVersion: Property<String> = project.objects.property(String::class.java)
+
     val compilations: NamedDomainObjectContainer<CargoBuildConfig> =
-        project.container<CargoBuildConfig>(CargoBuildConfig::class.java).apply {
+        project.objects.domainObjectContainer(CargoBuildConfig::class.java).apply {
             BuildTarget.RustTarget.entries.forEach {
                 maybeCreate(it.name)
             }
