@@ -3,6 +3,7 @@ package ch.ubique.uniffi.plugin.tasks
 import ch.ubique.uniffi.plugin.model.CargoMetadata
 import ch.ubique.uniffi.plugin.utils.targetPackage
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.file.FileTree
@@ -18,6 +19,7 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
+import java.io.IOException
 import javax.inject.Inject
 
 @DisableCachingByDefault(because = "Not every input that affects the bindings is declared yet")
@@ -55,6 +57,10 @@ abstract class BuildBindingsTask : DefaultTask() {
 
 	@get:Input
 	abstract val generateBindingsForExternalCrates: Property<Boolean>
+
+    /** Run `ktlint --format` over the generated bindings. Needs `ktlint` in PATH. */
+    @get:Input
+    abstract val formatCode: Property<Boolean>
 
     @get:Internal
     abstract val bindingsDirectory: DirectoryProperty
@@ -100,6 +106,33 @@ abstract class BuildBindingsTask : DefaultTask() {
         val targetPackage = metadata.targetPackage
 
         buildBindings(targetPackage.targets[0].name)
+
+        if (formatCode.get()) {
+            formatBindings()
+        }
+    }
+
+    private fun formatBindings() {
+        val bindings = bindingsDirectory.get().asFile
+
+        val process = try {
+            ProcessBuilder("ktlint", "--format", "**/*.kt")
+                .directory(bindings)
+                .redirectErrorStream(true)
+                .start()
+        } catch (e: IOException) {
+            throw GradleException(
+                "'uniffi.formatCode' is enabled but 'ktlint' could not be executed. " +
+                    "Make sure it is installed and in PATH.",
+                e
+            )
+        }
+
+        val output = process.inputStream.bufferedReader().readText()
+
+        if (process.waitFor() != 0) {
+            logger.warn("ktlint could not format all generated bindings:\n$output")
+        }
     }
 
     private fun buildBindings(crateName: String) {

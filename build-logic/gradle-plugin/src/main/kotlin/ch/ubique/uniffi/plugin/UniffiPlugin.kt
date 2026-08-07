@@ -103,6 +103,7 @@ class UniffiPlugin : Plugin<Project> {
             metadataJson = metadataJsonProvider,
         )
 
+        var hasNativeTarget: Boolean = false
         project.pluginManager.withPlugin(Plugins.KMP_PLUGIN) {
             val kmpExtension =
                 project.extensions.getByType(KotlinMultiplatformExtension::class.java)
@@ -113,13 +114,6 @@ class UniffiPlugin : Plugin<Project> {
             @OptIn(ExperimentalKotlinGradlePluginApi::class)
             kmpExtension.compilerOptions {
                 freeCompilerArgs.add("-Xexpect-actual-classes")
-            }
-
-            // Run build bindings on sync
-            if ("prepareKotlinIdeaImport" in project.tasks.names) {
-                project.tasks.named("prepareKotlinIdeaImport") { task ->
-                    task.dependsOn(buildBindingsTask)
-                }
             }
 
             val commonMain = kmpExtension.sourceSets.getByName("commonMain")
@@ -138,9 +132,6 @@ class UniffiPlugin : Plugin<Project> {
                                 buildTarget = BuildTarget.Jvm,
                                 cargoInfo = cargoInfo,
                                 isRelease = isRelease,
-                                outputDirectory = project.layout.buildDirectory.dir(
-                                    librariesPath(BuildTarget.Jvm.sourceSetName)
-                                ),
                             ).flatMap { it.outputDirectory },
                         )
 
@@ -167,7 +158,9 @@ class UniffiPlugin : Plugin<Project> {
                             )
                         )
 
-                    in BuildTarget.nativeTargets ->
+                    in BuildTarget.nativeTargets -> {
+                        hasNativeTarget = true
+
                         project.configureNativeTarget(
                             nativeMain = kmpExtension.sourceSets.maybeCreate("nativeMain"),
                             nativeTarget = target as KotlinNativeTarget,
@@ -187,6 +180,7 @@ class UniffiPlugin : Plugin<Project> {
                                 ).flatMap { it.staticLibraryFile }
                             },
                         )
+                    }
 
                     else -> throw GradleException("Unhandled target: $buildTarget")
                 }
@@ -202,6 +196,22 @@ class UniffiPlugin : Plugin<Project> {
             // Make sure the binding generation source is specified
             if (!uniffiExtension.bindingsGeneration.isPresent) {
                 throw GradleException("Please call either 'generateFromLibrary' or 'generateFromUdl'.")
+            }
+
+            // The generated bindings live in `nativeMain`, a source set shared by all
+            // Kotlin/Native targets, and reference the c-interop declarations. Only the
+            // commonizer makes those visible from a shared source set, so without it the
+            // build fails deep inside the Kotlin compiler with unresolved references.
+            if (hasNativeTarget && "commonizeCInterop" !in evaluated.tasks.names) {
+                throw GradleException(
+                    "Please set 'kotlin.mpp.enableCInteropCommonization=true' in gradle.properties"
+                )
+            }
+
+            if ("prepareKotlinIdeaImport" in evaluated.tasks.names) {
+                evaluated.tasks.named("prepareKotlinIdeaImport") { task ->
+                    task.dependsOn(buildBindingsTask)
+                }
             }
         }
     }
@@ -263,6 +273,7 @@ class UniffiPlugin : Plugin<Project> {
             )
             task.bindingsDirectory.set(project.layout.buildDirectory.dir(BINDINGS_PATH))
             task.bindgen.set(bindgenBin)
+            task.formatCode.set(uniffiExtension.formatCode)
 
             task.libraryFile.set(uniffiExtension.bindingsGeneration.filter { it is BindingsGenerationFromLibrary }
                 .flatMap { libraryForBindings })
@@ -323,14 +334,15 @@ class UniffiPlugin : Plugin<Project> {
         cargoInfo: CargoInfo,
         isRelease: Boolean,
         rustTargets: List<BuildTarget.RustTarget> = buildTarget.rustTargets(isRelease),
-        outputDirectory: Provider<Directory>? = null,
         leafName: (BuildTarget.RustTarget) -> String = { it.jarLibraryPath },
     ): TaskProvider<MergeLibrariesTask> {
         val cargoBuilds = rustTargets.map { rustTarget ->
             rustTarget to registerCargoBuildTask(rustTarget, isRelease, cargoInfo)
         }
         return tasks.register(taskName, MergeLibrariesTask::class.java) { task ->
-            outputDirectory?.let(task.outputDirectory::set)
+            task.outputDirectory.convention(
+                layout.buildDirectory.dir(librariesPath(buildTarget.sourceSetName))
+            )
 
             cargoBuilds.forEach { (rustTarget, cargoBuild) ->
                 task.library(

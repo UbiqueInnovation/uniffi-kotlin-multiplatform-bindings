@@ -2,7 +2,6 @@ package ch.ubique.uniffi.plugin
 
 import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.utils.BindgenSource
-import org.gradle.internal.extensions.stdlib.capitalized
 
 internal object Constants {
     val BINDGEN_SOURCE: BindgenSource = BindgenSource.Git(
@@ -54,5 +53,6 @@ internal object Strings {
     }
 
     @Suppress("FunctionName")
-    fun Release(release: Boolean) = release(release).capitalized()
+    fun Release(release: Boolean) =
+        release(release).replaceFirstChar { it.uppercaseChar() }
 }

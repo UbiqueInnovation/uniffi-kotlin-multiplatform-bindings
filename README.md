@@ -67,6 +67,12 @@ If you want your bindings to be generated with a specific package name, you can 
 package_name = "com.example.quickstart"
 ```
 
+If you build for any Kotlin/Native target, c-interop commonization has to be enabled in your `gradle.properties`. The generated bindings live in the shared `nativeMain` source set and reference the c-interop declarations, which are only visible from a shared source set once the commonizer has run:
+
+```properties
+kotlin.mpp.enableCInteropCommonization=true
+```
+
 To see the complete example, check out the [quickstart example](examples/quickstart). For more advanced configuration options, see the [Advanced Configuration](#advanced-configuration) section below.
 
 ## Requirements
@@ -75,6 +81,35 @@ To see the complete example, check out the [quickstart example](examples/quickst
 | ----------- | ---------- |
 | Rust        | `>=1.82.0` |
 | UniFFI      | `=0.28.3`  |
+| Gradle      | `>=9.6.1`  |
+| Kotlin      | `>=2.4.0`  |
+| AGP         | `9.x`      |
+
+`AGP` is only required if you build for Android, see [Android](#android). The project is built and tested against AGP `9.3.1`.
+
+## Android
+
+Android support is built on the Android Kotlin Multiplatform library plugin, so apply `com.android.kotlin.multiplatform.library` next to the Kotlin Multiplatform plugin and declare the Android target inside the `kotlin { }` block:
+
+```kotlin
+plugins {
+    kotlin("multiplatform")
+    id("com.android.kotlin.multiplatform.library") version "9.3.1"
+    id("ch.ubique.uniffi.plugin") version "1.0.0"
+}
+
+kotlin {
+    android {
+        namespace = "com.example.quickstart"
+        compileSdk = 36
+        minSdk = 21
+    }
+}
+```
+
+> **Migrating from `1.0.x`:** the old setup used `com.android.library` together with `androidTarget { }` and a top level `android { }` block. Both are replaced by the above. Note that the Android configuration now lives *inside* `kotlin { }`, and that `minSdk` / `compileSdk` are set directly on it instead of in a `defaultConfig { }` block.
+
+If the NDK version picked up by default does not work for you, pin it explicitly, see [NDK version](#ndk-version).
 
 ## Status
 
@@ -116,7 +151,17 @@ uniffi {
 }
 ```
 
-An installation of `ktlint` is required for this to work.
+An installation of `ktlint` is required for this to work, it is invoked as `ktlint --format` and has to be in `PATH`. Formatting issues `ktlint` cannot fix by itself are reported as a build warning and do not fail the build.
+
+### NDK version
+
+The rust code for the Android targets is compiled with the NDK toolchain. By default the plugin picks the newest NDK installed under `$ANDROID_HOME/ndk`, falling back to `$ANDROID_NDK_ROOT`. To pin a specific version instead:
+
+```kotlin
+cargo {
+    ndkVersion = "28.1.13356709"
+}
+```
 
 ### Manual dependency management
 
@@ -128,14 +173,15 @@ uniffi {
 }
 ```
 
-Per default, these dependencies are added:
+Per default, these dependencies are added to `commonMain`:
 
 | Dependency                                    | Version |
 | --------------------------------------------- | ------- |
-| com.squareup.okio:okio                        | 3.9.1   |
-| org.jetbrains.kotlinx:atomicfu                | 0.32.1  |
-| org.jetbrains.kotlinx:kotlinx-coroutines-core | 1.9.0   |
-| org.jetbrains.kotlinx:kotlinx-datetime        | 0.7.1   |
+| com.squareup.okio:okio                        | 3.18.1  |
+| org.jetbrains.kotlinx:atomicfu                | 0.33.0  |
+| org.jetbrains.kotlinx:kotlinx-coroutines-core | 1.11.0  |
+
+In addition, `net.java.dev.jna:jna` `5.19.1` is added to the `jvmMain`, `androidMain` (as `@aar`) and `androidHostTest` source sets, since the JVM and Android bindings call into the rust library through JNA.
 
 ### Manual runtime management
 

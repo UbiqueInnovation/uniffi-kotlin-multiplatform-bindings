@@ -72,7 +72,9 @@ kotlin {
             }
         }
 
-        withDeviceTest {}
+        withDeviceTest {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
         withHostTest {}
     }
 

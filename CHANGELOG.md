@@ -2,15 +2,26 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.0.16...HEAD)
 
+### Added
+
+- `cargo { ndkVersion = "..." }` to pin the NDK the android targets are built with. When unset the plugin picks the
+  newest NDK under `$ANDROID_HOME/ndk`, then falls back to `$ANDROID_NDK_ROOT`.
+
 ### Changed
 
 - Android support now requires the Android Kotlin Multiplatform library plugin (`com.android.kotlin.multiplatform.library`)
-  and AGP `9`, replacing `com.android.library` with `androidTarget { }`.
+  and AGP `9`, replacing `com.android.library` together with `androidTarget { }`. The android configuration moves into
+  the `kotlin { android { } }` block, see the [Android section](README.md#android) of the README.
 - Update to Gradle `9.6.1`.
 - The native libraries are handed to AGP through the variant API instead of by hooking into its task names. The
   per library `copyNativeLibs*` tasks are replaced by `mergeUniffiJvmResources`, `mergeUniffiAndroidJniLibs` and
   `mergeUniffiAndroidHostTestResources`.
 - Update `jna` to `5.19.1`, `okio` to `3.18.1`, `kotlinx-coroutines` to `1.11.0` and `atomicfu` to `0.33.0`.
+- The runtime is compiled against `compileSdk` `37` and no longer applies the `atomicfu` JVM bytecode transformation.
+
+### Fixed
+
+- `uniffi { formatCode = true }` had no effect - `ktlint` is now actually run over the generated bindings.
 
 ### Removed
 
