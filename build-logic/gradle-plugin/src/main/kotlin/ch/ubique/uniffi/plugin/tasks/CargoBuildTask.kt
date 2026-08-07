@@ -13,7 +13,6 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import java.io.File
-import kotlin.String
 
 abstract class CargoBuildTask : DefaultTask() {
 
@@ -75,7 +74,7 @@ abstract class CargoBuildTask : DefaultTask() {
 
             workdir(packageDirectory.asFile.get())
 
-            additionalEnvironment.get().forEach { key, value ->
+            additionalEnvironment.get().forEach { (key, value) ->
                 env(key, value)
             }
         }.run()
