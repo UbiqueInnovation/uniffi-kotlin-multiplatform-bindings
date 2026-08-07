@@ -9,7 +9,7 @@ kotest = "5.8.0"
 kotlinx-coroutines = "1.9.0"
 kotlinx-serialization = "1.9.0"
 maven-publish = "0.33.0"
-shadow = "8.1.1"
+shadow = "9.6.1"
 ktor = "3.2.3"
 atomicfu = "0.32.1"
 androidx-test-runner = "1.7.0"
@@ -23,7 +23,7 @@ kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref 
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
-shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 
 [libraries]
 android-tools-gradle = { module = "com.android.tools.build:gradle", version.ref = "agp" }

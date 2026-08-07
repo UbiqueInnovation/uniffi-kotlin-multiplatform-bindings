@@ -103,7 +103,7 @@ class UniffiPlugin : Plugin<Project> {
             metadataJson = metadataJsonProvider,
         )
 
-        project.pluginManager.withPlugin(Constants.Plugins.KMP_PLUGIN) {
+        project.pluginManager.withPlugin(Plugins.KMP_PLUGIN) {
             val kmpExtension =
                 project.extensions.getByType(KotlinMultiplatformExtension::class.java)
 
@@ -195,7 +195,7 @@ class UniffiPlugin : Plugin<Project> {
 
         project.afterEvaluate { evaluated ->
             // Make sure the KMP Plugin is applied
-            if (!evaluated.plugins.hasPlugin(Constants.Plugins.KMP_PLUGIN)) {
+            if (!evaluated.plugins.hasPlugin(Plugins.KMP_PLUGIN)) {
                 throw GradleException("Kotlin Multiplatform Plugin is required")
             }
 
@@ -469,7 +469,7 @@ class UniffiPlugin : Plugin<Project> {
             }
         }
 
-        pluginManager.withPlugin(Constants.Plugins.ANDROID_PLUGIN) {
+        pluginManager.withPlugin(Plugins.ANDROID_PLUGIN) {
             AndroidSupport(project).wireVariants(jniLibrariesTask, hostLibrariesTask)
         }
     }

@@ -70,9 +70,6 @@ abstract class BuildBindingsTask : DefaultTask() {
     abstract val nativeMainDir: DirectoryProperty
 
     @get:OutputDirectory
-    abstract val nativeInteropDir: DirectoryProperty
-
-    @get:OutputDirectory
     abstract val nativeInteropHeadersDir: DirectoryProperty
 
     @get:Inject
@@ -84,7 +81,6 @@ abstract class BuildBindingsTask : DefaultTask() {
         jvmMainDir.convention(bindingsDirectory.dir("jvmMain"))
         androidMainDir.convention(bindingsDirectory.dir("androidMain"))
         nativeMainDir.convention(bindingsDirectory.dir("nativeMain"))
-        nativeInteropDir.convention(bindingsDirectory.dir("nativeInterop"))
         nativeInteropHeadersDir.convention(bindingsDirectory.dir("nativeInterop/cinterop/headers"))
     }
 

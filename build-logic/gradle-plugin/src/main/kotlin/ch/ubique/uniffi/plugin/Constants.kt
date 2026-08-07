@@ -5,12 +5,6 @@ import ch.ubique.uniffi.plugin.utils.BindgenSource
 import org.gradle.internal.extensions.stdlib.capitalized
 
 internal object Constants {
-    object Plugins {
-        const val KMP_PLUGIN = "org.jetbrains.kotlin.multiplatform"
-        const val ANDROID_PLUGIN = "com.android.kotlin.multiplatform.library"
-    }
-
-
     val BINDGEN_SOURCE: BindgenSource = BindgenSource.Git(
         repository = "https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings.git",
         bindgenName = BINDGEN_BIN_NAME,
@@ -26,6 +20,11 @@ internal object Constants {
     const val OKIO_VERSION = "3.9.1"
     const val COROUTINES_VERSION = "1.9.0"
     const val DATETIME_VERSION = "0.7.1"
+}
+
+internal object Plugins {
+    const val KMP_PLUGIN = "org.jetbrains.kotlin.multiplatform"
+    const val ANDROID_PLUGIN = "com.android.kotlin.multiplatform.library"
 }
 
 internal object Tasks {
@@ -46,19 +45,6 @@ internal object Tasks {
     fun generateDefFile(
         buildTarget: BuildTarget
     ): String = "generateDefFileFor${buildTarget.name}"
-
-    /**
-     * Neither the profile nor the linkage appear here any more:
-     *  - the profile is a global build input (`-Puniffi.profile`), so only one of the
-     *    two ever existed in a given build; it stays visible on [cargoBuild], which is
-     *    the task that actually compiles rust.
-     *  - the linkage follows from the build target ([BuildTarget.usesDynamicLibrary]),
-     *    so a (rustTarget, buildTarget) pair has exactly one copy task.
-     */
-    fun copyNativeLibraries(
-        rustTarget: BuildTarget.RustTarget,
-        buildTarget: BuildTarget,
-    ): String = "copyNativeLibs${rustTarget.name}For${buildTarget.name}"
 }
 
 internal object Strings {
@@ -70,10 +56,4 @@ internal object Strings {
 
     @Suppress("FunctionName")
     fun Release(release: Boolean) = release(release).capitalized()
-
-    fun Dynamic(dynamic: Boolean) = if (dynamic) {
-        "Dynamic"
-    } else {
-        "Static"
-    }
 }
