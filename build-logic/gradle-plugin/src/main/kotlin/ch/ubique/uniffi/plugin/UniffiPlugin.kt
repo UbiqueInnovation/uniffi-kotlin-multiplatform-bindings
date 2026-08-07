@@ -12,7 +12,9 @@ import ch.ubique.uniffi.plugin.tasks.BuildBindingsTask
 import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
 import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
 import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
+import ch.ubique.uniffi.plugin.utils.NdkUtil
 import ch.ubique.uniffi.plugin.utils.targetPackage
+import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -27,7 +29,6 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
-import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import java.io.File
 
@@ -108,21 +109,43 @@ class UniffiPlugin : Plugin<Project> {
                 val buildTarget = BuildTarget.fromTargetName(target.name) ?: return@configureEach
 
                 when (buildTarget) {
-                    BuildTarget.Jvm -> project.configureJvmTarget(
-                        jvmMain = kmpExtension.sourceSets.maybeCreate("jvmMain"),
-                        bindingsDir = buildBindingsTask.flatMap { it.jvmMainDir },
-                        librariesDir = project.registerMergeLibrariesTask(
-                            taskName = Tasks.MERGE_JVM_RESOURCES,
-                            buildTarget = BuildTarget.Jvm,
-                            cargoInfo = cargoInfo,
-                            isRelease = isRelease,
-                            outputDirectory = project.layout.buildDirectory.dir(
-                                librariesPath(BuildTarget.Jvm.sourceSetName)
-                            ),
-                        ).flatMap { it.outputDirectory },
-                    )
+                    BuildTarget.Jvm ->
+                        project.configureJvmTarget(
+                            jvmMain = kmpExtension.sourceSets.maybeCreate("jvmMain"),
+                            bindingsDir = buildBindingsTask.flatMap { it.jvmMainDir },
+                            librariesDir = project.registerMergeLibrariesTask(
+                                taskName = Tasks.MERGE_JVM_RESOURCES,
+                                buildTarget = BuildTarget.Jvm,
+                                cargoInfo = cargoInfo,
+                                isRelease = isRelease,
+                                outputDirectory = project.layout.buildDirectory.dir(
+                                    librariesPath(BuildTarget.Jvm.sourceSetName)
+                                ),
+                            ).flatMap { it.outputDirectory },
+                        )
 
-                    BuildTarget.Android -> project.configureAndroidTarget(target)
+                    BuildTarget.Android ->
+                        project.configureAndroidTarget(
+                            kmpExtension = kmpExtension,
+                            androidMain = kmpExtension.sourceSets.maybeCreate("androidMain"),
+                            bindingsDir = buildBindingsTask.flatMap { it.androidMainDir },
+                            jniLibrariesTask = project.registerMergeLibrariesTask(
+                                taskName = Tasks.MERGE_ANDROID_JNI_LIBS,
+                                buildTarget = BuildTarget.Android,
+                                cargoInfo = cargoInfo,
+                                isRelease = isRelease,
+                                rustTargets = BuildTarget.Android.rustTargets(isRelease)
+                                    .filter { it.abiName != null },
+                                leafName = { it.abiName!! }
+                            ),
+                            hostLibrariesTask = project.registerMergeLibrariesTask(
+                                taskName = Tasks.MERGE_ANDROID_TEST_RESOURCES,
+                                buildTarget = BuildTarget.AndroidLocal,
+                                cargoInfo = cargoInfo,
+                                isRelease = isRelease,
+                                leafName = { it.jarLibraryPath }
+                            )
+                        )
 
                     in BuildTarget.nativeTargets -> project.configureNativeTarget(target as KotlinNativeTarget)
 
@@ -217,24 +240,60 @@ class UniffiPlugin : Plugin<Project> {
         rustTarget: BuildTarget.RustTarget,
         release: Boolean,
         cargoInfo: CargoInfo,
-    ): TaskProvider<CargoBuildTask> =
-        tasks.maybeRegister(
-            Tasks.cargoBuild(rustTarget, release),
-            CargoBuildTask::class.java,
-        ) { task ->
-            task.packageDirectory.set(cargoExtension.packageDirectory)
-            task.rustTarget.set(rustTarget)
-            task.release.set(release)
-            task.packageName.set(cargoInfo.packageName)
-            task.libraryName.set(cargoInfo.libraryName)
-            task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
-            task.outputDirectory.set(
-                layout.buildDirectory.dir(
-                    "$RUST_LIBS_PATH/${rustTarget.rustTriple}/${Strings.release(release)}"
-                )
+    ): TaskProvider<CargoBuildTask> = tasks.maybeRegister(
+        Tasks.cargoBuild(rustTarget, release),
+        CargoBuildTask::class.java,
+    ) { task ->
+        task.packageDirectory.set(cargoExtension.packageDirectory)
+        task.rustTarget.set(rustTarget)
+        task.release.set(release)
+        task.packageName.set(cargoInfo.packageName)
+        task.libraryName.set(cargoInfo.libraryName)
+        task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
+        task.outputDirectory.set(
+            layout.buildDirectory.dir(
+                "$RUST_LIBS_PATH/${rustTarget.rustTriple}/${Strings.release(release)}"
             )
-            task.useCross.set(cargoExtension.compilations.getByName(rustTarget.name).useCross)
+        )
+
+        val useCross = cargoExtension.compilations.getByName(rustTarget.name).useCross
+        task.useCross.set(useCross)
+
+        if (rustTarget.isAndroid) {
+            task.additionalEnvironment.set(project.cargoNdkEnvironment(rustTarget, useCross))
         }
+    }
+
+    /**
+     * Returns the environmental variables for the android ndk. Returns an empty environment if
+     * [useCross] evaluates to true
+     */
+    private fun Project.cargoNdkEnvironment(
+        rustTarget: BuildTarget.RustTarget,
+        useCross: Provider<Boolean>,
+    ): Provider<Map<String, String>> {
+        val sdkDirectory = extensions
+            .getByType(KotlinMultiplatformAndroidComponentsExtension::class.java)
+            .sdkComponents
+            .sdkDirectory
+
+        val ndkEnvironment = sdkDirectory
+            .zip(cargoExtension.ndkVersion.orElse("")) { sdk, ndkVersion ->
+                NdkUtil.ndkEnvVariables(
+                    sdkRoot = sdk.asFile,
+                    // The KMP android extension's minSdk is not readable this early in the
+                    // lifecycle; 21 matches what :runtime declares.
+                    apiLevel = 21,
+                    ndkVersion = ndkVersion.takeIf(String::isNotEmpty),
+                    ndkRoot = null,
+                    rustTriple = rustTarget.rustTriple,
+                    ndkLlvmTriple = rustTarget.ndkLlvmTriple,
+                )
+            }
+
+        val empty = providers.provider { emptyMap<String, String>() }
+        return useCross.flatMap { useCross -> if (useCross) empty else ndkEnvironment }
+    }
 
     /**
      * JVM / Android targets need multiple libraries to be in the correct directory structure.
@@ -281,15 +340,15 @@ class UniffiPlugin : Plugin<Project> {
         configurations.named(commonMain.implementationConfigurationName) { configuration ->
             configuration.dependencies.addIf(
                 condition = uniffiExtension.addRuntime,
-                project.dependencies.create("ch.ubique.uniffi:runtime:${Constants.RUNTIME_VERSION}")
+                dependencies.create("ch.ubique.uniffi:runtime:${Constants.RUNTIME_VERSION}")
             )
 
             configuration.dependencies.addIf(
                 condition = uniffiExtension.addDependencies,
-                project.dependencies.create("com.squareup.okio:okio:${Constants.OKIO_VERSION}"),
-                project.dependencies.create("org.jetbrains.kotlinx:atomicfu:${Constants.ATOMICFU_VERSION}"),
-                project.dependencies.create("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Constants.COROUTINES_VERSION}"),
-                project.dependencies.create("org.jetbrains.kotlinx:kotlinx-datetime:${Constants.DATETIME_VERSION}"),
+                dependencies.create("com.squareup.okio:okio:${Constants.OKIO_VERSION}"),
+                dependencies.create("org.jetbrains.kotlinx:atomicfu:${Constants.ATOMICFU_VERSION}"),
+                dependencies.create("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Constants.COROUTINES_VERSION}"),
+                dependencies.create("org.jetbrains.kotlinx:kotlinx-datetime:${Constants.DATETIME_VERSION}"),
             )
         }
     }
@@ -303,156 +362,64 @@ class UniffiPlugin : Plugin<Project> {
 
         jvmMain.resources.srcDir(librariesDir)
 
-        jvmMain.dependencies {
-            implementation("net.java.dev.jna:jna:${Constants.JNA_VERSION}")
+        configurations.named(jvmMain.implementationConfigurationName) { configuration ->
+            configuration.dependencies.addIf(
+                condition = uniffiExtension.addDependencies,
+                dependencies.create("net.java.dev.jna:jna:${Constants.JNA_VERSION}")
+            )
         }
     }
 
-    private fun Project.configureAndroidTarget(target: KotlinTarget) {
-        // TODO
+    private fun Project.configureAndroidTarget(
+        kmpExtension: KotlinMultiplatformExtension,
+        androidMain: KotlinSourceSet,
+        bindingsDir: Provider<Directory>,
+        jniLibrariesTask: TaskProvider<MergeLibrariesTask>,
+        hostLibrariesTask: TaskProvider<MergeLibrariesTask>,
+    ) {
+        androidMain.kotlin.srcDir(bindingsDir)
+
+        // Add the JNA aar dependency
+        configurations.named(androidMain.implementationConfigurationName) { configuration ->
+            configuration.dependencies.addIf(
+                condition = uniffiExtension.addDependencies,
+                dependencies.create("net.java.dev.jna:jna:${Constants.JNA_VERSION}@aar")
+            )
+        }
+
+        // Add the JNA jar dependency to the androidHostTest
+        kmpExtension.sourceSets.configureEach { sourceSet ->
+            if (sourceSet.name == "androidHostTest") {
+                configurations.named(sourceSet.implementationConfigurationName) { configuration ->
+                    configuration.dependencies.addIf(
+                        condition = uniffiExtension.addDependencies,
+                        dependencies.create("net.java.dev.jna:jna:${Constants.JNA_VERSION}")
+                    )
+                }
+            }
+        }
+
+        pluginManager.withPlugin(Constants.Plugins.ANDROID_PLUGIN) {
+            val androidComponents =
+                project.extensions.getByType(KotlinMultiplatformAndroidComponentsExtension::class.java)
+
+            androidComponents.onVariants { variant ->
+                variant.sources.jniLibs?.addGeneratedSourceDirectory(
+                    jniLibrariesTask,
+                    MergeLibrariesTask::outputDirectory
+                )
+
+                variant.hostTests.forEach { (_, hostTest) ->
+                    hostTest.sources.resources?.addGeneratedSourceDirectory(
+                        hostLibrariesTask,
+                        MergeLibrariesTask::outputDirectory
+                    )
+                }
+            }
+        }
     }
 
-    private fun Project.configureNativeTarget(target: KotlinNativeTarget) {
-        // TODO
-    }
-
-//    /**
-//     * Configures the KMP build targets
-//     */
-//    private fun configureTargets(project: Project) {
-//        project.pluginManager.withPlugin(Constants.Plugins.KMP_PLUGIN) {
-//            val kmpExtension = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
-//
-//            configureCommonMain(project, kmpExtension)
-//
-//            kmpExtension.targets.configureEach { target ->
-//                val buildTarget = BuildTarget.fromTargetName(target.name) ?: return@configureEach
-//
-//                registerRustTasksFor(project, buildTarget)
-//
-//                when {
-//                    buildTarget == BuildTarget.Jvm ->
-//                        configureJvmTarget(project, kmpExtension)
-//
-//                    buildTarget == BuildTarget.Android ->
-//                        configureAndroidSourceSets(project, kmpExtension)
-//
-//                    target is KotlinNativeTarget ->
-//                        configureNativeTarget(
-//                            project,
-//                            buildTarget,
-//                            target,
-//                            kmpExtension,
-//                        )
-//
-//                    else -> throw GradleException("Unknown target: $target")
-//                }
-//            }
-//        }
-//
-//        project.pluginManager.withPlugin(Constants.Plugins.ANDROID_PLUGIN) {
-//            configureAndroidVariants(project)
-//        }
-//    }
-//
-//    private fun configureAndroidSourceSets(
-//        project: Project,
-//        kmpExtension: KotlinMultiplatformExtension,
-//    ) {
-//        kmpExtension.sourceSets.named("androidMain") { sourceSet ->
-//            sourceSet.kotlin.srcDir(bindingsSourceDir(project, "androidMain"))
-//
-//            sourceSet.dependencies {
-//                implementation("net.java.dev.jna:jna:${Constants.JNA_VERSION}@aar")
-//            }
-//        }
-//
-//        kmpExtension.sourceSets.configureEach { sourceSet ->
-//            if (sourceSet.name == "androidHostTest") {
-//                // Host tests run on the JVM, so they need the plain jar, not the aar.
-//                sourceSet.dependencies {
-//                    implementation("net.java.dev.jna:jna:${Constants.JNA_VERSION}")
-//                }
-//            }
-//        }
-//    }
-//
-//    // ─────────────────────────────────────────────────────────────────────────
-//    // Native targets
-//    // ─────────────────────────────────────────────────────────────────────────
-//
-//    private fun configureNativeTarget(
-//        project: Project,
-//        buildTarget: BuildTarget,
-//        nativeTarget: KotlinNativeTarget,
-//        kmpExtension: KotlinMultiplatformExtension,
-//    ) {
-//        kmpExtension.sourceSets.maybeCreate("nativeMain")
-//            .kotlin
-//            .srcDir(bindingsSourceDir(project, "nativeMain"))
-//
-//        val defFileTask = registerGenerateDefFileTask(project, buildTarget, libraryName)
-//        val dummyDefFileTask = registerGenerateDummyDefFileTask(project)
-//
-//        // Native targets are architecture specific, so there is exactly one rust
-//        // target per build target.
-//        val rustTarget = buildTarget.checkedNativeTarget
-//
-//        // A native target maps to exactly one rust target, so it consumes that copy task
-//        // directly - no merging, and no umbrella task.
-//        val copyNativeLibsTaskName = Tasks.copyNativeLibraries(rustTarget, buildTarget)
-//
-//        // cinterop's -libraryPath wants a plain string at configuration time, so this
-//        // mirrors registerCopyNativeLibrariesTask's layout rather than reading it off the
-//        // task (which would realize it during configuration).
-//        val libraryIncludeDir = project.layout.buildDirectory
-//            .dir("intermediates/rust/${buildTarget.sourceSetName}/libs/${rustTarget.jarLibraryPath}")
-//            .get().asFile.path
-//
-//        // Both def files now live at a fixed path. The old name embedded the crate's
-//        // library name, which is only known from `cargo metadata` — i.e. it forced a
-//        // blocking cargo invocation during configuration just to name a file. The
-//        // library name is still written *into* the file, at execution time.
-//        val defFile = project.layout.buildDirectory
-//            .file("$CINTEROP_ROOT/uniffi-${buildTarget.name}.def").get().asFile
-//        val dummyDefFile = project.layout.buildDirectory
-//            .file("$CINTEROP_ROOT/dummy.def").get().asFile
-//
-//        nativeTarget.compilations.getByName("main") { compilation ->
-//            compilation.cinterops.register(CINTEROP_NAME) { cinterop ->
-//                cinterop.packageName("cinterop")
-//
-//                if (isIdeSync) {
-//                    // During an import the headers are enough to produce a klib
-//                    cinterop.defFile(dummyDefFile)
-//                } else {
-//                    cinterop.defFile(defFile)
-//
-//                    cinterop.extraOpts("-libraryPath", libraryIncludeDir)
-//                }
-//
-//                project.tasks.named(cinterop.interopProcessingTaskName) { task ->
-//                    task.dependsOn(Tasks.BUILD_BINDINGS)
-//
-//                    if (isIdeSync) {
-//                        task.dependsOn(dummyDefFileTask)
-//                    } else {
-//                        task.dependsOn(defFileTask)
-//                        task.dependsOn(copyNativeLibsTaskName)
-//                    }
-//                }
-//            }
-//        }
-//
-//        nativeTarget.compilerOptions { options ->
-//            options.optIn.add("kotlinx.cinterop.ExperimentalForeignApi")
-//        }
-//    }
-//
 //    private fun configureAndroidVariants(project: Project) {
-//        val androidComponents =
-//            project.extensions.getByType(KotlinMultiplatformAndroidComponentsExtension::class.java)
-//
 //        BuildTarget.RustTarget.entries.filter { it.isAndroid }.forEach { rustTarget ->
 //            val config = cargoExtension.compilations.getByName(rustTarget.name)
 //
@@ -528,6 +495,83 @@ class UniffiPlugin : Plugin<Project> {
 //                    MergeNativeLibrariesTask::outputDirectory,
 //                )
 //            }
+//        }
+//    }
+
+    private fun Project.configureNativeTarget(target: KotlinNativeTarget) {
+        // TODO
+    }
+
+//
+//    // ─────────────────────────────────────────────────────────────────────────
+//    // Native targets
+//    // ─────────────────────────────────────────────────────────────────────────
+//
+//    private fun configureNativeTarget(
+//        project: Project,
+//        buildTarget: BuildTarget,
+//        nativeTarget: KotlinNativeTarget,
+//        kmpExtension: KotlinMultiplatformExtension,
+//    ) {
+//        kmpExtension.sourceSets.maybeCreate("nativeMain")
+//            .kotlin
+//            .srcDir(bindingsSourceDir(project, "nativeMain"))
+//
+//        val defFileTask = registerGenerateDefFileTask(project, buildTarget, libraryName)
+//        val dummyDefFileTask = registerGenerateDummyDefFileTask(project)
+//
+//        // Native targets are architecture specific, so there is exactly one rust
+//        // target per build target.
+//        val rustTarget = buildTarget.checkedNativeTarget
+//
+//        // A native target maps to exactly one rust target, so it consumes that copy task
+//        // directly - no merging, and no umbrella task.
+//        val copyNativeLibsTaskName = Tasks.copyNativeLibraries(rustTarget, buildTarget)
+//
+//        // cinterop's -libraryPath wants a plain string at configuration time, so this
+//        // mirrors registerCopyNativeLibrariesTask's layout rather than reading it off the
+//        // task (which would realize it during configuration).
+//        val libraryIncludeDir = project.layout.buildDirectory
+//            .dir("intermediates/rust/${buildTarget.sourceSetName}/libs/${rustTarget.jarLibraryPath}")
+//            .get().asFile.path
+//
+//        // Both def files now live at a fixed path. The old name embedded the crate's
+//        // library name, which is only known from `cargo metadata` — i.e. it forced a
+//        // blocking cargo invocation during configuration just to name a file. The
+//        // library name is still written *into* the file, at execution time.
+//        val defFile = project.layout.buildDirectory
+//            .file("$CINTEROP_ROOT/uniffi-${buildTarget.name}.def").get().asFile
+//        val dummyDefFile = project.layout.buildDirectory
+//            .file("$CINTEROP_ROOT/dummy.def").get().asFile
+//
+//        nativeTarget.compilations.getByName("main") { compilation ->
+//            compilation.cinterops.register(CINTEROP_NAME) { cinterop ->
+//                cinterop.packageName("cinterop")
+//
+//                if (isIdeSync) {
+//                    // During an import the headers are enough to produce a klib
+//                    cinterop.defFile(dummyDefFile)
+//                } else {
+//                    cinterop.defFile(defFile)
+//
+//                    cinterop.extraOpts("-libraryPath", libraryIncludeDir)
+//                }
+//
+//                project.tasks.named(cinterop.interopProcessingTaskName) { task ->
+//                    task.dependsOn(Tasks.BUILD_BINDINGS)
+//
+//                    if (isIdeSync) {
+//                        task.dependsOn(dummyDefFileTask)
+//                    } else {
+//                        task.dependsOn(defFileTask)
+//                        task.dependsOn(copyNativeLibsTaskName)
+//                    }
+//                }
+//            }
+//        }
+//
+//        nativeTarget.compilerOptions { options ->
+//            options.optIn.add("kotlinx.cinterop.ExperimentalForeignApi")
 //        }
 //    }
 //

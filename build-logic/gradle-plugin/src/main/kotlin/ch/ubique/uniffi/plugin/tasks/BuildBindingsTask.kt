@@ -53,23 +53,32 @@ abstract class BuildBindingsTask : DefaultTask() {
 	@get:Input
 	abstract val generateBindingsForExternalCrates: Property<Boolean>
 
-    @get:OutputDirectory
+    @get:Internal
     abstract val bindingsDirectory: DirectoryProperty
 
-    @get:Internal
-    val commonMainDir: Provider<Directory> = bindingsDirectory.dir("commonMain")
+    @get:OutputDirectory
+    abstract val commonMainDir: DirectoryProperty
 
-    @get:Internal
-    val jvmMainDir: Provider<Directory> = bindingsDirectory.dir("jvmMain")
+    @get:OutputDirectory
+    abstract val jvmMainDir: DirectoryProperty
 
-    @get:Internal
-    val androidMainDir: Provider<Directory> = bindingsDirectory.dir("androidMain")
+    @get:OutputDirectory
+    abstract val androidMainDir: DirectoryProperty
 
-    @get:Internal
-    val nativeMainDir: Provider<Directory> = bindingsDirectory.dir("nativeMain")
+    @get:OutputDirectory
+    abstract val nativeMainDir: DirectoryProperty
 
-    @get:Internal
-    val nativeInteropDir: Provider<Directory> = bindingsDirectory.dir("nativeInterop")
+    @get:OutputDirectory
+    abstract val nativeInteropDir: DirectoryProperty
+
+    init {
+        // Need to be set like that, otherwise the generation dependency is not preserved
+        commonMainDir.convention(bindingsDirectory.dir("commonMain"))
+        jvmMainDir.convention(bindingsDirectory.dir("jvmMain"))
+        androidMainDir.convention(bindingsDirectory.dir("androidMain"))
+        nativeMainDir.convention(bindingsDirectory.dir("nativeMain"))
+        nativeInteropDir.convention(bindingsDirectory.dir("nativeInterop"))
+    }
 
     @TaskAction
     fun action() {

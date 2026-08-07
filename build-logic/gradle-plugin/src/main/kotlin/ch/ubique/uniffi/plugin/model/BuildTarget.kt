@@ -9,7 +9,7 @@ enum class BuildTarget(
     /**
      * The name of the kotlin build target
      */
-    val targetName: String,
+    val targetName: String?,
 
     /**
      * Targets to build and include for a debug build
@@ -44,16 +44,22 @@ enum class BuildTarget(
     Android(
         sourceSetName = "androidMain",
         targetName = "android",
-        baseTargets = listOf(
-            // For executing "android (local)" tests
-            RustTarget.forCurrentPlatform,
-        ),
         debugTargets = RustTarget.androidTargetForCurrentPlatform,
         releaseTargets = listOf(
             RustTarget.Aarch64Android,
             RustTarget.X64Android,
             RustTarget.ArmV7Android,
         ),
+    ),
+
+    AndroidLocal(
+        sourceSetName = "androidHostTest",
+        targetName = null,
+        baseTargets = listOf(
+            RustTarget.forCurrentPlatform
+        ),
+        debugTargets = listOf(),
+        releaseTargets = listOf()
     ),
 
     // The native targets are architecture specific
@@ -304,7 +310,7 @@ enum class BuildTarget(
      */
     val usesDynamicLibrary: Boolean
         get() = when (this) {
-            Jvm, Android -> true
+            Jvm, Android, AndroidLocal -> true
             else -> false
         }
 
