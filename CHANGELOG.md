@@ -2,6 +2,11 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.0.16...HEAD)
 
+### Removed
+
+- The `macosX64` Kotlin/Native target, which Kotlin deprecated ([native target tiers](https://kotl.in/native-targets-tiers)).
+  The `x86_64-apple-darwin` rust target is still built for the jvm artifact, so intel macs keep working there.
+
 ## [1.0.15](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.15) - 2026-07-27
 
 ### Added

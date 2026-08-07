@@ -47,7 +47,6 @@ kotlin {
             iosSimulatorArm64(),
             iosX64(),
             macosArm64(),
-            macosX64(),
         ).forEach { iosTarget ->
             iosTarget.binaries.framework {
                 baseName = "uniffi-runtime"

@@ -69,12 +69,6 @@ enum class BuildTarget(
         debugTargets = listOf(RustTarget.Aarch64AppleDarwin),
         releaseTargets = listOf(RustTarget.Aarch64AppleDarwin)
     ),
-    MacosX64(
-        sourceSetName = "macosX64Main",
-        targetName = "macosX64",
-        debugTargets = listOf(RustTarget.X64AppleDarwin),
-        releaseTargets = listOf(RustTarget.X64AppleDarwin)
-    ),
 
     LinuxAarch64(
         sourceSetName = "linuxArm64Main",
@@ -339,7 +333,7 @@ enum class BuildTarget(
             BuildTarget.entries.find { it.targetName == name }
 
         val nativeTargets: List<BuildTarget> = listOf(
-            MacosArm64, MacosX64,
+            MacosArm64,
             LinuxAarch64, LinuxX64,
             WindowsX64,
             IosSimulatorArm64, IosArm64, IosX64
