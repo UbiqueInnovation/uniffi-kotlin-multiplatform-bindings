@@ -15,11 +15,10 @@ internal object Constants {
     const val BINDGEN_PACKAGE_NAME = "uniffi_bindgen_kotlin_multiplatform"
 
     const val RUNTIME_VERSION = PluginVersions.RUNTIME_VERSION
-    const val JNA_VERSION = "5.17.0"
-    const val ATOMICFU_VERSION = "0.32.1"
-    const val OKIO_VERSION = "3.9.1"
-    const val COROUTINES_VERSION = "1.9.0"
-    const val DATETIME_VERSION = "0.7.1"
+    const val JNA_VERSION = "5.19.1"
+    const val ATOMICFU_VERSION = "0.33.0"
+    const val OKIO_VERSION = "3.18.1"
+    const val COROUTINES_VERSION = "1.11.0"
 }
 
 internal object Plugins {

@@ -418,7 +418,6 @@ class UniffiPlugin : Plugin<Project> {
                 dependencies.create("com.squareup.okio:okio:${Constants.OKIO_VERSION}"),
                 dependencies.create("org.jetbrains.kotlinx:atomicfu:${Constants.ATOMICFU_VERSION}"),
                 dependencies.create("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Constants.COROUTINES_VERSION}"),
-                dependencies.create("org.jetbrains.kotlinx:kotlinx-datetime:${Constants.DATETIME_VERSION}"),
             )
         }
     }
