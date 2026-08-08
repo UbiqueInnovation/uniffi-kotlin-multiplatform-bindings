@@ -39,6 +39,7 @@ members = [
     "examples/custom-types",
     "examples/quickstart",
     "examples/jvm-only",
+    "examples/swift-interop",
 ]
 resolver = "2"
 

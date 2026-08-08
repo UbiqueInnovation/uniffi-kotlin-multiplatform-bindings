@@ -176,7 +176,7 @@ uniffi {
 Per default, these dependencies are added to `commonMain`:
 
 | Dependency                                    | Version |
-| --------------------------------------------- | ------- |
+|-----------------------------------------------|---------|
 | com.squareup.okio:okio                        | 3.18.1  |
 | org.jetbrains.kotlinx:atomicfu                | 0.33.0  |
 | org.jetbrains.kotlinx:kotlinx-coroutines-core | 1.11.0  |
@@ -204,3 +204,7 @@ uniffi {
 ```
 
 For more information on how to use this feature, check out the [External Types](#external-types) section in the README.
+
+### Using `spmForKmp` alongside this plugin
+
+Using [spmForKmp](https://github.com/frankois944/spm4Kmp) is supported and lets you call Swift code from Kotlin. The two plugins work together, but currently it needs a workaround due to [an issue](https://github.com/frankois944/spm4Kmp/issues/326) in how the spmForKmp plugin configures its cinterop tasks. See the [swift interop example](examples/swift-interop) for a working configuration.

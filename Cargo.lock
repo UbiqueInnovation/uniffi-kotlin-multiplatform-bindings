@@ -776,6 +776,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "uniffi-kmm-example-swift-interop"
+version = "0.1.0"
+dependencies = [
+ "uniffi",
+]
+
+[[package]]
 name = "uniffi-kmm-fixture-build-common"
 version = "0.1.0"
 dependencies = [

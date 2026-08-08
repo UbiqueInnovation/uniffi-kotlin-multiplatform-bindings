@@ -2,6 +2,10 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.1.0...HEAD)
 
+### Added
+
+- A `swift-interop` example combining this plugin with `spmForKmp`
+
 ## [1.1.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.1.0) - 2026-08-07
 
 ### Added
