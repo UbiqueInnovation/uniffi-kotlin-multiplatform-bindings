@@ -951,6 +951,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "uniffi-kmm-fixture-interface-throws"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+ "uniffi",
+]
+
+[[package]]
 name = "uniffi-kmm-fixture-keywords"
 version = "0.1.0"
 dependencies = [
