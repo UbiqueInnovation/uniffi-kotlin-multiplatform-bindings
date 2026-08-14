@@ -2,6 +2,10 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.1.1...HEAD)
 
+### Removed
+
+- Workaround for `spmForKmp` as it is no longer needed since version 1.9.5.
+
 ## [1.1.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.1.1) - 2026-08-14
 
 ### Added

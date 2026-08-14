@@ -13,7 +13,7 @@ shadow = "9.6.1"
 ktor = "3.2.3"
 atomicfu = "0.33.0"
 androidx-test-runner = "1.7.0"
-spm4kmp = "1.9.4"
+spm4kmp = "1.9.5"
 
 [plugins]
 buildconfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildconfig" }

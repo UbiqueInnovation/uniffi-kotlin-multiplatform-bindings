@@ -52,40 +52,41 @@ kotlin {
     }
 }
 
-/*
- * Workaround for a conflict between spmForKmp and this plugin. See https://github.com/frankois944/spm4Kmp/issues/326
- */
-afterEvaluate {
-    kotlin.targets.withType<KotlinNativeTarget>().configureEach {
-        val defFile = uniffiDefFileFor(targetName)
-
-        compilations.getByName("main").cinterops.named("uniffi-cinterop") {
-            definitionFile.set(defFile)
-
-            tasks.named(interopProcessingTaskName) {
-                dependsOn(defFile)
-            }
-        }
-    }
-}
-
-/**
- * The def file the plugin feeds to its cinterop for [targetName].
- *
- * This has to mirror the branch in `UniffiPlugin`: during an IDE sync the plugin registers a single
- * [GenerateDummyDefFileTask] shared by every target and skips building the rust library, otherwise it
- * registers one [GenerateDefFileTask] per target.
- */
-fun uniffiDefFileFor(targetName: String): Provider<RegularFile> {
-    // idea.sync.active is automatically set by any idea IDE
-    val isSync = providers.systemProperty("idea.sync.active").map(String::toBoolean).getOrElse(false)
-
-    return if (isSync) {
-        tasks.named<GenerateDummyDefFileTask>("generateDummyDefFile")
-            .flatMap { it.outputFile }
-    } else {
-        tasks.named<GenerateDefFileTask>(
-            "generateDefFileFor${targetName.replaceFirstChar(Char::uppercaseChar)}"
-        ).flatMap { it.outputFile }
-    }
-}
+// If you're using spmForKmp version < 1.9.5 you need to apply this workaround:
+///*
+// * Workaround for a conflict between spmForKmp and this plugin. See https://github.com/frankois944/spm4Kmp/issues/326
+// */
+//afterEvaluate {
+//    kotlin.targets.withType<KotlinNativeTarget>().configureEach {
+//        val defFile = uniffiDefFileFor(targetName)
+//
+//        compilations.getByName("main").cinterops.named("uniffi-cinterop") {
+//            definitionFile.set(defFile)
+//
+//            tasks.named(interopProcessingTaskName) {
+//                dependsOn(defFile)
+//            }
+//        }
+//    }
+//}
+//
+///**
+// * The def file the plugin feeds to its cinterop for [targetName].
+// *
+// * This has to mirror the branch in `UniffiPlugin`: during an IDE sync the plugin registers a single
+// * [GenerateDummyDefFileTask] shared by every target and skips building the rust library, otherwise it
+// * registers one [GenerateDefFileTask] per target.
+// */
+//fun uniffiDefFileFor(targetName: String): Provider<RegularFile> {
+//    // idea.sync.active is automatically set by any idea IDE
+//    val isSync = providers.systemProperty("idea.sync.active").map(String::toBoolean).getOrElse(false)
+//
+//    return if (isSync) {
+//        tasks.named<GenerateDummyDefFileTask>("generateDummyDefFile")
+//            .flatMap { it.outputFile }
+//    } else {
+//        tasks.named<GenerateDefFileTask>(
+//            "generateDefFileFor${targetName.replaceFirstChar(Char::uppercaseChar)}"
+//        ).flatMap { it.outputFile }
+//    }
+//}
