@@ -24,6 +24,7 @@ members = [
     "tests/uniffi/ext-types/sub-lib",
     "tests/uniffi/ext-types/uniffi-one",
     "tests/uniffi/futures",
+    "tests/uniffi/interface-throws",
     "tests/uniffi/keywords",
     "tests/uniffi/multi-module/mod-a",
     "tests/uniffi/multi-module/mod-b",

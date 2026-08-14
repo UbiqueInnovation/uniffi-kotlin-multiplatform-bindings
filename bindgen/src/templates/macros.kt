@@ -40,11 +40,18 @@
     {%- call docstring(callable, indent) %}
     {%- match callable.throws_type() -%}
     {%-     when Some(throwable) %}
-    {#- An override inherits its @Throws filter from the interface method it implements.
-        Repeating it is redundant and Kotlin/Native (2.4+) rejects it as a mismatched
-        '@Throws' filter, so only emit @Throws for non-override declarations (top-level
-        functions, constructors). #}
-    {%-         if !func_decl.contains("override") %}
+    {#- On the JVM `@Throws` is what puts the `throws` clause into the class file, and Java
+        callers can only catch the exception when the clause is on the method they call. So
+        the annotation has to be repeated on the overrides of the JVM/Android actuals,
+        otherwise the exception is catchable through the interface but not through the class
+        implementing it.
+
+        The override is left unannotated everywhere else. Kotlin/Native rejects the repeated
+        (identical) annotation on an override of a commonMain interface as a mismatched
+        '@Throws' filter (https://youtrack.jetbrains.com/issue/KT-88548), and annotating the
+        commonMain `expect` instead would only move the problem to the native `actual`, which
+        must then repeat it. Native overrides inherit the filter from the interface anyway. #}
+    {%-         if !func_decl.contains("override") || module_name == "jvm" || module_name == "android" %}
     @Throws({{ throwable|type_name(ci) }}::class {%- if callable.is_async() -%},kotlin.coroutines.cancellation.CancellationException::class{%- endif -%})
     {%-         endif %}
     {%-     else -%}
@@ -69,11 +76,18 @@
     {%- call docstring(callable, indent) %}
     {%- match callable.throws_type() -%}
     {%-     when Some(throwable) %}
-    {#- An override inherits its @Throws filter from the interface method it implements.
-        Repeating it is redundant and Kotlin/Native (2.4+) rejects it as a mismatched
-        '@Throws' filter, so only emit @Throws for non-override declarations (top-level
-        functions, constructors). #}
-    {%-         if !func_decl.contains("override") %}
+    {#- On the JVM `@Throws` is what puts the `throws` clause into the class file, and Java
+        callers can only catch the exception when the clause is on the method they call. So
+        the annotation has to be repeated on the overrides of the JVM/Android actuals,
+        otherwise the exception is catchable through the interface but not through the class
+        implementing it.
+
+        The override is left unannotated everywhere else. Kotlin/Native rejects the repeated
+        (identical) annotation on an override of a commonMain interface as a mismatched
+        '@Throws' filter (https://youtrack.jetbrains.com/issue/KT-88548), and annotating the
+        commonMain `expect` instead would only move the problem to the native `actual`, which
+        must then repeat it. Native overrides inherit the filter from the interface anyway. #}
+    {%-         if !func_decl.contains("override") || module_name == "jvm" || module_name == "android" %}
     @Throws({{ throwable|type_name(ci) }}::class {%- if callable.is_async() -%},kotlin.coroutines.cancellation.CancellationException::class{%- endif -%})
     {%-         endif %}
     {%-     else -%}

@@ -6,6 +6,13 @@
 
 - A `swift-interop` example combining this plugin with `spmForKmp`
 
+### Fixed
+
+- Throwing methods of an object are annotated with `@Throws` on the JVM and Android actuals again. Only the generated
+  interface carried the annotation, so the `throws` clause was missing from the class file and Java callers holding a
+  reference of the object type could not catch the exception. The Kotlin/Native actuals stay unannotated, they inherit
+  the filter from the interface and repeating it trips [KT-88548](https://youtrack.jetbrains.com/issue/KT-88548).
+
 ## [1.1.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.1.0) - 2026-08-07
 
 ### Added
