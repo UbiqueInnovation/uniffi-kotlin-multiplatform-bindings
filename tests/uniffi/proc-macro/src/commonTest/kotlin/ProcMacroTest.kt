@@ -103,7 +103,29 @@ class ProcMacroTest {
 
         doubleWithDefault() shouldBe 42
     }
-    
+
+    /**
+     * A bare `#[uniffi(default)]` carries no literal - the binding has to know each
+     * type's own Kotlin default. Constructing this with no arguments at all is the
+     * point of the test: it only compiles if every field got a usable default.
+     */
+    @Test
+    fun testRecordWithBareDefaults() {
+        val record = RecordWithBareDefaults()
+        record.string shouldBe ""
+        record.boolean shouldBe false
+        record.integer shouldBe 0
+        record.longValue shouldBe 0L
+        record.unsignedByte shouldBe 0u.toUByte()
+        record.floatVar shouldBe 0.0
+        record.bytes.size shouldBe 0
+        record.vec shouldBe beEmpty<Boolean>()
+        record.map.isEmpty() shouldBe true
+        record.optInteger shouldBe null
+
+        greetWithBareDefault() shouldBe "Hello, !"
+    }
+
     @Test
     fun testObjectWithDefaults() {
         val objWithDefaults = ObjectWithDefaults()

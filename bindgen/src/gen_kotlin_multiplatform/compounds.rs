@@ -86,10 +86,12 @@ impl CodeType for SequenceCodeType {
         )
     }
 
-    fn literal(&self, literal: &Literal, _ci: &ComponentInterface) -> String {
-        match literal {
-            Literal::EmptySequence => "listOf()".into(),
-            _ => panic!("Invalid literal for List type: {literal:?}"),
+    fn default(&self, default: &DefaultValue, _ci: &ComponentInterface) -> Result<String> {
+        match default {
+            DefaultValue::Default | DefaultValue::Literal(Literal::EmptySequence) => {
+                Ok("listOf()".into())
+            }
+            _ => bail!("Invalid default for List type: {default:?}"),
         }
     }
 }
@@ -131,10 +133,12 @@ impl CodeType for MapCodeType {
         )
     }
 
-    fn literal(&self, literal: &Literal, _ci: &ComponentInterface) -> String {
-        match literal {
-            Literal::EmptyMap => "mapOf()".into(),
-            _ => panic!("Invalid literal for Map type: {literal:?}"),
+    fn default(&self, default: &DefaultValue, _ci: &ComponentInterface) -> Result<String> {
+        match default {
+            DefaultValue::Default | DefaultValue::Literal(Literal::EmptyMap) => {
+                Ok("mapOf()".into())
+            }
+            _ => bail!("Invalid default for Map type: {default:?}"),
         }
     }
 }

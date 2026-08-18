@@ -356,10 +356,43 @@ pub struct RecordWithDefaults {
     opt_integer: Option<i32>,
 }
 
+/// Test bare `#[uniffi(default)]` - "whatever this type's own default is", with no
+/// literal. Each field here needs the binding to know the Kotlin default for its type;
+/// a generic `Type()` constructor call would not compile for any of them.
+#[derive(uniffi::Record)]
+pub struct RecordWithBareDefaults {
+    #[uniffi(default)]
+    string: String,
+    #[uniffi(default)]
+    boolean: bool,
+    #[uniffi(default)]
+    integer: i32,
+    #[uniffi(default)]
+    long_value: i64,
+    #[uniffi(default)]
+    unsigned_byte: u8,
+    #[uniffi(default)]
+    float_var: f64,
+    #[uniffi(default)]
+    bytes: Vec<u8>,
+    #[uniffi(default)]
+    vec: Vec<bool>,
+    #[uniffi(default)]
+    map: std::collections::HashMap<String, i32>,
+    #[uniffi(default)]
+    opt_integer: Option<i32>,
+}
+
 /// Test defaults on top-level functions
 #[uniffi::export(default(num = 21))]
 fn double_with_default(num: i32) -> i32 {
     num + num
+}
+
+/// Test a bare default on a function argument.
+#[uniffi::export(default(name))]
+fn greet_with_bare_default(name: String) -> String {
+    format!("Hello, {name}!")
 }
 
 /// Test defaults on constructors / methods

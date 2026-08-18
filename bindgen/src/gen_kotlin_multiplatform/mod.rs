@@ -9,7 +9,7 @@ use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Debug;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use askama::Template;
 use heck::{ToLowerCamelCase, ToShoutySnakeCase, ToUpperCamelCase};
 use serde::{Deserialize, Serialize};
@@ -70,21 +70,25 @@ trait CodeType: Debug {
     #[cfg_attr(feature = "runtime", allow(dead_code))]
     fn canonical_name(&self) -> String;
 
-    #[cfg_attr(feature = "runtime", allow(dead_code))]
-    fn literal(&self, _literal: &Literal, ci: &ComponentInterface) -> String {
-        unimplemented!("Unimplemented for {}", self.type_label(ci))
-    }
-
     /// Render a default value.
     ///
     /// uniffi 0.30 made `#[uniffi(default)]` literals optional, so a default is now
-    /// either an explicit literal or "whatever this type's own default is". Named
-    /// types get a bare constructor call; everything else defers to `literal`.
+    /// either an explicit literal or "whatever this type's own default is".
+    ///
+    /// This base impl only covers named types - records and objects - where "own
+    /// default" is a no-argument constructor call and a literal is meaningless. Every
+    /// type whose Kotlin rendering has no such constructor (primitives, sequences,
+    /// maps, options, enums, custom types) overrides this.
     #[cfg_attr(feature = "runtime", allow(dead_code))]
     fn default(&self, default: &DefaultValue, ci: &ComponentInterface) -> Result<String> {
         match default {
             DefaultValue::Default => Ok(format!("{}()", self.type_label(ci))),
-            DefaultValue::Literal(literal) => Ok(self.literal(literal, ci)),
+            DefaultValue::Literal(_) => {
+                bail!(
+                    "Literals are not supported as a default for {}",
+                    self.type_label(ci)
+                )
+            }
         }
     }
 
@@ -1015,7 +1019,9 @@ impl<T: AsType> AsCodeType for T {
                 key_type,
                 value_type,
             } => Box::new(compounds::MapCodeType::new(*key_type, *value_type)),
-            Type::Custom { name, .. } => Box::new(custom::CustomCodeType::new(name)),
+            Type::Custom { name, builtin, .. } => {
+                Box::new(custom::CustomCodeType::new(name, builtin.as_codetype()))
+            }
             // `Box<T>` (uniffi 0.32) only matters for scaffolding; bindings use the inner type.
             Type::Box { inner_type } => inner_type.as_codetype(),
             // `HashSet` support landed in uniffi 0.32. Supporting it here needs a
@@ -1085,19 +1091,18 @@ mod filters {
         ))
     }
 
-    /// Per-argument lowering, used for the arguments of an FFI call.
-    ///
     /// uniffi 0.32 passes `&[u8]` / `[ByRef] bytes` arguments as a borrowed `ForeignBytes`
-    /// (pointer + length) instead of copying them through a `RustBuffer`. Lowering one
-    /// safely means keeping the Kotlin buffer alive - pinned on Kotlin/Native, copied into
-    /// native memory on JNA - for the whole call, which a single lowering expression cannot
-    /// express. Until the four source sets grow a wrapper for that, reject the argument here
-    /// rather than emitting bindings that fail to compile.
-    #[askama::filter_fn]
-    pub(super) fn lower_fn_for_arg(
-        arg: &Argument,
-        _: &dyn askama::Values,
-    ) -> Result<String, askama::Error> {
+    /// (pointer + length) instead of copying them through a `RustBuffer`. Handling one
+    /// safely means keeping the buffer alive for the whole call - pinned on Kotlin/Native,
+    /// copied into native memory on JNA going out; wrapped without taking ownership coming
+    /// in - which a single lower/lift expression cannot express. Until the four source sets
+    /// grow a wrapper for that, reject the argument rather than emitting bindings that fail
+    /// to compile with an opaque Kotlin type error.
+    ///
+    /// This has to be checked in both directions: `lower_fn_for_arg` covers outbound calls
+    /// (`macros.kt`'s `arg_list_lowered`), `lift_fn_for_arg` the vtable methods of a
+    /// callback or trait interface, where the argument travels Rust -> Kotlin instead.
+    fn reject_borrowed_bytes(arg: &Argument) -> Result<(), askama::Error> {
         if arg.is_borrowed_bytes() {
             return Err(to_askama_error(&format!(
                 "borrowed bytes arguments (`&[u8]` in Rust, `[ByRef] bytes` in UDL) are not \
@@ -1106,7 +1111,27 @@ mod filters {
                 arg.name()
             )));
         }
+        Ok(())
+    }
+
+    /// Per-argument lowering, used for the arguments of an FFI call.
+    #[askama::filter_fn]
+    pub(super) fn lower_fn_for_arg(
+        arg: &Argument,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
+        reject_borrowed_bytes(arg)?;
         Ok(format!("{}.lower", arg.as_codetype().ffi_converter_name()))
+    }
+
+    /// Per-argument lifting, used for the arguments of a callback interface vtable method.
+    #[askama::filter_fn]
+    pub(super) fn lift_fn_for_arg(
+        arg: &Argument,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
+        reject_borrowed_bytes(arg)?;
+        Ok(format!("{}.lift", arg.as_codetype().ffi_converter_name()))
     }
 
     #[askama::filter_fn]
@@ -1437,7 +1462,10 @@ mod filters {
                 FfiType::RustBuffer(Some(external_meta))
                     if external_meta.crate_name() != ci.crate_name() =>
                 {
-                    let suffix = KotlinCodeOracle.class_name(ci, &external_meta.name);
+                    // Not `class_name`: the typealias this refers to is declared by
+                    // `ExternalTypeTemplate.kt` / `headers/Types.h` as `RustBuffer{name}`,
+                    // using the raw name. `UniffiOneUDLTrait` must not become `...UdlTrait`.
+                    let suffix = &external_meta.name;
                     format!(
                         "{call}.let {{ RustBuffer{suffix}ByValue(it.capacity, it.len, it.data) }}"
                     )

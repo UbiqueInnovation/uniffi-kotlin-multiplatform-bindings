@@ -4,8 +4,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+import custom_types.RecordWithCustomDefault
 import custom_types.getGuid
 import custom_types.getOuid
+import custom_types.getRecordWithCustomDefault
 import kotlin.test.Test
 import ext_types.*
 import io.kotest.matchers.shouldBe
@@ -63,5 +65,16 @@ class ExtTypesTest {
 
         ct.ecd.sval shouldBe "ecd"
         getExternalCrateInterface("foo").value() shouldBe "foo"
+    }
+
+    /**
+     * A custom type is a typealias to its builtin in Kotlin, so a `#[uniffi(default)]`
+     * on a custom-typed field has to render as the builtin's default (`""` for a
+     * String-backed `Ouid`), not as a constructor call on the alias.
+     */
+    @Test
+    fun customTypeDefault() {
+        getRecordWithCustomDefault(RecordWithCustomDefault()) shouldBe ""
+        getRecordWithCustomDefault(RecordWithCustomDefault("set")) shouldBe "set"
     }
 }

@@ -13,7 +13,7 @@ internal object {{ trait_impl }} {
             val makeCall = {% if meth.is_async() %}suspend {% endif %}{ ->
                 uniffiObj.{{ meth.name()|fn_name() }}(
                     {%- for arg in meth.arguments() %}
-                    {{ arg|lift_fn }}({{ arg.name()|var_name }}!!),
+                    {{ arg|lift_fn_for_arg }}({{ arg.name()|var_name }}!!),
                     {%- endfor %}
                 )
             }

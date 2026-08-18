@@ -10,8 +10,22 @@ use std::collections::HashMap;
 pub struct Guid(pub String);
 
 // Ditto, using a proc-macro.
+#[derive(Default)]
 pub struct Ouid(pub String);
 uniffi::custom_newtype!(Ouid, String);
+
+// A custom type is its builtin on the Kotlin side (`typealias Ouid = kotlin.String`),
+// so a default on a custom-typed field has to render as the builtin's default.
+#[derive(uniffi::Record)]
+pub struct RecordWithCustomDefault {
+    #[uniffi(default)]
+    pub ouid: Ouid,
+}
+
+#[uniffi::export]
+pub fn get_record_with_custom_default(r: RecordWithCustomDefault) -> String {
+    r.ouid.0
+}
 
 // This error is represented in the UDL.
 #[derive(Debug, thiserror::Error)]
