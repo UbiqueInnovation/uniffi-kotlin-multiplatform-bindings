@@ -24,7 +24,7 @@ actual open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
      * connected Rust object.
      */
     @Suppress("UNUSED_PARAMETER")
-    actual constructor(noPointer: NoPointer) {
+    actual constructor(noHandle: NoHandle) {
         this.handle = null
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
     }

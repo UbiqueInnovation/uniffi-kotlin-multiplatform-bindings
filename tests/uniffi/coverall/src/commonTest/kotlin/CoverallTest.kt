@@ -15,7 +15,7 @@ import coverall.EmptyStruct
 import coverall.FalliblePatch
 import coverall.Getters
 import coverall.InternalException
-import coverall.NoPointer
+import coverall.NoHandle
 import coverall.NodeTrait
 import coverall.OtherError
 import coverall.Patch
@@ -576,11 +576,11 @@ class CoverallTest {
         runGCWithDelay()
     }
 
-    class FakePatch(private val color: Color) : Patch(NoPointer) {
+    class FakePatch(private val color: Color) : Patch(NoHandle) {
         override fun getColor(): Color = color
     }
 
-    class FakeCoveralls(private val name: String) : Coveralls(NoPointer) {
+    class FakeCoveralls(private val name: String) : Coveralls(NoHandle) {
         private val repairs = mutableListOf<Repair>()
 
         override fun addPatch(patch: Patch) {

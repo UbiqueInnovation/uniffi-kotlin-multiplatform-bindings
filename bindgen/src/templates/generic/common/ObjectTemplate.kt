@@ -20,7 +20,7 @@ expect open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
      * attempt to actually use an object constructed this way will fail as there is no
      * connected Rust object.
      */
-    constructor(noPointer: NoPointer)
+    constructor(noHandle: NoHandle)
 
     {%- match obj.primary_constructor() %}
     {%- when Some(cons) %}

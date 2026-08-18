@@ -9,6 +9,11 @@
 //
 // The easiest way to ensure this method is called is to use the `.use`
 // helper method to execute a block and destroy the object at the end.
+//
+// N.B. this is declared here rather than taken from `uniffi.runtime` on purpose:
+// it is a supertype of every generated object, so sourcing it from the runtime
+// would make the runtime part of this module's public ABI and force consumers of
+// these bindings to depend on it too.
 interface Disposable : AutoCloseable {
     fun destroy()
     override fun close() = destroy()
@@ -32,8 +37,8 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
         }
     }
 
-/** Used to instantiate an interface without an actual pointer, for fakes in tests, mostly. */
-object NoPointer
+/** Used to instantiate an interface without an actual handle, for fakes in tests, mostly. */
+object NoHandle
 
 // Marker for the internal "wrap an existing Rust handle" constructor. Objects cross the
 // FFI as a plain Long since uniffi 0.30, so without a marker argument that constructor
