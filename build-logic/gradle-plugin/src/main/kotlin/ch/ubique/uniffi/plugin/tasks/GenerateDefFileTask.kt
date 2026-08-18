@@ -69,9 +69,33 @@ abstract class GenerateDefFileTask : DefaultTask() {
 			""".trimIndent()
         )
 
-        val opts = getLinkerOpts()
-        if (opts != null) {
-            output.appendText("\nlinkerOpts = $opts")
+        val opts = listOfNotNull(getLinkerOpts(), duplicateSymbolOpt())
+        if (opts.isNotEmpty()) {
+            output.appendText("\nlinkerOpts = ${opts.joinToString(" ")}")
+        }
+    }
+
+    /**
+     * Two uniffi modules that share a Rust dependency each carry that dependency's object code
+     * in their own staticlib, so the final link sees the same `#[no_mangle]` scaffolding symbols
+     * twice - once from each module's cinterop archive. Apple's linker takes the first definition
+     * and moves on; `lld` and the mingw driver reject the link outright. Whether it trips at all
+     * depends on how rustc happens to split the crate into codegen units, so the same project can
+     * link today and stop linking after an unrelated change.
+     *
+     * Match the Apple behaviour everywhere, so a multi-module setup links on every target. The
+     * duplicated definitions are the same code built from the same sources; the only thing that
+     * differs is which archive the linker reaches first.
+     */
+    private fun duplicateSymbolOpt(): String? {
+        val target = targetString.get()
+        return when {
+            // Kotlin/Native drives the mingw link through clang++, so the flag needs forwarding.
+            target.contains("windows") -> "-Wl,--allow-multiple-definition"
+            // ld.lld is invoked directly for linux targets.
+            target.contains("linux") -> "--allow-multiple-definition"
+            // Apple's ld64 already resolves duplicates this way.
+            else -> null
         }
     }
 

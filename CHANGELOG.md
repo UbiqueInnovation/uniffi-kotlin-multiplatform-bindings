@@ -26,6 +26,15 @@
   startup integrity check against `0.32` scaffolding. Let the plugin reinstall the bindgen after upgrading.
 - The Rust toolchain moved to `1.97.1`.
 
+### Fixed
+
+- Kotlin/Native links no longer fail with `duplicate symbol` when two uniffi modules share a Rust
+  dependency. Each module's cinterop archive carries that dependency's object code, so the final link sees the same
+  `#[no_mangle]` scaffolding symbols twice. Apple's linker takes the first definition and moves on; `lld` and the mingw
+  driver rejected the link. The generated def files now pass `--allow-multiple-definition` on linux and mingw so every
+  target behaves the way the Apple ones already did. Whether this trips at all depends on how rustc splits a crate into
+  codegen units, so a project could link before this release and stop linking after an unrelated change.
+
 ### Removed
 
 - Workaround for `spmForKmp` as it is no longer needed since version 1.9.5.
