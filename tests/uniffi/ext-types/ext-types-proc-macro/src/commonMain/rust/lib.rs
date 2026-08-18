@@ -12,12 +12,8 @@ use uniffi_one::{
 };
 use url::Url;
 
-uniffi::use_udl_record!(uniffi_one, UniffiOneType);
-uniffi::use_udl_enum!(uniffi_one, UniffiOneEnum);
-uniffi::use_udl_object!(uniffi_one, UniffiOneInterface);
-uniffi::use_udl_record!(custom, Guid);
-uniffi::use_udl_record!(custom_types, Url);
-uniffi::use_udl_record!(custom_types, Handle);
+// `Url` is a remote type - `custom_types` is the crate that defines its custom-type impl.
+uniffi::use_remote_type!(custom_types::Url);
 
 #[derive(uniffi::Record)]
 pub struct CombinedType {
@@ -174,29 +170,18 @@ pub struct Uuid {
     val: String,
 }
 
-// Tell UniFfi we want to use am UniffiCustomTypeConverter to go to and
-// from a String.
-//  Note this could be done even if the above `struct` defn was external.
-uniffi::custom_type!(Uuid, String);
-
-impl UniffiCustomTypeConverter for Uuid {
-    type Builtin = String;
-
-    fn into_custom(val: Self::Builtin) -> uniffi::Result<Self> {
-        Ok(Uuid { val })
-    }
-
-    fn from_custom(obj: Self) -> Self::Builtin {
-        obj.val
-    }
-}
+// Tell UniFfi how to go to and from a String.
+// Note this could be done even if the above `struct` defn was external.
+uniffi::custom_type!(Uuid, String, {
+    lower: |obj| obj.val,
+    try_lift: |val| Ok(Uuid { val }),
+});
 
 mod submodule {
     // A custom type using the "newtype" idiom.
-    // Uniffi can generate the UniffiCustomTypeConverter for us.
     pub struct NewtypeHandle(pub(super) i64);
 
-    // Uniffi can generate the UniffiCustomTypeConverter for us too.
+    // Uniffi can generate the conversions for us.
     uniffi::custom_newtype!(NewtypeHandle, i64);
 }
 pub use submodule::NewtypeHandle;

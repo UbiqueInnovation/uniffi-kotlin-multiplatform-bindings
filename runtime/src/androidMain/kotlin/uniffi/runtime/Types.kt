@@ -457,46 +457,6 @@ interface UniffiForeignFutureCompleteF64 : Callback {
 }
 
 @Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureResultPointerStruct(
-    returnValue: Pointer?,
-    callStatus: UniffiRustCallStatusByValue,
-) : Structure() {
-    @JvmField var returnValue: Pointer? = returnValue
-    @JvmField var callStatus: UniffiRustCallStatusByValue = callStatus
-
-    constructor() : this(
-        returnValue = NullPointer,
-        callStatus = UniffiRustCallStatusHelper.allocValue(),
-    )
-
-    class UniffiByValue(
-        returnValue: Pointer?,
-        callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureResultPointer(returnValue, callStatus), ByValue
-}
-
-typealias UniffiForeignFutureResultPointer = UniffiForeignFutureResultPointerStruct
-
-fun UniffiForeignFutureResultPointer.uniffiSetValue(other: UniffiForeignFutureResultPointer) {
-    returnValue = other.returnValue
-    callStatus = other.callStatus
-}
-
-fun UniffiForeignFutureResultPointer.uniffiSetValue(other: UniffiForeignFutureResultPointerUniffiByValue) {
-    returnValue = other.returnValue
-    callStatus = other.callStatus
-}
-
-typealias UniffiForeignFutureResultPointerUniffiByValue = UniffiForeignFutureResultPointerStruct.UniffiByValue
-
-interface UniffiForeignFutureCompletePointer : Callback {
-    fun callback(
-        callbackData: Long,
-        result: UniffiForeignFutureResultPointerUniffiByValue,
-    )
-}
-
-@Structure.FieldOrder("returnValue", "callStatus")
 open class UniffiForeignFutureResultRustBufferStruct(
     returnValue: RustBufferByValue,
     callStatus: UniffiRustCallStatusByValue,

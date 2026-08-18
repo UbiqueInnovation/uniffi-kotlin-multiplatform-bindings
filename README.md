@@ -31,7 +31,7 @@ crate-type = ["lib", "cdylib", "staticlib"]
 path = "src/commonMain/rust/lib.rs"
 
 [dependencies]
-uniffi = "0.28.3"
+uniffi = "0.32.0"
 ```
 
 Then, create a `src/commonMain/rust/lib.rs` file with the following content:
@@ -79,8 +79,8 @@ To see the complete example, check out the [quickstart example](examples/quickst
 
 | Requirement | Version    |
 | ----------- | ---------- |
-| Rust        | `>=1.82.0` |
-| UniFFI      | `=0.28.3`  |
+| Rust        | `>=1.97.1` |
+| UniFFI      | `=0.32.0`  |
 | Gradle      | `>=9.6.1`  |
 | Kotlin      | `>=2.4.0`  |
 | AGP         | `9.x`      |
@@ -127,7 +127,7 @@ Multi Module Support allows you to write modular and composable rust code and bi
 
 ### External Types
 
-[External Types](https://mozilla.github.io/uniffi-rs/0.28/udl/ext_types.html) are supported, but they are adviced against in favor of the multi module support.
+[External Types](https://mozilla.github.io/uniffi-rs/0.32/types/remote_ext_types.html) are supported, but they are adviced against in favor of the multi module support.
 
 The only case where external types are needed is if your rust library depends on a third-party rust library that also uses UniFFI. In this case, you need to generate bindings for both your rust library and the third-party rust library. To enable this, you need to set the `generateBindingsForExternalCrates` option to `true` in your `build.gradle.kts`:
 

@@ -148,7 +148,7 @@
 
 {%- macro arg_list_lowered(func) %}
     {%- for arg in func.arguments() %}
-        {{- arg|lower_fn }}({{ arg.name()|var_name }}),
+        {{- arg|lower_fn_for_arg }}({{ arg.name()|var_name }}),
     {%- endfor %}
 {%- endmacro -%}
 

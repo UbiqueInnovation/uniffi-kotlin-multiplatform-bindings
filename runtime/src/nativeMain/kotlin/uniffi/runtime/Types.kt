@@ -514,52 +514,6 @@ val UniffiForeignFutureResultF64UniffiByValue.callStatus: UniffiRustCallStatusBy
     get() = useContents { callStatus.readValue() }
 
 typealias UniffiForeignFutureCompleteF64 = cinterop.UniffiForeignFutureCompleteF64
-typealias UniffiForeignFutureResultPointer = CPointer<cinterop.UniffiForeignFutureResultPointer>
-
-var UniffiForeignFutureResultPointer.returnValue: Pointer?
-    get() = pointed.returnValue?.let { Pointer(it) }
-    set(value) {
-        pointed.returnValue = value?.inner
-    }
-
-var UniffiForeignFutureResultPointer.callStatus: UniffiRustCallStatusByValue
-    get() = pointed.callStatus.readValue()
-    set(value) {
-        value.write(pointed.callStatus.rawPtr)
-    }
-
-fun UniffiForeignFutureResultPointer.uniffiSetValue(other: UniffiForeignFutureResultPointer) {
-    returnValue = other.returnValue
-    callStatus = other.callStatus
-}
-
-fun UniffiForeignFutureResultPointer.uniffiSetValue(other: UniffiForeignFutureResultPointerUniffiByValue) {
-    returnValue = other.returnValue
-    callStatus = other.callStatus
-}
-
-typealias UniffiForeignFutureResultPointerUniffiByValue = CValue<cinterop.UniffiForeignFutureResultPointer>
-
-fun UniffiForeignFutureResultPointerUniffiByValue(
-    returnValue: Pointer?,
-    callStatus: UniffiRustCallStatusByValue,
-): UniffiForeignFutureResultPointerUniffiByValue =
-    cValue<cinterop.UniffiForeignFutureResultPointer> {
-        this.returnValue = returnValue?.inner
-
-        callStatus.write(this.callStatus.rawPtr)
-    }
-
-val UniffiForeignFutureResultPointerUniffiByValue.returnValue: Pointer?
-    get() =
-        useContents {
-            returnValue
-        }?.let { Pointer(it) }
-
-val UniffiForeignFutureResultPointerUniffiByValue.callStatus: UniffiRustCallStatusByValue
-    get() = useContents { callStatus.readValue() }
-
-typealias UniffiForeignFutureCompletePointer = cinterop.UniffiForeignFutureCompletePointer
 typealias UniffiForeignFutureResultRustBuffer = CPointer<cinterop.UniffiForeignFutureResultRustBuffer>
 
 var UniffiForeignFutureResultRustBuffer.returnValue: RustBufferByValue

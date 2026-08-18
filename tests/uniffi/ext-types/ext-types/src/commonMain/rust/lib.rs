@@ -17,17 +17,8 @@ use uniffi_kmm_fixture_ext_types_uniffi_one::{
 };
 use url::Url;
 
-// #1988
-uniffi::ffi_converter_forward!(
-    uniffi_kmm_fixture_ext_types_custom_types::Ouid,
-    uniffi_kmm_fixture_ext_types_custom_types::UniFfiTag,
-    crate::UniFfiTag
-);
-uniffi::ffi_converter_forward!(
-    uniffi_kmm_fixture_ext_types_custom_types::ANestedGuid,
-    uniffi_kmm_fixture_ext_types_custom_types::UniFfiTag,
-    crate::UniFfiTag
-);
+// Remote types require a macro call in the Rust source.
+uniffi::use_remote_type!(uniffi_kmm_example_custom_types::Url);
 
 pub struct CombinedType {
     pub uoe: UniffiOneEnum,

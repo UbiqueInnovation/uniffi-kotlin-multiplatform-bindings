@@ -1085,6 +1085,30 @@ mod filters {
         ))
     }
 
+    /// Per-argument lowering, used for the arguments of an FFI call.
+    ///
+    /// uniffi 0.32 passes `&[u8]` / `[ByRef] bytes` arguments as a borrowed `ForeignBytes`
+    /// (pointer + length) instead of copying them through a `RustBuffer`. Lowering one
+    /// safely means keeping the Kotlin buffer alive - pinned on Kotlin/Native, copied into
+    /// native memory on JNA - for the whole call, which a single lowering expression cannot
+    /// express. Until the four source sets grow a wrapper for that, reject the argument here
+    /// rather than emitting bindings that fail to compile.
+    #[askama::filter_fn]
+    pub(super) fn lower_fn_for_arg(
+        arg: &Argument,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
+        if arg.is_borrowed_bytes() {
+            return Err(to_askama_error(&format!(
+                "borrowed bytes arguments (`&[u8]` in Rust, `[ByRef] bytes` in UDL) are not \
+                 supported by the Kotlin Multiplatform backend yet, found one as argument \
+                 `{}`. Take `Vec<u8>` (`bytes`) instead.",
+                arg.name()
+            )));
+        }
+        Ok(format!("{}.lower", arg.as_codetype().ffi_converter_name()))
+    }
+
     #[askama::filter_fn]
     pub(super) fn allocation_size_fn(
         as_ct: &impl AsCodeType,
