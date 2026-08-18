@@ -91,6 +91,9 @@
 {%- when Type::Map { key_type, value_type } %}
 {% include "generic/ffi/MapTemplate.kt" %}
 
+{%- when Type::Set { inner_type } %}
+{% include "generic/ffi/SetTemplate.kt" %}
+
 {%- when Type::CallbackInterface { module_path, name } %}
 {% include "CallbackInterfaceTemplate.kt" %}
 

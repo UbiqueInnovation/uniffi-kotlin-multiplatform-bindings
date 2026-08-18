@@ -2,6 +2,12 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.1.1...HEAD)
 
+### Added
+
+- `HashSet` support (`Type::Set`, new in uniffi `0.32`). A `HashSet<T>` argument, return value or field is generated as
+  a Kotlin `Set<T>`, and `#[uniffi(default)]` on such a field gives `setOf()`. Only reachable through the proc-macros -
+  UDL has no syntax for a set.
+
 ### Changed
 
 - Update uniffi-rs to `v0.32.0` (from `v0.28.3`). This is a breaking change for consumers - the crates you build with
@@ -47,8 +53,6 @@
 
 ### Known limitations
 
-- `HashSet` (`Type::Set`, new in uniffi `0.32`) is not supported yet - the bindgen stops with a clear message rather
-  than generating broken code.
 - Borrowed byte buffers (`&[u8]` in Rust, `[ByRef] bytes` in UDL, new in uniffi `0.32`) are not supported yet. They
   travel as a `ForeignBytes` that borrows the caller's buffer for the duration of the call, which needs the buffer
   pinned (Kotlin/Native) or copied into native memory (JNA) across the call - the bindgen rejects such an argument with

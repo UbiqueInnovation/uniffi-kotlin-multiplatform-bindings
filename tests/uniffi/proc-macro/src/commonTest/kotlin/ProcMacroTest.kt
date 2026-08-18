@@ -98,6 +98,7 @@ class ProcMacroTest {
         recordWithDefaults.integer shouldBe 42
         recordWithDefaults.floatVar shouldBe 4.2
         recordWithDefaults.vec shouldBe beEmpty<Boolean>()
+        recordWithDefaults.set shouldBe beEmpty<String>()
         recordWithDefaults.optVec shouldBe null
         recordWithDefaults.optInteger shouldBe 42
 
@@ -121,9 +122,34 @@ class ProcMacroTest {
         record.bytes.size shouldBe 0
         record.vec shouldBe beEmpty<Boolean>()
         record.map.isEmpty() shouldBe true
+        record.set shouldBe beEmpty<String>()
         record.optInteger shouldBe null
 
         greetWithBareDefault() shouldBe "Hello, !"
+    }
+
+    /**
+     * `HashSet` crosses as a length-prefixed sequence, same wire shape as `Vec`, and
+     * lands as a Kotlin `Set`. Round-tripping a set with a duplicate written into it is
+     * the interesting case: dedup happens on the Rust side, so the reader must build a
+     * `Set` rather than assume the count it was given is the count it will hold.
+     */
+    @Test
+    fun testHashSet() {
+        makeHashSet("hello") shouldBe setOf("hello")
+
+        val set = setOf("a", "b", "c")
+        returnHashSet(set) shouldBe set
+
+        returnHashSet(emptySet()) shouldBe emptySet()
+        returnHashSet(listOf("a", "a", "b").toSet()) shouldBe setOf("a", "b")
+    }
+
+    @Test
+    fun testNestedHashSet() {
+        val nested = listOf(setOf("a", "b"), emptySet<String>())
+        returnNestedHashSet(nested) shouldBe nested
+        returnNestedHashSet(null) shouldBe null
     }
 
     @Test

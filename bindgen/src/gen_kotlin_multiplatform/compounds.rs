@@ -142,3 +142,46 @@ impl CodeType for MapCodeType {
         }
     }
 }
+
+#[derive(Debug)]
+pub struct SetCodeType {
+    inner: Type,
+}
+
+impl SetCodeType {
+    pub fn new(inner: Type) -> Self {
+        Self { inner }
+    }
+    fn inner(&self) -> &Type {
+        &self.inner
+    }
+}
+
+impl CodeType for SetCodeType {
+    fn type_label(&self, ci: &ComponentInterface) -> String {
+        format!(
+            "Set<{}>",
+            super::KotlinCodeOracle.find(self.inner()).type_label(ci)
+        )
+    }
+
+    fn canonical_name(&self) -> String {
+        format!(
+            "Set{}",
+            super::KotlinCodeOracle.find(self.inner()).canonical_name()
+        )
+    }
+
+    // `Literal::EmptySet` exists in the metadata but nothing produces it: the proc-macro
+    // encodes `#[uniffi(default = [])]` as `LIT_EMPTY_SEQ` whatever the field's type, so a
+    // set's empty-literal default arrives as `EmptySequence`. Both are accepted so the
+    // reading doesn't depend on that encoding detail.
+    fn default(&self, default: &DefaultValue, _ci: &ComponentInterface) -> Result<String> {
+        match default {
+            DefaultValue::Default
+            | DefaultValue::Literal(Literal::EmptySequence)
+            | DefaultValue::Literal(Literal::EmptySet) => Ok("setOf()".into()),
+            _ => bail!("Invalid default for Set type: {default:?}"),
+        }
+    }
+}

@@ -1024,12 +1024,9 @@ impl<T: AsType> AsCodeType for T {
             }
             // `Box<T>` (uniffi 0.32) only matters for scaffolding; bindings use the inner type.
             Type::Box { inner_type } => inner_type.as_codetype(),
-            // `HashSet` support landed in uniffi 0.32. Supporting it here needs a
-            // SetCodeType plus a SetTemplate.kt for all four source sets, so it is
-            // deliberately out of scope for this version bump.
-            Type::Set { .. } => {
-                unimplemented!("HashSet is not yet supported by the Kotlin Multiplatform backend")
-            }
+            // `HashSet` (uniffi 0.32). Like `Sequence` and `Map`, only the FFI source
+            // sets declare a converter; the common API just names `Set<T>`.
+            Type::Set { inner_type } => Box::new(compounds::SetCodeType::new(*inner_type)),
         }
     }
 }

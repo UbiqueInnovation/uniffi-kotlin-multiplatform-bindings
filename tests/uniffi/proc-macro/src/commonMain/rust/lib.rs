@@ -2,7 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 mod callback_interface;
 
@@ -146,6 +149,23 @@ fn make_hashmap(k: i8, v: u64) -> HashMap<i8, u64> {
 
 #[uniffi::export]
 fn return_hashmap(h: HashMap<i8, u64>) -> HashMap<i8, u64> {
+    h
+}
+
+#[uniffi::export]
+fn make_hash_set(v: String) -> HashSet<String> {
+    HashSet::from([v])
+}
+
+#[uniffi::export]
+fn return_hash_set(h: HashSet<String>) -> HashSet<String> {
+    h
+}
+
+/// A set nested inside the other containers, so the converter is exercised as an inner
+/// type and not only as a top-level argument.
+#[uniffi::export]
+fn return_nested_hash_set(h: Option<Vec<HashSet<String>>>) -> Option<Vec<HashSet<String>>> {
     h
 }
 
@@ -350,6 +370,8 @@ pub struct RecordWithDefaults {
     float_var: f64,
     #[uniffi(default=[])]
     vec: Vec<bool>,
+    #[uniffi(default=[])]
+    set: HashSet<String>,
     #[uniffi(default=None)]
     opt_vec: Option<Vec<bool>>,
     #[uniffi(default = Some(42))]
@@ -379,6 +401,8 @@ pub struct RecordWithBareDefaults {
     vec: Vec<bool>,
     #[uniffi(default)]
     map: std::collections::HashMap<String, i32>,
+    #[uniffi(default)]
+    set: HashSet<String>,
     #[uniffi(default)]
     opt_integer: Option<i32>,
 }
