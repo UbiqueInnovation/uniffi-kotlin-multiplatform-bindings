@@ -7,13 +7,13 @@
 
 {%- include "Interface.kt" %}
 
-{%- call kt::docstring(obj, 0) %}
+{%- call kt::docstring(obj, 0) %}{% endcall %}
 {% if (is_error) %}
 expect open class {{ impl_class_name }} : kotlin.Exception, Disposable, {{ interface_name }} {
 {% else -%}
 expect open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
 {%- endif %}
-    constructor(pointer: Pointer)
+    constructor(uniffiWithHandle: UniffiWithHandle, handle: Long)
 
     /**
      * This constructor can be used to instantiate a fake object. Only used for tests. Any
@@ -27,8 +27,8 @@ expect open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
     {%-     if cons.is_async() %}
     // Note no constructor generated for this object as it is async.
     {%-     else %}
-    {%- call kt::docstring(cons, 4) %}
-    constructor({% call kt::arg_list(cons, true) -%})
+    {%- call kt::docstring(cons, 4) %}{% endcall %}
+    constructor({% call kt::arg_list(cons, true) %}{% endcall -%})
     {%-     endif %}
     {%- when None %}
     {%- endmatch %}
@@ -36,11 +36,11 @@ expect open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
     override fun destroy()
     override fun close()
 
-    internal inline fun <R> callWithPointer(block: (ptr: Pointer) -> R): R
-    fun uniffiClonePointer(): Pointer
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R
+    fun uniffiCloneHandle(): Long
 
     {% for meth in obj.methods() -%}
-    {%- call kt::func_decl("override", meth, 4) %}
+    {%- call kt::func_decl("override", meth, 4) %}{% endcall %}
     {% endfor %}
 
     {%- for tm in obj.uniffi_traits() %}
@@ -60,7 +60,7 @@ expect open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
     {% if !obj.alternate_constructors().is_empty() -%}
     companion object {
         {% for cons in obj.alternate_constructors() -%}
-        {% call kt::func_decl("", cons, 4) %}
+        {% call kt::func_decl("", cons, 4) %}{% endcall %}
         {% endfor %}
     }
     {% else %}

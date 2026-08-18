@@ -56,9 +56,13 @@ fun <U> UniffiRustCallStatusHelper.withReference(
 interface UniffiRustFutureContinuationCallback: Callback {
     fun callback(handle: Long, pollResult: Byte)
 }
-interface UniffiForeignFutureFree: Callback {
+interface UniffiForeignFutureDroppedCallback: Callback {
     fun callback(handle: Long)
 }
 interface UniffiCallbackInterfaceFree: Callback {
     fun callback(handle: Long)
+}
+
+interface UniffiCallbackInterfaceClone: Callback {
+    fun callback(handle: Long): Long
 }

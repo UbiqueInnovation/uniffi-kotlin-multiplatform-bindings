@@ -5,9 +5,9 @@
 internal object {{ trait_impl }} {
     {%- for (ffi_callback, meth) in vtable_methods.iter() %}
     internal object {{ meth.name()|var_name }}: {{ ffi_callback.name()|ffi_callback_name }} {
-        override fun callback ({%- call kt::arg_list_ffi_decl(ffi_callback) -%})
+        override fun callback ({%- call kt::arg_list_ffi_decl(ffi_callback) %}{% endcall -%})
         {%- if let Some(return_type) = ffi_callback.return_type() %}
-            : {{ return_type|ffi_type_name_by_value }},
+            : {{ return_type|ffi_type_name_by_value(ci) }},
         {%- endif %} {
             val uniffiObj = {{ ffi_converter_name }}.handleMap.get(uniffiHandle)
             val makeCall = {% if meth.is_async() %}suspend {% endif %}{ ->
@@ -65,7 +65,7 @@ internal object {{ trait_impl }} {
                 )
             }
 
-            uniffiOutReturn.uniffiSetValue(
+            uniffiOutDroppedCallback.uniffiSetValue(
                 {%- match meth.throws_type() %}
                 {%- when None %}
                 uniffiTraitInterfaceCallAsync(
@@ -92,11 +92,22 @@ internal object {{ trait_impl }} {
         }
     }
 
-    internal val vtable = {{ vtable|ffi_type_name }}(
+    // uniffi 0.30 added `uniffi_clone` to the callback interface vtable, so that Rust
+    // can take an extra reference to a foreign-implemented trait object.
+    internal object uniffiClone: {{ "CallbackInterfaceClone"|ffi_callback_name }} {
+        override fun callback(handle: Long): Long {
+            return {{ ffi_converter_name }}.handleMap.clone(handle)
+        }
+    }
+
+    // Field order is part of the ABI: uniffi 0.30 moved `free` from last to first and
+    // added `clone` right after it, ahead of the interface methods.
+    internal val vtable = {{ vtable|ffi_type_name(ci) }}(
+        uniffiFree,
+        uniffiClone,
         {%- for (ffi_callback, meth) in vtable_methods.iter() %}
         {{ meth.name()|var_name() }},
         {%- endfor %}
-        uniffiFree,
     )
 
     internal fun register(lib: UniffiLib) {

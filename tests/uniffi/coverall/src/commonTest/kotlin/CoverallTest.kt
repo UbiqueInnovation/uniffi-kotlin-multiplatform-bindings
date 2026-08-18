@@ -470,12 +470,14 @@ class CoverallTest {
             traits[1].name() shouldBe "node-2"
             traits[1].strongCount() shouldBe 2UL
 
-            // Note: this doesn't increase the Rust strong count, since we wrap the Rust impl with a
-            // Swift impl before passing it to `setParent()`
+            // Note: since uniffi 0.30 this DOES increase the Rust strong count. Trait handles
+            // now travel across the FFI in both directions, so lowering a Rust-implemented
+            // trait object clones the Rust handle and hands that over directly. Previously it
+            // was wrapped in a foreign object first, which left the Rust `Arc` count untouched.
             traits[0].setParent(traits[1])
             ancestorNames(traits[0]) shouldBe listOf("node-2")
             ancestorNames(traits[1]).isEmpty() shouldBe true
-            traits[1].strongCount() shouldBe 2UL
+            traits[1].strongCount() shouldBe 3UL
             traits[0].getParent()!!.name() shouldBe "node-2"
 
             val ktNode = KotlinNode()

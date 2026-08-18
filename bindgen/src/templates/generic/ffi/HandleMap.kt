@@ -1,21 +1,36 @@
 
+// Initial value and increment amount for handles.
+// Since uniffi 0.30 both Rust and foreign handles travel across the FFI for trait
+// interfaces, and the two are told apart by the lowest bit: it is always set for
+// foreign handles and never for Rust ones. Starting at 1 and stepping by 2 keeps
+// every handle we hand out odd. (Starting at 1 also avoids "Null Pointers" in
+// native's `interpretCPointer`.)
+private const val UNIFFI_HANDLEMAP_INITIAL = 1L
+private const val UNIFFI_HANDLEMAP_DELTA = 2L
+
 internal class UniffiHandleMap<T: Any> {
     // NOTE: java.util.concurrent.ConcurrentMap will be more efficient than a coarse grained lock
     //       use it on JVM platforms
     private val mapLock = kotlinx.atomicfu.locks.ReentrantLock()
     private val map = HashMap<Long, T>()
 
-    // We'll start at 1L to prevent "Null Pointers" in native's `intepretCPointer`
-    private val counter: kotlinx.atomicfu.AtomicLong = kotlinx.atomicfu.atomic(1L)
+    private val counter: kotlinx.atomicfu.AtomicLong = kotlinx.atomicfu.atomic(UNIFFI_HANDLEMAP_INITIAL)
 
     val size: Int
         get() = map.size
 
     // Insert a new object into the handle map and get a handle for it
     fun insert(obj: T): Long {
-        val handle = counter.getAndAdd(1)
+        val handle = counter.getAndAdd(UNIFFI_HANDLEMAP_DELTA)
         syncAccess { map.put(handle, obj) }
         return handle
+    }
+
+    // Clone a handle, creating a new one that refers to the same object
+    fun clone(handle: Long): Long {
+        val obj = syncAccess { map.get(handle) }
+            ?: throw InternalException("UniffiHandleMap.clone: Invalid handle")
+        return insert(obj)
     }
 
     // Get an object from the handle map

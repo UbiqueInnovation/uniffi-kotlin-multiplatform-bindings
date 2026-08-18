@@ -2,22 +2,22 @@
 {%- let rec = ci|get_record_definition(name) %}
 
 {%- if rec.has_fields() %}
-{%- call kt::docstring(rec, 0) %}
+{%- call kt::docstring(rec, 0) %}{% endcall %}
 {%- if config.generate_serializable_records() && self.is_name_serializable(type_name) %}
 @kotlinx.serialization.Serializable
 {% endif%}
 data class {{ type_name }} (
     {%- for field in rec.fields() %}
-    {%- call kt::docstring(field, 4) %}
+    {%- call kt::docstring(field, 4) %}{% endcall %}
     {%- if config.generate_serializable_records() && self.is_name_serializable(type_name)  %}
-    @kotlinx.serialization.json.JsonNames("{% call kt::field_name_unquoted_unescaped(field, loop.index) %}")
+    @kotlinx.serialization.json.JsonNames("{% call kt::field_name_unquoted_unescaped(field, loop.index) %}{% endcall %}")
     {%- if !field.name().is_empty() && self.is_name_serializable(type_name)  %}
     @kotlinx.serialization.SerialName("{{ field.name() }}")
     {%- endif -%}
     {%- endif %}
     {% if config.generate_immutable_records() %}val{% else %}var{% endif %} {{ field.name()|var_name }}: {{ field|type_name(ci) -}}
     {%- match field.default_value() %}
-        {%- when Some with(literal) %} = {{ literal|render_literal(field, ci) }}
+        {%- when Some with(literal) %} = {{ literal|render_default(field, ci) }}
         {%- else %}
         {% if field|is_optional %} = null {% endif %}
     {%- endmatch -%}
@@ -27,13 +27,13 @@ data class {{ type_name }} (
     {% if contains_object_references %}
     @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
     override fun destroy() {
-        {% call kt::destroy_fields(rec) %}
+        {% call kt::destroy_fields(rec) %}{% endcall %}
     }
     {% endif %}
     companion object
 }
 {%- else -%}
-{%- call kt::docstring(rec, 0) %}
+{%- call kt::docstring(rec, 0) %}{% endcall %}
 class {{ type_name }} {
     override fun equals(other: Any?): Boolean {
         return other is {{ type_name }}

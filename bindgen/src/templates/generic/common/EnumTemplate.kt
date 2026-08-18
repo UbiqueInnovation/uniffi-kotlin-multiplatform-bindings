@@ -8,7 +8,7 @@
 
 {%- if e.is_flat() %}
 
-{%- call kt::docstring(e, 0) %}
+{%- call kt::docstring(e, 0) %}{% endcall %}
 {% match e.variant_discr_type() %}
 {% when None %}
 {%- if config.generate_serializable_records() && self.is_enum_serializable(e) %}
@@ -16,7 +16,7 @@
 {% endif%}
 enum class {{ type_name }} {
     {% for variant in e.variants() -%}
-    {%- call kt::docstring(variant, 4) %}
+    {%- call kt::docstring(variant, 4) %}{% endcall %}
     {{ variant|variant_name }}{% if loop.last %};{% else %},{% endif %}
     {%- endfor %}
     companion object
@@ -27,7 +27,7 @@ enum class {{ type_name }} {
 {% endif%}
 enum class {{ type_name }}(val value: {{ variant_discr_type|type_name(ci) }}) {
     {% for variant in e.variants() -%}
-    {%- call kt::docstring(variant, 4) %}
+    {%- call kt::docstring(variant, 4) %}{% endcall %}
     {{ variant|variant_name }}({{ e|variant_discr_literal(loop.index0) }}){% if loop.last %};{% else %},{% endif %}
     {%- endfor %}
     companion object
@@ -80,7 +80,7 @@ object {{ type_name }}PolySerializer : kotlinx.serialization.json.JsonContentPol
         {%- for field in variant.fields() -%}
 
             {%- let fieldNameInternal = field.name()|var_name|unquote %}
-            fieldName = "{% call kt::field_name_unquoted_unescaped(field, loop.index) %}"
+            fieldName = "{% call kt::field_name_unquoted_unescaped(field, loop.index) %}{% endcall %}"
             alternativeFieldName = "{{ field.name() }}"
 
             // if it has fields, try all field names
@@ -119,12 +119,12 @@ object {{ type_name }}PolySerializer : kotlinx.serialization.json.JsonContentPol
 
     }
 }
-{%- call kt::docstring(e, 0) %}
+{%- call kt::docstring(e, 0) %}{% endcall %}
 @kotlinx.serialization.Serializable({{ type_name }}PolySerializer::class)
 {% endif %}
 sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% endif %} {
     {% for variant in e.variants() -%}
-    {%- call kt::docstring(variant, 4) %}
+    {%- call kt::docstring(variant, 4) %}{% endcall %}
     {% if !variant.has_fields() -%}
     {%- if !contains_object_references && config.generate_serializable_records() && self.is_variant_serializable(variant) %}
     @kotlinx.serialization.Serializable
@@ -138,21 +138,21 @@ sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% e
     {% endif %}
     data class {{ variant|variant_type_name(ci) }}(
         {%- for field in variant.fields() -%}
-        {%- call kt::docstring(field, 8) %}
+        {%- call kt::docstring(field, 8) %}{% endcall %}
         {%- if config.generate_serializable_records() && self.is_variant_serializable(variant) %}
-        @kotlinx.serialization.json.JsonNames("{% call kt::field_name_unquoted_unescaped(field, loop.index) %}")
+        @kotlinx.serialization.json.JsonNames("{% call kt::field_name_unquoted_unescaped(field, loop.index) %}{% endcall %}")
         {%-if !field.name().is_empty() %}
         @kotlinx.serialization.SerialName("{{ field.name() }}")
         {%- endif %}
         {% endif %}
-        val {% call kt::field_name(field, loop.index) %}: {{ field|type_name(ci) }} {% if field|is_optional %} = null {% endif %} {% if loop.last %}{% else %}, {% endif %}
+        val {% call kt::field_name(field, loop.index) %}{% endcall %}: {{ field|type_name(ci) }} {% if field|is_optional %} = null {% endif %} {% if loop.last %}{% else %}, {% endif %}
         {%- endfor -%}
     ) : {{ type_name }}() {
         {% if contains_object_references %}
         @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
         override fun destroy() {
             {%- if variant.has_fields() %}
-            {% call kt::destroy_fields(variant) %}
+            {% call kt::destroy_fields(variant) %}{% endcall %}
             {% else -%}
             // Nothing to destroy
             {%- endif %}

@@ -1,3 +1,6 @@
 namespace simple_fns {};
 
+// `MyHashSet` aliases `Mutex<HashSet<String>>`, a type from another crate.
+// Since uniffi 0.29 those need the `[Remote]` attribute to satisfy the orphan rule.
+[Remote]
 interface MyHashSet {};

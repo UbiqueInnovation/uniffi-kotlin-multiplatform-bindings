@@ -13,12 +13,12 @@
 {%- endmacro %}
 
 {%- macro to_ffi_call(func) -%}
-    {%- if func.takes_self() %}
-    callWithPointer {
-        {%- call to_raw_ffi_call(func) %}
+    {%- if func.self_type().is_some() %}
+    callWithHandle {
+        {%- call to_raw_ffi_call(func) %}{% endcall %}
     }
     {% else %}
-        {%- call to_raw_ffi_call(func) %}
+        {%- call to_raw_ffi_call(func) %}{% endcall %}
     {% endif %}
 {%- endmacro %}
 
@@ -30,14 +30,14 @@
     uniffiRustCall()
     {%- endmatch %} { _status ->
     UniffiLib.INSTANCE.{{ func.ffi_func().name() }}(
-        {% if func.takes_self() %}it, {% endif -%}
-        {% call arg_list_lowered(func) -%}
+        {% if func.self_type().is_some() %}it, {% endif -%}
+        {% call arg_list_lowered(func) %}{% endcall -%}
         _status)!!
 }
 {%- endmacro -%}
 
 {%- macro func_decl(func_decl, callable, indent) %}
-    {%- call docstring(callable, indent) %}
+    {%- call docstring(callable, indent) %}{% endcall %}
     {%- match callable.throws_type() -%}
     {%-     when Some(throwable) %}
     {#- On the JVM `@Throws` is what puts the `throws` clause into the class file, and Java
@@ -59,11 +59,11 @@
     {%- if callable.is_async() %}
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     {{ func_decl }} suspend fun {{ callable.name()|fn_name }}(
-        {%- call arg_list(callable, !callable.takes_self()) -%}
+        {%- call arg_list(callable, !callable.self_type().is_some()) %}{% endcall -%}
     ){% match callable.return_type() %}{% when Some with (return_type) %} : {{ return_type|type_name(ci) }}{% when None %}{%- endmatch %}
     {%- else -%}
     {{ func_decl }} fun {{ callable.name()|fn_name }}(
-        {%- call arg_list(callable, !callable.takes_self()) -%}
+        {%- call arg_list(callable, !callable.self_type().is_some()) %}{% endcall -%}
     ){%- match callable.return_type() -%}
     {%-         when Some with (return_type) -%}
         : {{ return_type|type_name(ci) }}
@@ -73,7 +73,7 @@
 {% endmacro %}
 
 {%- macro func_decl_with_body(func_decl, callable, indent) %}
-    {%- call docstring(callable, indent) %}
+    {%- call docstring(callable, indent) %}{% endcall %}
     {%- match callable.throws_type() -%}
     {%-     when Some(throwable) %}
     {#- On the JVM `@Throws` is what puts the `throws` clause into the class file, and Java
@@ -95,35 +95,35 @@
     {%- if callable.is_async() %}
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     {{ func_decl }} suspend fun {{ callable.name()|fn_name }}(
-        {%- call arg_list(callable, false) -%}
+        {%- call arg_list(callable, false) %}{% endcall -%}
     ){% match callable.return_type() %}{% when Some with (return_type) %} : {{ return_type|type_name(ci) }}{% when None %}{%- endmatch %} {
-        return {% call call_async(callable) %}
+        return {% call call_async(callable) %}{% endcall %}
     }
     {%- else -%}
     {{ func_decl }} fun {{ callable.name()|fn_name }}(
-        {%- call arg_list(callable, false) -%}
+        {%- call arg_list(callable, false) %}{% endcall -%}
     ){%- match callable.return_type() -%}
     {%-         when Some with (return_type) -%}
         : {{ return_type|type_name(ci) }} {
-            return {{ return_type|lift_fn }}({% call to_ffi_call(callable) %})
+            return {{ return_type|lift_fn }}({% call to_ffi_call(callable) %}{% endcall %})
     }
     {%-         when None %}
-        = {% call to_ffi_call(callable) %}
+        = {% call to_ffi_call(callable) %}{% endcall %}
     {%-     endmatch %}
     {% endif %}
 {% endmacro %}
 
 {%- macro call_async(callable) -%}
     uniffiRustCallAsync(
-{%- if callable.takes_self() %}
-        callWithPointer { thisPtr ->
+{%- if callable.self_type().is_some() %}
+        callWithHandle { thisHandle ->
             UniffiLib.INSTANCE.{{ callable.ffi_func().name() }}(
-                thisPtr,
-                {% call arg_list_lowered(callable) %}
+                thisHandle,
+                {% call arg_list_lowered(callable) %}{% endcall %}
             )!!
         },
 {%- else %}
-        UniffiLib.INSTANCE.{{ callable.ffi_func().name() }}({% call arg_list_lowered(callable) %})!!,
+        UniffiLib.INSTANCE.{{ callable.ffi_func().name() }}({% call arg_list_lowered(callable) %}{% endcall %})!!,
 {%- endif %}
         {{ callable|async_poll(ci) }},
         {{ callable|async_complete(ci) }},
@@ -163,7 +163,7 @@
         {{ arg.name()|var_name }}: {{ arg|type_name(ci) }}
 {%-     if is_decl %}
 {%-         match arg.default_value() %}
-{%-             when Some with(literal) %} = {{ literal|render_literal(arg, ci) }}
+{%-             when Some with(literal) %} = {{ literal|render_default(arg, ci) }}
 {%-             else %}
 {%-         endmatch %}
 {%-     endif %}
@@ -177,14 +177,14 @@
 -#}
 {%- macro arg_list_ffi_decl(func) %}
     {%- for arg in func.arguments() %}
-        {{- arg.name()|var_name }}: {{ arg.type_().borrow()|ffi_type_name_by_value -}},
+        {{- arg.name()|var_name }}: {{ arg.type_().borrow()|ffi_type_name_by_value(ci) -}},
     {%- endfor %}
     {%- if func.has_rust_call_status_arg() %}uniffiCallStatus: UniffiRustCallStatus, {% endif %}
 {%- endmacro -%}
 
 {%- macro arg_list_ffi_decl_for_ffi_function(func) %}
     {%- for arg in func.arguments() %}
-        {{- arg.name()|var_name }}: {{ arg.type_().borrow()|ffi_type_name_for_ffi_function -}},
+        {{- arg.name()|var_name }}: {{ arg.type_().borrow()|ffi_type_name_for_ffi_function(ci) -}},
     {%- endfor %}
     {%- if func.has_rust_call_status_arg() %}uniffiCallStatus: UniffiRustCallStatus, {% endif %}
 {%- endmacro -%}
@@ -235,7 +235,7 @@ v{{- field_num -}}
 {%- macro destroy_fields(member) %}
     Disposable.destroy(
         {%- for field in member.fields() %}
-            this.{%- call field_name(field, loop.index) -%},
+            this.{%- call field_name(field, loop.index) %}{% endcall -%},
         {% endfor -%}
     )
 {%- endmacro -%}
@@ -249,5 +249,5 @@ v{{- field_num -}}
 {%- endmacro %}
 
 {%- macro docstring(defn, indent_spaces) %}
-{%- call docstring_value(defn.docstring(), indent_spaces) %}
+{%- call docstring_value(defn.docstring(), indent_spaces) %}{% endcall %}
 {%- endmacro %}

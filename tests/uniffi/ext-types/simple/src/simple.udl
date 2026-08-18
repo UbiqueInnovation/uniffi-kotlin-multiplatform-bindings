@@ -4,4 +4,4 @@ namespace simple {
 };
 
 [External="external_lib"]
-typedef extern MyStruct;
+typedef dictionary MyStruct;

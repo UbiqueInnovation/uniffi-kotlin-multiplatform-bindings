@@ -4,7 +4,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use uniffi_bindgen::backend::{Literal, Type};
+use anyhow::{bail, Result};
+use uniffi_bindgen::interface::{DefaultValue, Literal, Type};
 use uniffi_bindgen::ComponentInterface;
 
 use super::{AsCodeType, CodeType};
@@ -42,11 +43,16 @@ impl CodeType for OptionalCodeType {
         )
     }
 
-    fn literal(&self, literal: &Literal, ci: &ComponentInterface) -> String {
-        match literal {
-            Literal::None => "null".into(),
-            Literal::Some { inner } => super::KotlinCodeOracle.find(&self.inner).literal(inner, ci),
-            _ => panic!("Invalid literal for Optional type: {literal:?}"),
+    // Overridden rather than left to `literal` because uniffi 0.30 changed
+    // `Literal::Some`'s payload from `Box<Literal>` to `Box<DefaultValue>`, so the
+    // inner value has to be resolved through `default` rather than `literal`.
+    fn default(&self, default: &DefaultValue, ci: &ComponentInterface) -> Result<String> {
+        match default {
+            DefaultValue::Default | DefaultValue::Literal(Literal::None) => Ok("null".into()),
+            DefaultValue::Literal(Literal::Some { inner }) => {
+                super::KotlinCodeOracle.find(&self.inner).default(inner, ci)
+            }
+            _ => bail!("Invalid default for Optional type: {default:?}"),
         }
     }
 }

@@ -1,7 +1,7 @@
 
 {%- import "macros.kt" as kt %}
 
-{%- for type_ in ci.iter_types() %}
+{%- for type_ in ci.iter_local_types() %}
 {%- let type_name = type_|type_name(ci) %}
 {%- let ffi_converter_name = type_|ffi_converter_name %}
 {%- let canonical_type_name = type_|canonical_name %}
@@ -103,11 +103,16 @@
 {%- when Type::Custom { module_path, name, builtin } %}
 {% include "generic/ffi/CustomTypeTemplate.kt" %}
 
-{%- when Type::External { module_path, name, namespace, kind, tagged } %}
-{% include "ExternalTypeTemplate.kt" %}
-
 {%- else %}
 {%- endmatch %}
+{%- endfor %}
+
+{#- uniffi 0.29 removed `Type::External`; externals are ordinary types now
+ # and are reached through their own iterator rather than a match arm. -#}
+{%- for type_ in ci.iter_external_types() %}
+{%- let name = self.external_type_name(type_) %}
+{%- let package_name = self.external_type_package(type_) %}
+{% include "ExternalTypeTemplate.kt" %}
 {%- endfor %}
 
 {%- if ci.has_async_fns() %}

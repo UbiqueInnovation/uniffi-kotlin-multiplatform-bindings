@@ -8,8 +8,8 @@ internal typealias {{ callback.name()|ffi_callback_name }} = cinterop.{{ callbac
 {%- when FfiDefinition::Struct(ffi_struct) %}
 internal typealias {{ ffi_struct.name()|ffi_struct_name }} = CPointer<cinterop.{{ ffi_struct.name()|ffi_struct_name }}>
 {% for field in ffi_struct.fields() %}
-internal var {{ ffi_struct.name()|ffi_struct_name }}.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }}
-{% let type_name = field.type_().borrow()|ffi_type_name_for_ffi_struct -%}
+internal var {{ ffi_struct.name()|ffi_struct_name }}.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) }}
+{% let type_name = field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) -%}
     get() = pointed.{{ field.name()|var_name }}
         {%-  if type_name.contains("ByValue") -%}
         .readValue()
@@ -28,7 +28,7 @@ internal var {{ ffi_struct.name()|ffi_struct_name }}.{{ field.name()|var_name }}
         {%- if field.type_().borrow()|is_pointer_type -%}
         pointed.{{ field.name()|var_name }} = value?.inner
         {%- else -%}
-        pointed.{{ field.name()|var_name }} = value as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner }}
+        pointed.{{ field.name()|var_name }} = value as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci) }}
         {%- endif -%}
         {%- endmatch %}
     }
@@ -48,7 +48,7 @@ internal fun {{ ffi_struct.name()|ffi_struct_name }}.uniffiSetValue(other: {{ ff
 internal typealias {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue = CValue<cinterop.{{ ffi_struct.name()|ffi_struct_name }}>
 fun {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue(
     {% for field in ffi_struct.fields() %}
-    {{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }},
+    {{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) }},
     {% endfor %}
 ): {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue {
     return cValue<cinterop.{{ ffi_struct.name()|ffi_struct_name }}> {
@@ -62,7 +62,7 @@ fun {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue(
         {%- if field.type_().borrow()|is_pointer_type -%}
         this.{{ field.name()|var_name }} = {{ field.name()|var_name }}?.inner
         {%- else -%}
-        this.{{ field.name()|var_name }} = {{ field.name()|var_name }} as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner }}
+        this.{{ field.name()|var_name }} = {{ field.name()|var_name }} as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci) }}
         {%- endif -%}
         {%- endmatch %}
         {% endfor %}
@@ -70,8 +70,8 @@ fun {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue(
 }
 
 {% for field in ffi_struct.fields() %}
-internal val {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }}
-{% let type_name = field.type_().borrow()|ffi_type_name_for_ffi_struct -%}
+internal val {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) }}
+{% let type_name = field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) -%}
     get() = useContents { {{ field.name()|var_name }} 
     {%-  if type_name.contains("ByValue") -%}
         .readValue()
@@ -93,8 +93,8 @@ internal interface UniffiLib {
     companion object {
         internal val INSTANCE: UniffiLib by lazy {
             UniffiLibInstance().also { lib ->
-             {% for fn in self.initialization_fns() -%}
-                {{ fn }}(lib)
+             {% for init_fn in self.initialization_fns() -%}
+                {{ init_fn }}(lib)
              {% endfor -%}
              }
         }
@@ -108,17 +108,17 @@ internal interface UniffiLib {
 
     {% for func in ci.iter_ffi_function_definitions() -%}
     fun {{ func.name() }}(
-        {%- call kt::arg_list_ffi_decl_for_ffi_function(func) %}
-    ): {% match func.return_type() %}{% when Some with (return_type) %}{{ return_type.borrow()|ffi_type_name_for_ffi_function }}{% when None %}Unit{% endmatch %}
+        {%- call kt::arg_list_ffi_decl_for_ffi_function(func) %}{% endcall %}
+    ): {% match func.return_type() %}{% when Some with (return_type) %}{{ return_type.borrow()|ffi_type_name_for_ffi_function(ci) }}{% when None %}Unit{% endmatch %}
     {% endfor %}
 }
 
 internal class UniffiLibInstance: UniffiLib {
     {% for func in ci.iter_ffi_function_definitions() -%}
     override fun {{ func.name() }}(
-        {%- call kt::arg_list_ffi_decl_for_ffi_function(func) %}
-    ): {% match func.return_type() %}{% when Some with (return_type) %}{{ return_type.borrow()|ffi_type_name_for_ffi_function }}{% when None %}Unit{% endmatch %}
-        = cinterop.{{ func.name() }}({%- call kt::arg_list_ffi_call(func) %})
+        {%- call kt::arg_list_ffi_decl_for_ffi_function(func) %}{% endcall %}
+    ): {% match func.return_type() %}{% when Some with (return_type) %}{{ return_type.borrow()|ffi_type_name_for_ffi_function(ci) }}{% when None %}Unit{% endmatch %}
+        = cinterop.{{ func.name() }}({%- call kt::arg_list_ffi_call(func) %}{% endcall %})
           {%- match func.return_type() -%}
           {%- when Some with (return_type) -%}
           {%- if return_type.borrow()|is_pointer_type -%}
@@ -128,7 +128,7 @@ internal class UniffiLibInstance: UniffiLib {
           {%- endmatch -%}
           {%- match func.return_type() -%}
           {%- when Some with (return_type) -%}
-          as {{ return_type.borrow()|ffi_type_name_for_ffi_function }}
+          as {{ return_type.borrow()|ffi_type_name_for_ffi_function(ci) }}
           {%- when None -%}
           {%- endmatch %}
     

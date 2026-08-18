@@ -35,7 +35,12 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
 /** Used to instantiate an interface without an actual pointer, for fakes in tests, mostly. */
 object NoPointer
 
-{%- for type_ in ci.iter_types() %}
+// Marker for the internal "wrap an existing Rust handle" constructor. Objects cross the
+// FFI as a plain Long since uniffi 0.30, so without a marker argument that constructor
+// could collide with a user-defined one taking a single Long.
+object UniffiWithHandle
+
+{%- for type_ in ci.iter_local_types() %}
 {%- let type_name = type_|type_name(ci) %}
 {%- let ffi_converter_name = type_|ffi_converter_name %}
 {%- let canonical_type_name = type_|canonical_name %}
@@ -73,11 +78,16 @@ object NoPointer
 {%- when Type::Custom { module_path, name, builtin } %}
 {% include "CustomTypeTemplate.kt" %}
 
-{%- when Type::External { module_path, name, namespace, kind, tagged } %}
-{% include "ExternalTypeTemplate.kt" %}
-
 {%- else %}
 {%- endmatch %}
+{%- endfor %}
+
+{#- uniffi 0.29 removed `Type::External`; externals are ordinary types now
+ # and are reached through their own iterator rather than a match arm. -#}
+{%- for type_ in ci.iter_external_types() %}
+{%- let name = self.external_type_name(type_) %}
+{%- let package_name = self.external_type_package(type_) %}
+{% include "ExternalTypeTemplate.kt" %}
 {%- endfor %}
 
 {%- if ci.has_async_fns() %}
