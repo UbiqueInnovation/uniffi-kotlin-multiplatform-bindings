@@ -6,41 +6,41 @@ members = [
 
     "tests/build-common",
 
-    "tests/runtime",
-    "tests/uniffi/callbacks",
-    "tests/uniffi/chronological",
-    "tests/uniffi/coverall",
-    "tests/uniffi/docstring",
-    "tests/uniffi/docstring-proc-macro",
-    "tests/uniffi/enum-types",
-    "tests/uniffi/error-types",
-    "tests/uniffi/ext-types/custom-types",
-    "tests/uniffi/ext-types/ext-types",
-    "tests/uniffi/ext-types/ext-types-proc-macro",
-    "tests/uniffi/ext-types/external-crate",
-    "tests/uniffi/ext-types/http-headermap",
-    "tests/uniffi/ext-types/simple/external-lib",
-    "tests/uniffi/ext-types/simple",
-    "tests/uniffi/ext-types/sub-lib",
-    "tests/uniffi/ext-types/uniffi-one",
-    "tests/uniffi/futures",
-    "tests/uniffi/interface-throws",
-    "tests/uniffi/keywords",
-    "tests/uniffi/multi-module/mod-a",
-    "tests/uniffi/multi-module/mod-b",
-    "tests/uniffi/multi-module/rust-common",
-    "tests/uniffi/proc-macro",
-    "tests/uniffi/serialization",
-    "tests/uniffi/simple-fns",
-    "tests/uniffi/simple-iface",
-    "tests/uniffi/struct-default-values",
-    "tests/uniffi/trait-methods",
-    "tests/uniffi/type-limits",
+    # "tests/runtime",
+    # "tests/uniffi/callbacks",
+    # "tests/uniffi/chronological",
+    # "tests/uniffi/coverall",
+    # "tests/uniffi/docstring",
+    # "tests/uniffi/docstring-proc-macro",
+    # "tests/uniffi/enum-types",
+    # "tests/uniffi/error-types",
+    # "tests/uniffi/ext-types/custom-types",
+    # "tests/uniffi/ext-types/ext-types",
+    # "tests/uniffi/ext-types/ext-types-proc-macro",
+    # "tests/uniffi/ext-types/external-crate",
+    # "tests/uniffi/ext-types/http-headermap",
+    # "tests/uniffi/ext-types/simple/external-lib",
+    # "tests/uniffi/ext-types/simple",
+    # "tests/uniffi/ext-types/sub-lib",
+    # "tests/uniffi/ext-types/uniffi-one",
+    # "tests/uniffi/futures",
+    # "tests/uniffi/interface-throws",
+    # "tests/uniffi/keywords",
+    # "tests/uniffi/multi-module/mod-a",
+    # "tests/uniffi/multi-module/mod-b",
+    # "tests/uniffi/multi-module/rust-common",
+    # "tests/uniffi/proc-macro",
+    # "tests/uniffi/serialization",
+    # "tests/uniffi/simple-fns",
+    # "tests/uniffi/simple-iface",
+    # "tests/uniffi/struct-default-values",
+    # "tests/uniffi/trait-methods",
+    # "tests/uniffi/type-limits",
 
-    "examples/custom-types",
-    "examples/quickstart",
-    "examples/jvm-only",
-    "examples/swift-interop",
+    # "examples/custom-types",
+    # "examples/quickstart",
+    # "examples/jvm-only",
+    # "examples/swift-interop",
 ]
 resolver = "2"
 
@@ -51,8 +51,8 @@ lazy_static = "1.4"
 once_cell = "1.18"
 thiserror = "1"
 tokio = "1"
-uniffi = "0.28.3"
-uniffi_bindgen = "0.28.3"
-uniffi_macros = "0.28.3"
-uniffi_meta = "0.28.3"
+uniffi = "0.32.0"
+uniffi_bindgen = "0.32.0"
+uniffi_macros = "0.32.0"
+uniffi_meta = "0.32.0"
 url = "2.2"

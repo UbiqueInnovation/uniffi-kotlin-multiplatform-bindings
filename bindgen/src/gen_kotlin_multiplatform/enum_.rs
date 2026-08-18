@@ -4,7 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use uniffi_bindgen::backend::Literal;
+use uniffi_bindgen::interface::Literal;
 use uniffi_bindgen::ComponentInterface;
 
 use super::CodeType;
