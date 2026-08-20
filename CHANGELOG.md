@@ -66,6 +66,15 @@
 
 ### Fixed
 
+- A crate that uses types from another uniffi crate now initialises that crate too, so its callback interface vtables
+  are registered before Rust can reach one ([uniffi #2343](https://github.com/mozilla/uniffi-rs/issues/2343)). Every
+  namespace registers its vtables from its own lazily loaded `UniffiLib`, so passing a Kotlin implementation of a trait
+  that belongs to a different crate used to reach Rust with that crate's vtable still unset - unless something had
+  happened to call into that namespace first. Rust then called through a null vtable, which aborts the process rather
+  than throwing, because the failing handle panics a second time while unwinding. The generated bindings now chain into
+  `{package}.uniffiEnsureInitialized()` for each crate they use, and each binding exposes that function for its own
+  namespace. This only covers crates that end up in the same shared library; see the known limitation below.
+
 - Kotlin/Native links no longer fail with `duplicate symbol` when two uniffi modules share a Rust
   dependency. Each module's cinterop archive carries that dependency's object code, so the final link sees the same
   `#[no_mangle]` scaffolding symbols twice. Apple's linker takes the first definition and moves on; `lld` and the mingw
@@ -80,6 +89,15 @@
   an async function travel as a handle now, so uniffi no longer emits the pointer-shaped foreign-future result.
 
 ### Known limitations
+
+- A trait declared `#[uniffi::export(with_foreign)]` (or `[Trait, WithForeign]`) cannot be implemented in Kotlin and
+  passed to a function of a *different* Gradle module. Each module builds its own shared library and links its Rust
+  dependencies into it statically, so the shared crate's vtable slot exists once per library. The Kotlin package for
+  that crate is generated once and registers the vtable with one library only, leaving the other library's slot unset -
+  and a Rust-side call through it aborts the process. Implementing the trait and using it within the module that
+  declares it works, as does passing records, enums and objects of a shared crate between modules. Generating the
+  shared crate's bindings into the consuming module (`uniffi { generateBindingsForExternalCrates = true }`, without
+  also depending on the module that declares it) keeps everything in one library and avoids this.
 
 - Borrowed byte buffers (`&[u8]` in Rust, `[ByRef] bytes` in UDL, new in uniffi `0.32`) are not supported yet. They
   travel as a `ForeignBytes` that borrows the caller's buffer for the duration of the call, which needs the buffer

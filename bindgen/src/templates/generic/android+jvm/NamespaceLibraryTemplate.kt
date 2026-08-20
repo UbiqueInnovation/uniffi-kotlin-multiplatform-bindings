@@ -98,7 +98,7 @@ internal interface UniffiLib : Library {
                 uniffiCheckContractApiVersion(lib)
                 uniffiCheckApiChecksums(lib)
                 {% for init_fn in self.initialization_fns() -%}
-                {{ init_fn }}(lib)
+                {{ init_fn }}
                 {% endfor -%}
             }
         }
@@ -134,4 +134,16 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     {%- endfor %}
+}
+
+/**
+ * Force this namespace's library initialisation, registering its callback interface
+ * vtables with Rust. Generated bindings for a crate that uses one of our types call
+ * this from their own `UniffiLib` initialiser, so that Rust can never reach an
+ * unregistered vtable (upstream #2343). Public because the caller is in another module.
+ *
+ * @suppress
+ */
+public fun uniffiEnsureInitialized() {
+    UniffiLib.INSTANCE
 }

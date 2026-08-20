@@ -24,7 +24,7 @@ internal interface UniffiLib : Library {
                 uniffiCheckContractApiVersion(lib)
                 uniffiCheckApiChecksums(lib)
                 {% for init_fn in self.initialization_fns() -%}
-                {{ init_fn }}(lib)
+                {{ init_fn }}
                 {% endfor -%}
             }
         }

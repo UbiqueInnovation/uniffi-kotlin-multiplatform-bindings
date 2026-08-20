@@ -4,7 +4,7 @@ internal interface UniffiLib {
         internal val INSTANCE: UniffiLib by lazy {
             UniffiLibInstance().also { lib ->
              {% for init_fn in self.initialization_fns() -%}
-                {{ init_fn }}(lib)
+                {{ init_fn }}
              {% endfor -%}
              }
         }

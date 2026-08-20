@@ -192,6 +192,19 @@ impl Config {
             .clone()
     }
 
+    /// The Kotlin package another crate's types live in.
+    ///
+    /// Config overrides are keyed by the crate name, and since uniffi 0.31 `module_path`
+    /// is a full path rather than just the crate name. The fallback is unreachable in
+    /// library mode - all deps are in our config with the correct namespace.
+    pub fn external_package_name(&self, module_path: &str, namespace: &str) -> String {
+        let crate_name = module_path.split("::").next().unwrap_or(module_path);
+        match self.external_packages.get(crate_name) {
+            Some(name) => name.clone(),
+            None => format!("uniffi.{namespace}"),
+        }
+    }
+
     /// Whether to generate immutable records (`val` instead of `var`)
     pub fn generate_immutable_records(&self) -> bool {
         self.generate_immutable_records.unwrap_or(false)
@@ -420,14 +433,7 @@ macro_rules! kotlin_type_renderer {
 
             // Get the package name for an external type
             fn external_type_package_name(&self, module_path: &str, namespace: &str) -> String {
-                // config overrides are keyed by the crate name, default fallback is the namespace.
-                // Since uniffi 0.31 `module_path` is a full path, not just the crate name.
-                let crate_name = module_path.split("::").next().unwrap();
-                match self.config.external_packages.get(crate_name) {
-                    Some(name) => name.clone(),
-                    // unreachable in library mode - all deps are in our config with correct namespace.
-                    None => format!("uniffi.{namespace}"),
-                }
+                self.config.external_package_name(module_path, namespace)
             }
 
             // uniffi 0.29 removed `Type::External`, so external types are now ordinary
@@ -578,13 +584,40 @@ macro_rules! kotlin_wrapper {
                 }
             }
 
+            /// Statements to run inside `UniffiLib.INSTANCE`'s initialiser, where the
+            /// loaded library is bound as `lib`.
             pub fn initialization_fns(&self) -> Vec<String> {
                 // uniffi 0.31 replaced `iter_types` with an explicit local/external split.
-                self.ci
+                let local_init_fns = self
+                    .ci
                     .iter_local_types()
                     .map(|t| KotlinCodeOracle.find(t))
                     .filter_map(|ct| ct.initialization_fn())
-                    .collect()
+                    .map(|fn_name| format!("{fn_name}(lib)"));
+
+                // Also initialise every external crate we use, so that its callback
+                // interface vtables get registered before Rust can call into one of
+                // them (upstream #2343). Each namespace has its own lazy `UniffiLib`,
+                // so without this an external crate's vtables stay unregistered until
+                // that namespace is first touched from Kotlin - and a Rust-side call
+                // through an unset vtable aborts the process rather than throwing.
+                let external_init_fns = self
+                    .ci
+                    .iter_external_types()
+                    .filter_map(|ty| ty.module_path())
+                    .map(|module_path| {
+                        let namespace = self
+                            .ci
+                            .namespace_for_module_path(module_path)
+                            .unwrap_or(module_path);
+                        let package_name =
+                            self.config.external_package_name(module_path, namespace);
+                        format!("{package_name}.uniffiEnsureInitialized()")
+                    })
+                    // Collect into a btree set to de-dup and order
+                    .collect::<BTreeSet<_>>();
+
+                local_init_fns.chain(external_init_fns).collect()
             }
 
             pub fn imports(&self) -> Vec<ImportRequirement> {
