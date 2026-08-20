@@ -822,7 +822,11 @@ impl KotlinCodeOracle {
         }
     }
 
-    fn ffi_type_label_for_ffi_function(&self, ffi_type: &FfiType, ci: &ComponentInterface) -> String {
+    fn ffi_type_label_for_ffi_function(
+        &self,
+        ffi_type: &FfiType,
+        ci: &ComponentInterface,
+    ) -> String {
         match ffi_type {
             FfiType::RustBuffer(_) => format!("{}ByValue", self.ffi_type_label(ffi_type, ci)),
             FfiType::Struct(name) => format!("{}UniffiByValue", self.ffi_struct_name(name)),
@@ -849,7 +853,11 @@ impl KotlinCodeOracle {
     ///
     /// The main requirement here is that all types must have default values or else the struct
     /// won't work in some JNA contexts.
-    fn ffi_type_label_for_ffi_struct_inner(&self, ffi_type: &FfiType, ci: &ComponentInterface) -> String {
+    fn ffi_type_label_for_ffi_struct_inner(
+        &self,
+        ffi_type: &FfiType,
+        ci: &ComponentInterface,
+    ) -> String {
         match ffi_type {
             // Make callbacks function pointers nullable. This matches the semantics of a C
             // function pointer better and allows for `null` as a default value.
@@ -910,7 +918,11 @@ impl KotlinCodeOracle {
         }
     }
 
-    fn ffi_type_label_by_reference_header(&self, ffi_type: &FfiType, ci: &ComponentInterface) -> String {
+    fn ffi_type_label_by_reference_header(
+        &self,
+        ffi_type: &FfiType,
+        ci: &ComponentInterface,
+    ) -> String {
         match ffi_type {
             FfiType::Int8
             | FfiType::UInt8
@@ -1440,19 +1452,13 @@ mod filters {
 
     /// Get the idiomatic Kotlin rendering of a function name.
     #[askama::filter_fn]
-    pub fn fn_name<S: AsRef<str>>(
-        nm: S,
-        _: &dyn askama::Values,
-    ) -> Result<String, askama::Error> {
+    pub fn fn_name<S: AsRef<str>>(nm: S, _: &dyn askama::Values) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.fn_name(nm.as_ref()))
     }
 
     /// Get the idiomatic Kotlin rendering of a variable name.
     #[askama::filter_fn]
-    pub fn var_name<S: AsRef<str>>(
-        nm: S,
-        _: &dyn askama::Values,
-    ) -> Result<String, askama::Error> {
+    pub fn var_name<S: AsRef<str>>(nm: S, _: &dyn askama::Values) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.var_name(nm.as_ref()))
     }
 
@@ -1598,10 +1604,7 @@ mod filters {
     /// render the name unquoted.  One example is the message property for errors where we want to
     /// display the name for the user.
     #[askama::filter_fn]
-    pub fn unquote<S: AsRef<str>>(
-        nm: S,
-        _: &dyn askama::Values,
-    ) -> Result<String, askama::Error> {
+    pub fn unquote<S: AsRef<str>>(nm: S, _: &dyn askama::Values) -> Result<String, askama::Error> {
         Ok(nm.as_ref().trim_matches('`').to_string())
     }
 
