@@ -31,6 +31,7 @@ members = [
     "tests/uniffi/multi-module/mod-a",
     "tests/uniffi/multi-module/mod-b",
     "tests/uniffi/multi-module/rust-common",
+    "tests/uniffi/mutable-records",
     "tests/uniffi/proc-macro",
     "tests/uniffi/serialization",
     "tests/uniffi/simple-fns",

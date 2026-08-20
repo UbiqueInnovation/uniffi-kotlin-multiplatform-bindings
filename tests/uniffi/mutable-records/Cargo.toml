@@ -1,0 +1,17 @@
+[package]
+name = "uniffi-kmm-fixture-mutable-records"
+version = "0.1.0"
+edition = "2021"
+rust-version.workspace = true
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_mutable_records"
+crate-type = ["cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[dependencies]
+uniffi = { workspace = true }
+
+[build-dependencies]
+uniffi-kmm-fixture-build-common = { path = "../../build-common" }

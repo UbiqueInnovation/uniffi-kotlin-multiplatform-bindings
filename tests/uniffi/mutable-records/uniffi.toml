@@ -1,0 +1,7 @@
+package_name = "mutable_records"
+# `generate_immutable_records` defaults to true, and is spelled out here because this
+# fixture is about what `mutable_records` carves out of it.
+generate_immutable_records = true
+# Keyed by the record's name as Rust or the UDL declares it, whichever path defined it.
+# A name matching no record is ignored rather than being an error.
+mutable_records = ["UdlThawed", "ProcThawed", "NoSuchRecord"]

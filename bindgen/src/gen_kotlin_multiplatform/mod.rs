@@ -134,6 +134,8 @@ pub struct Config {
     pub(super) package_name: Option<String>,
     pub(super) cdylib_name: Option<String>,
     generate_immutable_records: Option<bool>,
+    #[serde(default)]
+    mutable_records: HashSet<String>,
     generate_serializable_records: Option<bool>,
     skip_serializer_for: Option<Vec<String>>,
     import_pointer_from: Option<Vec<String>>,
@@ -210,9 +212,18 @@ impl Config {
         }
     }
 
-    /// Whether to generate immutable records (`val` instead of `var`)
-    pub fn generate_immutable_records(&self) -> bool {
+    /// Whether to generate immutable records (`val` instead of `var`).
+    fn generate_immutable_records(&self) -> bool {
         self.generate_immutable_records.unwrap_or(false)
+    }
+
+    /// Whether one specific record gets immutable fields.
+    ///
+    /// A record is immutable only if `generate_immutable_records` is on and the record is
+    /// not listed in `mutable_records`, which is keyed by the record's name as Rust or the
+    /// UDL declares it.
+    pub fn is_record_immutable(&self, name: &str) -> bool {
+        self.generate_immutable_records() && !self.mutable_records.contains(name)
     }
     /// Whether to use kotlinx Serializable annotation on the data class
     pub fn generate_serializable_records(&self) -> bool {
@@ -1703,6 +1714,89 @@ mod test {
         let message = err.to_string();
         assert!(message.contains("callback or trait interface"), "{message}");
         assert!(message.contains("data"), "{message}");
+    }
+
+    /// The fields of one record, as they were rendered between the `data class` parens.
+    fn rendered_record_fields<'a>(rendered: &'a str, name: &str) -> &'a str {
+        let header = format!("data class {name} (");
+        let start = rendered
+            .find(&header)
+            .unwrap_or_else(|| panic!("no `{header}` in:\n{rendered}"))
+            + header.len();
+        let rest = &rendered[start..];
+        &rest[..rest.find(')').expect("unterminated data class")]
+    }
+
+    const TWO_RECORDS: &str = r#"
+        namespace probe {};
+
+        dictionary Frozen {
+            i64 count;
+        };
+
+        dictionary Thawed {
+            i64 count;
+        };
+    "#;
+
+    /// `mutable_records` exempts the records it names from `generate_immutable_records`;
+    /// every other record in the same binding stays `val`. A name that matches no record is
+    /// ignored rather than being an error, the same as upstream.
+    #[test]
+    fn test_mutable_records_exempts_listed_records() {
+        let ci = ci_from_udl(TWO_RECORDS);
+        let config = Config {
+            generate_immutable_records: Some(true),
+            mutable_records: HashSet::from(["Thawed".to_string(), "NoSuchRecord".to_string()]),
+            ..probe_config()
+        };
+        let rendered = CommonKotlinWrapper::new("common", config, &ci)
+            .render()
+            .unwrap();
+        assert!(
+            rendered_record_fields(&rendered, "Frozen").contains("val `count`"),
+            "{rendered}"
+        );
+        assert!(
+            rendered_record_fields(&rendered, "Thawed").contains("var `count`"),
+            "{rendered}"
+        );
+    }
+
+    /// `mutable_records` only ever exempts - with `generate_immutable_records` turned off
+    /// every record is already mutable, and listing one changes nothing.
+    #[test]
+    fn test_mutable_records_without_immutable_records_is_a_no_op() {
+        let ci = ci_from_udl(TWO_RECORDS);
+        let config = Config {
+            generate_immutable_records: Some(false),
+            mutable_records: HashSet::from(["Thawed".to_string()]),
+            ..probe_config()
+        };
+        let rendered = CommonKotlinWrapper::new("common", config, &ci)
+            .render()
+            .unwrap();
+        for name in ["Frozen", "Thawed"] {
+            assert!(
+                rendered_record_fields(&rendered, name).contains("var `count`"),
+                "{rendered}"
+            );
+        }
+    }
+
+    /// Records are immutable unless a binding opts out - the opposite of upstream's default.
+    #[test]
+    fn test_records_are_mutable_by_default() {
+        let ci = ci_from_udl(TWO_RECORDS);
+        let rendered = CommonKotlinWrapper::new("common", probe_config(), &ci)
+            .render()
+            .unwrap();
+        for name in ["Frozen", "Thawed"] {
+            assert!(
+                rendered_record_fields(&rendered, name).contains("var `count`"),
+                "{rendered}"
+            );
+        }
     }
 
     /// The name a borrow is bound to has to be a bare identifier: `var_name` backticks Kotlin

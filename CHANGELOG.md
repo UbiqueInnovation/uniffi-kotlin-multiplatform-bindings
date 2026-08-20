@@ -38,6 +38,11 @@
 
 ### Changed
 
+- **Records are generated with `val` fields by default.** `generate_immutable_records` defaults to `true` now (upstream
+  defaults it to `false`), because a record is a snapshot of what crossed the FFI - assigning to a field of one only
+  ever changed the Kotlin copy, never anything on the Rust side. Existing code that mutates a record field no longer
+  compiles; replace the assignment with `copy(field = ...)`, or set `generate_immutable_records = false` in
+  `uniffi.toml` to keep `var` everywhere, or name the individual records in `mutable_records`.
 - Update uniffi-rs to `v0.32.0` (from `v0.28.3`). This is a breaking change for consumers - the crates you build with
   have to move to `uniffi = "0.32.0"` together with the plugin, and the FFI is not compatible across the two versions.
   What this means for your Rust sources:
@@ -100,7 +105,7 @@
 ### Known limitations
 
 - A trait declared `#[uniffi::export(with_foreign)]` (or `[Trait, WithForeign]`) cannot be implemented in Kotlin and
-  passed to a function of a *different* Gradle module. Each module builds its own shared library and links its Rust
+  passed to a function of a _different_ Gradle module. Each module builds its own shared library and links its Rust
   dependencies into it statically, so the shared crate's vtable slot exists once per library. The Kotlin package for
   that crate is generated once and registers the vtable with one library only, leaving the other library's slot unset -
   and a Rust-side call through it aborts the process. Implementing the trait and using it within the module that

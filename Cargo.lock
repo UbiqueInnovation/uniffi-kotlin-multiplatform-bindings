@@ -1294,6 +1294,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "uniffi-kmm-fixture-mutable-records"
+version = "0.1.0"
+dependencies = [
+ "uniffi",
+ "uniffi-kmm-fixture-build-common",
+]
+
+[[package]]
 name = "uniffi-kmm-fixture-proc-macro"
 version = "0.1.0"
 dependencies = [
