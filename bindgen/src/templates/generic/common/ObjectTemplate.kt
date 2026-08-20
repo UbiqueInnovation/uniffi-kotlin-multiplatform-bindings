@@ -4,14 +4,16 @@
 {%- let interface_docstring = obj.docstring() %}
 {%- let is_error = ci.is_name_used_as_error(name) %}
 {%- let ffi_converter_name = obj|ffi_converter_name %}
+{%- let uniffi_trait_methods = obj.uniffi_trait_methods() %}
+{%- let comparable = uniffi_trait_methods.ord_cmp.is_some() %}
 
 {%- include "Interface.kt" %}
 
 {%- call kt::docstring(obj, 0) %}{% endcall %}
 {% if (is_error) %}
-expect open class {{ impl_class_name }} : kotlin.Exception, Disposable, {{ interface_name }} {
+expect open class {{ impl_class_name }} : kotlin.Exception, Disposable, {{ interface_name }}{% if comparable %}, Comparable<{{ impl_class_name }}>{% endif %} {
 {% else -%}
-expect open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
+expect open class {{ impl_class_name }}: Disposable, {{ interface_name }}{% if comparable %}, Comparable<{{ impl_class_name }}>{% endif %} {
 {%- endif %}
     constructor(uniffiWithHandle: UniffiWithHandle, handle: Long)
 
@@ -33,6 +35,13 @@ expect open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
     {%- when None %}
     {%- endmatch %}
 
+    /**
+     * Whether this object has been destroyed and its reference on the Rust side is gone.
+     *
+     * Once this is `true` every method call on the object throws, and `destroy()` is a no-op.
+     */
+    val uniffiIsDestroyed: Boolean
+
     override fun destroy()
     override fun close()
 
@@ -43,18 +52,20 @@ expect open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
     {%- call kt::func_decl("override", meth, 4) %}{% endcall %}
     {% endfor %}
 
-    {%- for tm in obj.uniffi_traits() %}
-    {%-     match tm %}
-    {%         when UniffiTrait::Display { fmt } %}
+    {#- We have 2 display traits, kotlin has 1. Prefer `Display` but use `Debug` otherwise. #}
+    {%- if uniffi_trait_methods.display_fmt.is_some() || uniffi_trait_methods.debug_fmt.is_some() %}
     override fun toString(): String
-    {%         when UniffiTrait::Eq { eq, ne } %}
-    {# only equals used #}
+    {%- endif %}
+    {%- if uniffi_trait_methods.eq_eq.is_some() %}
+    {#- only equals used #}
     override fun equals(other: Any?): Boolean
-    {%         when UniffiTrait::Hash { hash } %}
+    {%- endif %}
+    {%- if uniffi_trait_methods.hash_hash.is_some() %}
     override fun hashCode(): Int
-    {%-         else %}
-    {%-     endmatch %}
-    {%- endfor %}
+    {%- endif %}
+    {%- if uniffi_trait_methods.ord_cmp.is_some() %}
+    override fun compareTo(other: {{ impl_class_name }}): Int
+    {%- endif %}
 
     {# XXX - "companion object" confusion? How to have alternate constructors *and* be an error? #}
     {% if !obj.alternate_constructors().is_empty() -%}

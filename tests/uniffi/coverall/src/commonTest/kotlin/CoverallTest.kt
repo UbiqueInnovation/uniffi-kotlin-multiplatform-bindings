@@ -309,6 +309,29 @@ class CoverallTest {
     }
 
     @Test
+    fun uniffiIsDestroyed() = withCoverallLock {
+        val coveralls = Coveralls("test_uniffi_is_destroyed")
+        coveralls.uniffiIsDestroyed shouldBe false
+        coveralls.getName() shouldBe "test_uniffi_is_destroyed"
+
+        coveralls.destroy()
+        coveralls.uniffiIsDestroyed shouldBe true
+        // Past that point the handle is gone, so any call fails rather than reaching Rust.
+        shouldThrow<IllegalStateException> { coveralls.getName() }
+        // `destroy()` is idempotent, and a second call must not flip the flag back.
+        coveralls.destroy()
+        coveralls.uniffiIsDestroyed shouldBe true
+
+        // `use` destroys on the way out, so the flag is false inside the block and true after.
+        val used = Coveralls("test_uniffi_is_destroyed_use")
+        used.use { it.uniffiIsDestroyed shouldBe false }
+        used.uniffiIsDestroyed shouldBe true
+
+        runGCWithDelay()
+        getNumAlive() shouldBe 0UL
+    }
+
+    @Test
     fun gc() = withCoverallLock {
         // The GC test; we should have 1000 alive by the end of the loop.
         //

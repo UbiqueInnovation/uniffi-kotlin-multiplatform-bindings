@@ -7,6 +7,25 @@
 - `HashSet` support (`Type::Set`, new in uniffi `0.32`). A `HashSet<T>` argument, return value or field is generated as
   a Kotlin `Set<T>`, and `#[uniffi(default)]` on such a field gives `setOf()`. Only reachable through the proc-macros -
   UDL has no syntax for a set.
+- Methods on records and enums (new in uniffi `0.31`). An `#[uniffi::export] impl` block on a `uniffi::Record` or
+  `uniffi::Enum` now reaches Kotlin as ordinary member functions on the generated `data class`, `enum class` or
+  `sealed class`. Unlike an object, whose class is `expect`/`actual`, a record or enum is declared once in `commonMain`,
+  where the FFI is not in scope - each method therefore delegates to an `internal expect fun uniffiSelfCall_...` shim
+  whose `actual` sits next to the type's `FfiConverter` in each platform source set. The receiver crosses the FFI as a
+  serialized value rather than as a handle.
+- uniffi trait exports on records and enums: `Display`/`Debug`, `Eq`, `Hash` and `Ord` become `toString`, `equals`,
+  `hashCode` and `compareTo` there too, the same way they already did on objects. Each variant of a `sealed class`
+  repeats them, because a `data class` would otherwise shadow the base's overrides with its own generated ones. A
+  fieldless enum is the exception: `kotlin.Enum` declares `equals`, `hashCode` and `compareTo` `final`, so only
+  `Display`/`Debug` is rendered for a Kotlin `enum class` - the other three keep Kotlin's own behaviour, which agrees
+  with Rust's derives unless the variants carry explicit out-of-order discriminants.
+- `Ord` on objects (`[Traits=(Ord)]` in UDL, `#[uniffi::export(Ord)]` on an `impl`). The generated class implements
+  `Comparable<T>` and gets a `compareTo` backed by the Rust `Ord` impl; only `Display`, `Eq` and `Hash` were emitted
+  before. `Debug` is also honoured as a fallback for `toString` now when a type exports it without `Display`.
+- `uniffiIsDestroyed` on generated objects (new in uniffi `0.32`), a read-only `Boolean` reporting whether `destroy()`
+  has run and the object's handle on the Rust side is gone. The flag was already tracked internally to make `destroy()`
+  idempotent; this just exposes it, so callers can ask instead of discovering it from the `IllegalStateException` the
+  next method call throws.
 
 ### Changed
 

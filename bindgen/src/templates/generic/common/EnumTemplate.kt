@@ -6,6 +6,8 @@
 // and `sealed class` for the general case.
 #}
 
+{%- let comparable = e.uniffi_trait_methods().ord_cmp.is_some() %}
+
 {%- if e.is_flat() %}
 
 {%- call kt::docstring(e, 0) %}{% endcall %}
@@ -19,6 +21,13 @@ enum class {{ type_name }} {
     {%- call kt::docstring(variant, 4) %}{% endcall %}
     {{ variant|variant_name }}{% if loop.last %};{% else %},{% endif %}
     {%- endfor %}
+
+    {% for meth in e.methods() -%}
+    {%- call kt::self_method_decl(meth, 4) %}{% endcall %}
+    {% endfor %}
+    {%- let uniffi_trait_methods = e.uniffi_trait_methods() %}
+    {%- call kt::self_uniffi_trait_impls(uniffi_trait_methods, type_name, true) %}{% endcall %}
+
     companion object
 }
 {% when Some with (variant_discr_type) %}
@@ -30,6 +39,13 @@ enum class {{ type_name }}(val value: {{ variant_discr_type|type_name(ci) }}) {
     {%- call kt::docstring(variant, 4) %}{% endcall %}
     {{ variant|variant_name }}({{ e|variant_discr_literal(loop.index0) }}){% if loop.last %};{% else %},{% endif %}
     {%- endfor %}
+
+    {% for meth in e.methods() -%}
+    {%- call kt::self_method_decl(meth, 4) %}{% endcall %}
+    {% endfor %}
+    {%- let uniffi_trait_methods = e.uniffi_trait_methods() %}
+    {%- call kt::self_uniffi_trait_impls(uniffi_trait_methods, type_name, true) %}{% endcall %}
+
     companion object
 }
 {% endmatch %}
@@ -122,7 +138,10 @@ object {{ type_name }}PolySerializer : kotlinx.serialization.json.JsonContentPol
 {%- call kt::docstring(e, 0) %}{% endcall %}
 @kotlinx.serialization.Serializable({{ type_name }}PolySerializer::class)
 {% endif %}
-sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% endif %} {
+sealed class {{ type_name }}
+{%- if contains_object_references %}: Disposable{% if comparable %}, Comparable<{{ type_name }}>{% endif %}
+{%- else if comparable %}: Comparable<{{ type_name }}>
+{%- endif %} {
     {% for variant in e.variants() -%}
     {%- call kt::docstring(variant, 4) %}{% endcall %}
     {% if !variant.has_fields() -%}
@@ -148,6 +167,10 @@ sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% e
         val {% call kt::field_name(field, loop.index) %}{% endcall %}: {{ field|type_name(ci) }} {% if field|is_optional %} = null {% endif %} {% if loop.last %}{% else %}, {% endif %}
         {%- endfor -%}
     ) : {{ type_name }}() {
+        {#- A `data class` generates `equals`/`hashCode`/`toString` of its own, which would
+            shadow the ones on the sealed base, so the trait impls are repeated per variant. #}
+        {%- let uniffi_trait_methods = e.uniffi_trait_methods() %}
+        {%- call kt::self_uniffi_trait_impls(uniffi_trait_methods, type_name, false) %}{% endcall %}
         {% if contains_object_references %}
         @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
         override fun destroy() {
@@ -161,6 +184,18 @@ sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% e
     }
     {%- endif %}
     {% endfor %}
+
+    {#- Methods also have to live on the base: a variant with no fields is an `object`,
+        which has no body of its own to hang them on. #}
+    {% for meth in e.methods() -%}
+    {%- call kt::self_method_decl(meth, 4) %}{% endcall %}
+    {% endfor %}
+    {%- let uniffi_trait_methods = e.uniffi_trait_methods() %}
+    {%- call kt::self_uniffi_trait_impls(uniffi_trait_methods, type_name, false) %}{% endcall %}
 }
 
 {% endif %}
+
+{#- The bodies of everything declared above; see `self_shim_expect` in `macros.kt`. -#}
+{%- let uniffi_trait_methods = e.uniffi_trait_methods() %}
+{%- call kt::self_shims_expect(e.methods(), uniffi_trait_methods, type_name, e.is_flat()) %}{% endcall %}

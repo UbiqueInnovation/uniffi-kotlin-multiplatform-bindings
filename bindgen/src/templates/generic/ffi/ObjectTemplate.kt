@@ -5,12 +5,14 @@
 {%- let interface_docstring = obj.docstring() %}
 {%- let is_error = ci.is_name_used_as_error(name) %}
 {%- let ffi_converter_name = obj|ffi_converter_name %}
+{%- let uniffi_trait_methods = obj.uniffi_trait_methods() %}
+{%- let comparable = uniffi_trait_methods.ord_cmp.is_some() %}
 
 {%- call kt::docstring(obj, 0) %}{% endcall %}
 {% if (is_error) %}
-actual open class {{ impl_class_name }} : kotlin.Exception, Disposable, {{ interface_name }} {
+actual open class {{ impl_class_name }} : kotlin.Exception, Disposable, {{ interface_name }}{% if comparable %}, Comparable<{{ impl_class_name }}>{% endif %} {
 {% else -%}
-actual open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
+actual open class {{ impl_class_name }}: Disposable, {{ interface_name }}{% if comparable %}, Comparable<{{ impl_class_name }}>{% endif %} {
 {%- endif %}
 
     actual constructor(uniffiWithHandle: UniffiWithHandle, handle: Long) {
@@ -45,6 +47,8 @@ actual open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
     protected val cleanable: UniffiCleaner.Cleanable
 
     private val wasDestroyed: kotlinx.atomicfu.AtomicBoolean = kotlinx.atomicfu.atomic(false)
+
+    actual val uniffiIsDestroyed: Boolean get() = wasDestroyed.value
     private val callCounter: kotlinx.atomicfu.AtomicLong = kotlinx.atomicfu.atomic(1L)
 
     private val lock = kotlinx.atomicfu.locks.ReentrantLock()
@@ -118,26 +122,30 @@ actual open class {{ impl_class_name }}: Disposable, {{ interface_name }} {
     {%- call kt::func_decl_with_body("actual override", meth, 4) %}{% endcall %}
     {% endfor %}
 
-    {%- for tm in obj.uniffi_traits() %}
-    {%-     match tm %}
-    {%         when UniffiTrait::Display { fmt } %}
+    {#- We have 2 display traits, kotlin has 1. Prefer `Display` but use `Debug` otherwise. #}
+    {%- if let Some(fmt) = uniffi_trait_methods.display_fmt.clone().or(uniffi_trait_methods.debug_fmt.clone()) %}
     actual override fun toString(): String {
         return {{ fmt.return_type().unwrap()|lift_fn }}({% call kt::to_ffi_call(fmt) %}{% endcall %})
     }
-    {%         when UniffiTrait::Eq { eq, ne } %}
-    {# only equals used #}
+    {%- endif %}
+    {%- if let Some(eq) = uniffi_trait_methods.eq_eq.clone() %}
+    {#- only equals used #}
     actual override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is {{ impl_class_name}}) return false
         return {{ eq.return_type().unwrap()|lift_fn }}({% call kt::to_ffi_call(eq) %}{% endcall %})
     }
-    {%         when UniffiTrait::Hash { hash } %}
+    {%- endif %}
+    {%- if let Some(hash) = uniffi_trait_methods.hash_hash.clone() %}
     actual override fun hashCode(): Int {
         return {{ hash.return_type().unwrap()|lift_fn }}({%- call kt::to_ffi_call(hash) %}{% endcall %}).toInt()
     }
-    {%-         else %}
-    {%-     endmatch %}
-    {%- endfor %}
+    {%- endif %}
+    {%- if let Some(cmp) = uniffi_trait_methods.ord_cmp.clone() %}
+    actual override fun compareTo(other: {{ impl_class_name }}): Int {
+        return {{ cmp.return_type().unwrap()|lift_fn }}({%- call kt::to_ffi_call(cmp) %}{% endcall %}).toInt()
+    }
+    {%- endif %}
 
     {# XXX - "companion object" confusion? How to have alternate constructors *and* be an error? #}
     {% if !obj.alternate_constructors().is_empty() -%}

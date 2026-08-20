@@ -72,3 +72,8 @@ object {{ e|ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}>{
 }
 
 {% endif %}
+
+{#- The `actual` side of the shims `generic/common/EnumTemplate.kt` declared for this
+    enum's methods and uniffi trait exports; see `self_shim_expect` in `macros.kt`. -#}
+{%- let uniffi_trait_methods = e.uniffi_trait_methods() %}
+{%- call kt::self_shims_actual(e.methods(), uniffi_trait_methods, type_name, e.is_flat()) %}{% endcall %}
