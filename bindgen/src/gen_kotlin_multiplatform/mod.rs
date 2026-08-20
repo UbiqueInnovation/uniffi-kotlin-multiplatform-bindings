@@ -1088,47 +1088,102 @@ mod filters {
         ))
     }
 
-    /// uniffi 0.32 passes `&[u8]` / `[ByRef] bytes` arguments as a borrowed `ForeignBytes`
-    /// (pointer + length) instead of copying them through a `RustBuffer`. Handling one
-    /// safely means keeping the buffer alive for the whole call - pinned on Kotlin/Native,
-    /// copied into native memory on JNA going out; wrapped without taking ownership coming
-    /// in - which a single lower/lift expression cannot express. Until the four source sets
-    /// grow a wrapper for that, reject the argument rather than emitting bindings that fail
-    /// to compile with an opaque Kotlin type error.
+    /// True for an argument that crosses the FFI as a borrowed `ForeignBytes` rather than
+    /// an owned `RustBuffer`: `&[u8]` in Rust, `[ByRef] bytes` in UDL (uniffi 0.32).
     ///
-    /// This has to be checked in both directions: `lower_fn_for_arg` covers outbound calls
-    /// (`macros.kt`'s `arg_list_lowered`), `lift_fn_for_arg` the vtable methods of a
-    /// callback or trait interface, where the argument travels Rust -> Kotlin instead.
-    fn reject_borrowed_bytes(arg: &Argument) -> Result<(), askama::Error> {
-        if arg.is_borrowed_bytes() {
-            return Err(to_askama_error(&format!(
-                "borrowed bytes arguments (`&[u8]` in Rust, `[ByRef] bytes` in UDL) are not \
-                 supported by the Kotlin Multiplatform backend yet, found one as argument \
-                 `{}`. Take `Vec<u8>` (`bytes`) instead.",
-                arg.name()
-            )));
-        }
-        Ok(())
+    /// Such an argument cannot be lowered by an expression, because the buffer it points
+    /// at has to stay alive and unmoved for the whole call. `macros.kt` therefore wraps
+    /// the call in `withForeignBytes { ... }` - see `borrowed_bytes_var_name`.
+    #[askama::filter_fn]
+    pub(super) fn is_borrowed_bytes(
+        arg: &Argument,
+        _: &dyn askama::Values,
+    ) -> Result<bool, askama::Error> {
+        Ok(arg.is_borrowed_bytes())
+    }
+
+    /// The name `macros.kt` binds a borrowed-bytes argument's `ForeignBytes` to for the
+    /// duration of the call.
+    ///
+    /// The prefix is what keeps this from needing `var_name`'s backticks: no Kotlin
+    /// keyword survives it. Two arguments can only collide here if they already collide
+    /// as parameters.
+    #[askama::filter_fn]
+    pub(super) fn borrowed_bytes_var_name(
+        arg: &Argument,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
+        Ok(format!(
+            "uniffiByRefBytes_{}",
+            KotlinCodeOracle.var_name_raw(arg.name())
+        ))
     }
 
     /// Per-argument lowering, used for the arguments of an FFI call.
+    ///
+    /// Never called for a borrowed-bytes argument: `arg_list_lowered` passes the name
+    /// bound by `withForeignBytes` instead of lowering anything.
     #[askama::filter_fn]
     pub(super) fn lower_fn_for_arg(
         arg: &Argument,
         _: &dyn askama::Values,
     ) -> Result<String, askama::Error> {
-        reject_borrowed_bytes(arg)?;
         Ok(format!("{}.lower", arg.as_codetype().ffi_converter_name()))
     }
 
     /// Per-argument lifting, used for the arguments of a callback interface vtable method.
+    ///
+    /// Borrowed bytes are rejected in this direction. `ForeignBytes` implements `Lift` but
+    /// not `Lower` in `uniffi_core`, and the vtable shim lowers every argument it passes
+    /// out, so a `&[u8]` on a callback or trait-interface method cannot compile on the Rust
+    /// side in the first place - upstream has the same hole. Failing here turns what would
+    /// be a Kotlin type error into a message naming the argument.
     #[askama::filter_fn]
     pub(super) fn lift_fn_for_arg(
         arg: &Argument,
         _: &dyn askama::Values,
     ) -> Result<String, askama::Error> {
-        reject_borrowed_bytes(arg)?;
+        if arg.is_borrowed_bytes() {
+            return Err(to_askama_error(&format!(
+                "borrowed bytes (`&[u8]` in Rust, `[ByRef] bytes` in UDL) cannot be passed \
+                 from Rust to a foreign implementation, found one as argument `{}` of a \
+                 callback or trait interface method. Take `Vec<u8>` (`bytes`) instead.",
+                arg.name()
+            )));
+        }
         Ok(format!("{}.lift", arg.as_codetype().ffi_converter_name()))
+    }
+
+    /// Reject a borrowed-bytes argument on an async callable, rendering nothing otherwise.
+    ///
+    /// `withForeignBytes` only keeps the caller's bytes alive until the call returns, and an
+    /// async call returns a future handle immediately - the Rust future would outlive the
+    /// borrow. Today this is unreachable: `rust_future_new` moves the lifted arguments into
+    /// an `async move` block and needs them `Send`, which `ForeignBytes` (a raw pointer) is
+    /// not, so such a function does not compile in Rust. This is the guard for the day that
+    /// changes, because the failure it would otherwise produce is a use-after-free rather
+    /// than a compile error.
+    #[askama::filter_fn]
+    pub(super) fn reject_async_borrowed_bytes(
+        callable: impl Callable,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
+        if callable.is_async() {
+            if let Some(arg) = callable
+                .arguments()
+                .into_iter()
+                .find(|arg| arg.is_borrowed_bytes())
+            {
+                return Err(to_askama_error(&format!(
+                    "borrowed bytes (`&[u8]` in Rust, `[ByRef] bytes` in UDL) cannot be \
+                     passed to an async function, found one as argument `{}`. The borrow \
+                     would end when the call returns its future handle, before Rust is done \
+                     reading it. Take `Vec<u8>` (`bytes`) instead.",
+                    arg.name()
+                )));
+            }
+        }
+        Ok(String::new())
     }
 
     #[askama::filter_fn]
@@ -1550,5 +1605,81 @@ mod test {
         assert!(KotlinVersion::new(1, 2, 3) > KotlinVersion::new(0, 1, 2));
         assert!(KotlinVersion::new(1, 2, 3) > KotlinVersion::new(0, 100, 0));
         assert!(KotlinVersion::new(10, 0, 0) > KotlinVersion::new(1, 10, 0));
+    }
+
+    fn ci_from_udl(udl: &str) -> ComponentInterface {
+        ComponentInterface::from_webidl(udl, "probe").unwrap()
+    }
+
+    /// The two names `update_component_configs` would normally have filled in.
+    fn probe_config() -> Config {
+        Config {
+            package_name: Some("probe".to_string()),
+            cdylib_name: Some("uniffi_probe".to_string()),
+            ..Config::default()
+        }
+    }
+
+    /// A borrowed byte slice is only borrowed until the call returns, and an async call
+    /// returns a future handle immediately. Rust rejects such a function first - the lifted
+    /// `ForeignBytes` is not `Send` - so this is the guard for the day that changes.
+    #[test]
+    fn test_async_borrowed_bytes_is_rejected() {
+        let ci = ci_from_udl(
+            r#"
+            namespace probe {
+                [Async]
+                u64 sum_bytes([ByRef] bytes data);
+            };
+        "#,
+        );
+        let err = AndroidJvmKotlinWrapper::new("jvm", probe_config(), &ci)
+            .render()
+            .expect_err("an async borrowed-bytes argument should not generate");
+        let message = err.to_string();
+        assert!(message.contains("async"), "{message}");
+        assert!(message.contains("data"), "{message}");
+    }
+
+    /// Borrowed bytes cannot travel Rust -> Kotlin: `ForeignBytes` implements `Lift` but not
+    /// `Lower`, so the vtable shim that would pass one out does not compile in Rust.
+    #[test]
+    fn test_callback_interface_borrowed_bytes_is_rejected() {
+        let ci = ci_from_udl(
+            r#"
+            namespace probe {};
+
+            callback interface Watcher {
+                u64 observe([ByRef] bytes data);
+            };
+        "#,
+        );
+        let config = probe_config();
+        let err = AndroidJvmTypeRenderer::new("jvm", &config, &ci)
+            .render()
+            .expect_err("a borrowed-bytes vtable argument should not generate");
+        let message = err.to_string();
+        assert!(message.contains("callback or trait interface"), "{message}");
+        assert!(message.contains("data"), "{message}");
+    }
+
+    /// The name a borrow is bound to has to be a bare identifier: `var_name` backticks Kotlin
+    /// keywords, and `uniffiByRefBytes_` + `` `object` `` would not parse.
+    #[test]
+    fn test_borrowed_bytes_var_name_is_not_backticked() {
+        let ci = ci_from_udl(
+            r#"
+            namespace probe {
+                u64 sum_bytes([ByRef] bytes object);
+            };
+        "#,
+        );
+        let rendered = AndroidJvmKotlinWrapper::new("jvm", probe_config(), &ci)
+            .render()
+            .unwrap();
+        assert!(
+            rendered.contains("withForeignBytes(`object`) { uniffiByRefBytes_object ->"),
+            "{rendered}"
+        );
     }
 }

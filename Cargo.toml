@@ -7,6 +7,7 @@ members = [
     "tests/build-common",
 
     "tests/runtime",
+    "tests/uniffi/borrowed-bytes",
     "tests/uniffi/callbacks",
     "tests/uniffi/chronological",
     "tests/uniffi/coverall",

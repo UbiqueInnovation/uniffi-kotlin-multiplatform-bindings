@@ -1,0 +1,32 @@
+namespace borrowed_bytes {
+    /// Reads every byte Rust is lent, proving pointer and length arrive intact.
+    u64 sum_bytes([ByRef] bytes data);
+
+    /// Copies the borrowed bytes into an owned `Vec<u8>` and hands them straight back.
+    bytes echo_bytes([ByRef] bytes data);
+
+    /// Two borrowed slices in one call: the generated Kotlin nests one
+    /// `withForeignBytes` scope inside the other.
+    bytes concat_bytes([ByRef] bytes first, [ByRef] bytes second);
+
+    /// A borrowed slice between two ordinary owned arguments.
+    bytes wrap_bytes(u8 prefix, [ByRef] bytes data, string suffix);
+
+    /// Exercises the `uniffiRustCallWithError` branch inside the borrow scope.
+    [Throws=ByteError]
+    u64 sum_non_empty_bytes([ByRef] bytes data);
+};
+
+[Error]
+enum ByteError {
+    "Empty",
+};
+
+interface ByteSink {
+    /// A borrowed slice as a constructor argument.
+    constructor([ByRef] bytes seed);
+
+    u64 absorb([ByRef] bytes data);
+
+    bytes contents();
+};

@@ -74,11 +74,9 @@ fun RustBufferByReference.getValue(): RustBufferByValue {
 
 
 
-// This is a helper for safely passing byte references into the rust code.
-// It's not actually used at the moment, because there aren't many things that you
-// can take a direct pointer to in the JVM, and if we're going to copy something
-// then we might as well copy it into a `RustBuffer`. But it's here for API
-// completeness.
+// A borrowed view of foreign-owned bytes: the `ForeignBytes` a `&[u8]` argument
+// (`[ByRef] bytes` in UDL) crosses the FFI as. Rust only ever reads through it,
+// and only for the duration of the call - see `withForeignBytes`.
 
 @Structure.FieldOrder("len", "data")
 open class ForeignBytesStruct : Structure() {
@@ -91,6 +89,35 @@ open class ForeignBytesStruct : Structure() {
 typealias ForeignBytes = ForeignBytesStruct
 
 typealias ForeignBytesByValue = ForeignBytesStruct.ByValue
+
+/**
+ * Lend [value] to Rust as a `ForeignBytes` for the duration of [block].
+ *
+ * The bytes are copied into native memory that is freed as soon as [block] returns, so
+ * the pointer Rust sees is only valid while the call is on the stack. That is exactly
+ * the contract `ForeignBytes` documents on the Rust side, and it is why lowering a
+ * borrowed byte slice has to be a scope rather than an expression.
+ *
+ * The copy is unavoidable here: a JVM `ByteArray` lives on the managed heap and has no
+ * stable native address to hand out. Kotlin/Native pins the caller's array instead and
+ * copies nothing.
+ *
+ * An empty array is passed as `(null, 0)`, which Rust lifts as an empty slice.
+ */
+inline fun <R> withForeignBytes(value: ByteArray, block: (ForeignBytesByValue) -> R): R {
+    val foreignBytes = ForeignBytesByValue()
+    if (value.isEmpty()) {
+        foreignBytes.len = 0
+        foreignBytes.data = null
+        return block(foreignBytes)
+    }
+    return com.sun.jna.Memory(value.size.toLong()).use { memory ->
+        memory.write(0L, value, 0, value.size)
+        foreignBytes.len = value.size
+        foreignBytes.data = memory
+        block(foreignBytes)
+    }
+}
 
 
 fun RustBuffer.setValue(array: RustBufferByValue) {

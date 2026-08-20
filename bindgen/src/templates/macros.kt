@@ -32,6 +32,7 @@
 {%- endmacro %}
 
 {%- macro to_raw_ffi_call(func) -%}
+    {%- call byref_bytes_open(func) %}{% endcall %}
     {%- match func.throws_type() %}
     {%- when Some with (e) %}
     uniffiRustCallWithError({{ e|type_name(ci) }}ErrorHandler)
@@ -49,6 +50,36 @@
         {% call arg_list_lowered(func) %}{% endcall -%}
         _status)!!
 }
+    {%- call byref_bytes_close(func) %}{% endcall %}
+{%- endmacro -%}
+
+{#-
+// Borrowed bytes (`&[u8]`, `[ByRef] bytes`) cross the FFI as a `ForeignBytes` - a pointer
+// into the caller's buffer plus a length - rather than being copied into a `RustBuffer`.
+// Rust reads through that pointer and must not outlive the call, so the buffer has to be
+// held still for its whole duration: pinned on Kotlin/Native, copied into native memory
+// on JNA. That is a scope, not an expression, which is why lowering such an argument
+// cannot be done by `lower_fn_for_arg` like every other one.
+//
+// So the call gets wrapped: one `withForeignBytes` per borrowed argument, nesting if
+// there is more than one, with `arg_list_lowered` passing the bound name straight through
+// instead of lowering anything.
+-#}
+
+{%- macro byref_bytes_open(func) %}
+{%- for arg in func.arguments() %}
+{%- if arg|is_borrowed_bytes %}
+    withForeignBytes({{ arg.name()|var_name }}) { {{ arg|borrowed_bytes_var_name }} ->
+{%- endif %}
+{%- endfor %}
+{%- endmacro -%}
+
+{%- macro byref_bytes_close(func) %}
+{%- for arg in func.arguments() %}
+{%- if arg|is_borrowed_bytes %}
+    }
+{%- endif %}
+{%- endfor %}
 {%- endmacro -%}
 
 {%- macro func_decl(func_decl, callable, indent) %}
@@ -129,6 +160,7 @@
 {% endmacro %}
 
 {%- macro call_async(callable) -%}
+    {{- callable|reject_async_borrowed_bytes -}}
     uniffiRustCallAsync(
 {%- match callable.self_type() %}
 {%- when Some(Type::Object { .. }) %}
@@ -169,7 +201,11 @@
 
 {%- macro arg_list_lowered(func) %}
     {%- for arg in func.arguments() %}
+    {%- if arg|is_borrowed_bytes %}
+        {{ arg|borrowed_bytes_var_name }},
+    {%- else %}
         {{- arg|lower_fn_for_arg }}({{ arg.name()|var_name }}),
+    {%- endif %}
     {%- endfor %}
 {%- endmacro -%}
 

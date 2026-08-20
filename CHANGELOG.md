@@ -4,6 +4,15 @@
 
 ### Added
 
+- Borrowed bytes support (`&[u8]` in Rust, `[ByRef] bytes` in UDL, new in uniffi `0.32`). Such an argument crosses the
+  FFI as a `ForeignBytes` - a pointer into the caller's buffer plus a length - instead of being copied into a
+  `RustBuffer`. The Kotlin signature is an ordinary `ByteArray`, the same as for `Vec<u8>`, so which one your Rust
+  takes is invisible to consumers. Kotlin/Native pins the caller's array and copies nothing; JVM and Android copy it
+  into native memory for the duration of the call, since a `ByteArray` on the managed heap has no address to lend.
+  Either way the borrow ends when the call returns, which is what `ForeignBytes` requires. Not supported in two
+  positions, both of which the bindgen refuses with a message rather than generating: on an `async` function, where the
+  borrow would end while the Rust future was still reading it, and on a callback or trait interface method, where the
+  value travels Rust to Kotlin - `ForeignBytes` has no `Lower` impl, so that does not compile in Rust either.
 - `HashSet` support (`Type::Set`, new in uniffi `0.32`). A `HashSet<T>` argument, return value or field is generated as
   a Kotlin `Set<T>`, and `#[uniffi(default)]` on such a field gives `setOf()`. Only reachable through the proc-macros -
   UDL has no syntax for a set.

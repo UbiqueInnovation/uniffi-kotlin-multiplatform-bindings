@@ -5,11 +5,13 @@ package uniffi.runtime
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.cValue
 import kotlinx.cinterop.pointed
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.useContents
+import kotlinx.cinterop.usePinned
 
 typealias RustBuffer = CPointer<cinterop.RustBuffer>
 
@@ -93,6 +95,27 @@ val ForeignBytesByValue.len: Int
     get() = useContents { len }
 val ForeignBytesByValue.data: Pointer?
     get() = useContents { data }?.let { Pointer(it) }
+
+/**
+ * Lend [value] to Rust as a `ForeignBytes` for the duration of [block].
+ *
+ * The array is pinned rather than copied, so Rust reads the caller's bytes in place.
+ * The pin is released as soon as [block] returns, which makes the pointer valid only
+ * while the call is on the stack - exactly the contract `ForeignBytes` documents on
+ * the Rust side, and why lowering a borrowed byte slice has to be a scope rather than
+ * an expression.
+ *
+ * An empty array is passed as `(null, 0)`, which Rust lifts as an empty slice. It also
+ * cannot be pinned: there is no element 0 to take the address of.
+ */
+inline fun <R> withForeignBytes(value: ByteArray, block: (ForeignBytesByValue) -> R): R {
+    if (value.isEmpty()) {
+        return block(cValue { len = 0; data = null })
+    }
+    return value.usePinned { pinned ->
+        block(cValue { len = value.size; data = pinned.addressOf(0).reinterpret() })
+    }
+}
 
 fun RustBuffer.setValue(array: RustBufferByValue) {
     this.data = array.data

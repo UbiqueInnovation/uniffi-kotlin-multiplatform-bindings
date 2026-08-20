@@ -28,6 +28,7 @@ rootProject.name = "uniffi-kotlin-multiplatform-bindings"
 include(":runtime")
 
 include(":tests:runtime")
+include(":tests:uniffi:borrowed-bytes")
 include(":tests:uniffi:callbacks")
 include(":tests:uniffi:chronological")
 include(":tests:uniffi:coverall")
