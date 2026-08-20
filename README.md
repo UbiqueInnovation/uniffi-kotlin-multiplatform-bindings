@@ -205,6 +205,38 @@ uniffi {
 
 For more information on how to use this feature, check out the [External Types](#external-types) section in the README.
 
+### Record mutability
+
+Records are generated as `data class`es with mutable `var` fields. You can have them generated with `val` fields instead:
+
+```toml
+generate_immutable_records = true
+```
+
+Individual records can be exempted from that, and keep their `var` fields:
+
+```toml
+generate_immutable_records = true
+mutable_records = ["Cursor", "Draft"]
+```
+
+### API checksum checks
+
+Every exported function has a checksum, computed from its signature. The generated bindings carry the checksums they
+were generated from and compare them against the ones the loaded library reports, once, when the library is first
+touched. A mismatch means the bindings and the rust library were built from different versions of the same API, and it
+throws rather than letting a call cross the FFI with arguments the other side reads differently.
+
+The check costs one FFI call per exported function at startup. If your bindings and your rust library are always built
+together from the same source, which is what the gradle plugin does, you can leave it out in `uniffi.toml`:
+
+```toml
+omit_checksums = true
+```
+
+The contract version check, which catches a library built against a different uniffi version altogether, is separate
+and always runs.
+
 ### Using `spmForKmp` alongside this plugin
 
 Using [spmForKmp](https://github.com/frankois944/spm4Kmp) is supported and lets you call Swift code from Kotlin. The two plugins work together, but currently it needs a workaround due to [an issue](https://github.com/frankois944/spm4Kmp/issues/326) in how the spmForKmp plugin configures its cinterop tasks. See the [swift interop example](examples/swift-interop) for a working configuration.

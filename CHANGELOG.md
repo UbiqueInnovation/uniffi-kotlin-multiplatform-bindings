@@ -4,6 +4,18 @@
 
 ### Added
 
+- `mutable_records` in `uniffi.toml` (new in uniffi `0.32`), a list of records that keep `var` fields while every other
+  record in the binding gets `val`. It only ever carves out an exemption from `generate_immutable_records`, which is
+  off by default as before - with it off every record already has `var` fields and listing one changes nothing. Records
+  are named the way rust or your UDL spells them rather than by their Kotlin type name, and a name matching no record
+  is ignored rather than being an error.
+- `omit_checksums` in `uniffi.toml` (new in uniffi `0.32`), which leaves the per-function API checksum check out of the
+  generated bindings. The check runs once when the library is loaded and compares a checksum baked into the bindings
+  against one the library reports for every exported function, so that bindings and scaffolding built from different
+  versions of the same API fail loudly instead of corrupting arguments. Turning it off trades that safety net for one
+  fewer FFI call per exported function at startup, and is only safe where the two are always built together from the
+  same source. The contract version check is unaffected and always runs. Defaults to `false`, so bindings are checked
+  unless you opt out.
 - Borrowed bytes support (`&[u8]` in Rust, `[ByRef] bytes` in UDL, new in uniffi `0.32`). Such an argument crosses the
   FFI as a `ForeignBytes` - a pointer into the caller's buffer plus a length - instead of being copied into a
   `RustBuffer`. The Kotlin signature is an ordinary `ByteArray`, the same as for `Vec<u8>`, so which one your Rust
@@ -38,11 +50,6 @@
 
 ### Changed
 
-- **Records are generated with `val` fields by default.** `generate_immutable_records` defaults to `true` now (upstream
-  defaults it to `false`), because a record is a snapshot of what crossed the FFI - assigning to a field of one only
-  ever changed the Kotlin copy, never anything on the Rust side. Existing code that mutates a record field no longer
-  compiles; replace the assignment with `copy(field = ...)`, or set `generate_immutable_records = false` in
-  `uniffi.toml` to keep `var` everywhere, or name the individual records in `mutable_records`.
 - Update uniffi-rs to `v0.32.0` (from `v0.28.3`). This is a breaking change for consumers - the crates you build with
   have to move to `uniffi = "0.32.0"` together with the plugin, and the FFI is not compatible across the two versions.
   What this means for your Rust sources:

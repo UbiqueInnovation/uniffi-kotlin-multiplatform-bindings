@@ -1,6 +1,6 @@
 package_name = "mutable_records"
-# `generate_immutable_records` defaults to true, and is spelled out here because this
-# fixture is about what `mutable_records` carves out of it.
+# `generate_immutable_records` defaults to false, so it has to be turned on here - without it
+# every record is already mutable and there would be nothing for `mutable_records` to carve out.
 generate_immutable_records = true
 # Keyed by the record's name as Rust or the UDL declares it, whichever path defined it.
 # A name matching no record is ignored rather than being an error.
