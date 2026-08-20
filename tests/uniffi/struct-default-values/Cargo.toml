@@ -2,6 +2,7 @@
 name = "uniffi-kmm-fixture-struct-default-values"
 version = "0.1.0"
 edition = "2021"
+rust-version.workspace = true
 publish = false
 
 [lib]

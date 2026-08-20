@@ -77,13 +77,13 @@ To see the complete example, check out the [quickstart example](examples/quickst
 
 ## Requirements
 
-| Requirement | Version    |
-| ----------- | ---------- |
-| Rust        | `>=1.97.1` |
-| UniFFI      | `=0.32.0`  |
-| Gradle      | `>=9.6.1`  |
-| Kotlin      | `>=2.4.0`  |
-| AGP         | `9.x`      |
+| Requirement | Version   |
+| ----------- | --------- |
+| Rust        | `>=1.91`  |
+| UniFFI      | `=0.32.0` |
+| Gradle      | `>=9.6.1` |
+| Kotlin      | `>=2.4.0` |
+| AGP         | `9.x`     |
 
 `AGP` is only required if you build for Android, see [Android](#android). The project is built and tested against AGP `9.3.1`.
 
@@ -107,7 +107,7 @@ kotlin {
 }
 ```
 
-> **Migrating from `1.0.x`:** the old setup used `com.android.library` together with `androidTarget { }` and a top level `android { }` block. Both are replaced by the above. Note that the Android configuration now lives *inside* `kotlin { }`, and that `minSdk` / `compileSdk` are set directly on it instead of in a `defaultConfig { }` block.
+> **Migrating from `1.0.x`:** the old setup used `com.android.library` together with `androidTarget { }` and a top level `android { }` block. Both are replaced by the above. Note that the Android configuration now lives _inside_ `kotlin { }`, and that `minSdk` / `compileSdk` are set directly on it instead of in a `defaultConfig { }` block.
 
 If the NDK version picked up by default does not work for you, pin it explicitly, see [NDK version](#ndk-version).
 
@@ -176,7 +176,7 @@ uniffi {
 Per default, these dependencies are added to `commonMain`:
 
 | Dependency                                    | Version |
-|-----------------------------------------------|---------|
+| --------------------------------------------- | ------- |
 | com.squareup.okio:okio                        | 3.18.1  |
 | org.jetbrains.kotlinx:atomicfu                | 0.33.0  |
 | org.jetbrains.kotlinx:kotlinx-coroutines-core | 1.11.0  |

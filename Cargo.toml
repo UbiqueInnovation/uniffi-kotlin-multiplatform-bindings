@@ -46,6 +46,9 @@ members = [
 ]
 resolver = "2"
 
+[workspace.package]
+rust-version = "1.91"
+
 [workspace.dependencies]
 anyhow = "1.0.86"
 camino = "1.1.1"
