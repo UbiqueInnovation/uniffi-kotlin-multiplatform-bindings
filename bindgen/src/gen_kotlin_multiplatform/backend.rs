@@ -15,7 +15,7 @@
 
 use askama::Result;
 use uniffi_bindgen::interface::{
-    AsType, CallbackInterface, ComponentInterface, Enum, FfiType, Function, Object, Record,
+    AsType, CallbackInterface, ComponentInterface, FfiType, Object, Record,
 };
 use uniffi_bindgen::to_askama_error;
 
@@ -23,17 +23,6 @@ macro_rules! lookup_error {
     ($($args:tt)*) => {
         to_askama_error(&format!($($args)*))
     }
-}
-
-/// Get an Enum definition by name
-#[askama::filter_fn]
-pub fn get_enum_definition<'a>(
-    ci: &'a ComponentInterface,
-    _: &dyn askama::Values,
-    name: &str,
-) -> Result<&'a Enum> {
-    ci.get_enum_definition(name)
-        .ok_or_else(|| lookup_error!("enum {name} not found"))
 }
 
 /// Get a Record definition by name
@@ -45,17 +34,6 @@ pub fn get_record_definition<'a>(
 ) -> Result<&'a Record> {
     ci.get_record_definition(name)
         .ok_or_else(|| lookup_error!("record {name} not found"))
-}
-
-/// Get a Function definition by name
-#[askama::filter_fn]
-pub fn get_function_definition<'a>(
-    ci: &'a ComponentInterface,
-    _: &dyn askama::Values,
-    name: &str,
-) -> Result<&'a Function> {
-    ci.get_function_definition(name)
-        .ok_or_else(|| lookup_error!("function {name} not found"))
 }
 
 /// Get an Object definition by name

@@ -62,3 +62,9 @@ uniffi_bindgen = "0.32.0"
 uniffi_macros = "0.32.0"
 uniffi_meta = "0.32.0"
 url = "2.2"
+
+[profile.dev.package.uniffi_bindgen]
+debug = 0
+
+[profile.dev.package.askama_derive]
+opt-level = 3

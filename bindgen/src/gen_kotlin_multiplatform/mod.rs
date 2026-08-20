@@ -1379,24 +1379,6 @@ mod filters {
         Ok(matches!(type_, FfiType::ForeignBytes))
     }
 
-    /// Append a `_` if the name is a valid c/c++ keyword
-    #[askama::filter_fn]
-    pub fn header_escape_name<S: AsRef<str>>(
-        nm: S,
-        _: &dyn askama::Values,
-    ) -> Result<String, askama::Error> {
-        Ok(header_escape_name_str(nm.as_ref()))
-    }
-
-    /// Append a `_` if the name is a valid c/c++ keyword
-    #[askama::filter_fn]
-    pub fn header_noescape_name<S: AsRef<str>>(
-        nm: S,
-        _: &dyn askama::Values,
-    ) -> Result<String, askama::Error> {
-        Ok(nm.as_ref().to_owned())
-    }
-
     #[askama::filter_fn]
     pub fn header_ffi_type_name(
         type_: &FfiType,
