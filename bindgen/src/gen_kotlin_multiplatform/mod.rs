@@ -80,7 +80,12 @@ trait CodeType: Debug {
     /// type whose Kotlin rendering has no such constructor (primitives, sequences,
     /// maps, options, enums, custom types) overrides this.
     #[cfg_attr(feature = "runtime", allow(dead_code))]
-    fn default(&self, default: &DefaultValue, ci: &ComponentInterface) -> Result<String> {
+    fn default(
+        &self,
+        default: &DefaultValue,
+        ci: &ComponentInterface,
+        _config: &Config,
+    ) -> Result<String> {
         match default {
             DefaultValue::Default => Ok(format!("{}()", self.type_label(ci))),
             DefaultValue::Literal(_) => {
@@ -1267,10 +1272,11 @@ mod filters {
         _: &dyn askama::Values,
         as_ct: &T,
         ci: &ComponentInterface,
+        config: &Config,
     ) -> Result<String, askama::Error> {
         as_ct
             .as_codetype()
-            .default(default, ci)
+            .default(default, ci, config)
             .map_err(|e| to_askama_error(&e))
     }
 

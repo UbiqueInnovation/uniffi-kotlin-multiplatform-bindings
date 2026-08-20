@@ -33,7 +33,12 @@ impl CodeType for EnumCodeType {
     // A bare `#[uniffi(default)]` has no meaning for an enum - there is no variant to
     // pick - so only the explicit `Literal::Enum` form is accepted. The base `{}()`
     // rendering would emit a constructor call for a type that has no constructor.
-    fn default(&self, default: &DefaultValue, ci: &ComponentInterface) -> Result<String> {
+    fn default(
+        &self,
+        default: &DefaultValue,
+        ci: &ComponentInterface,
+        _config: &super::Config,
+    ) -> Result<String> {
         if let DefaultValue::Literal(Literal::Enum(v, _)) = default {
             Ok(format!(
                 "{}.{}",

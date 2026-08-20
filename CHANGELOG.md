@@ -66,6 +66,15 @@
 
 ### Fixed
 
+- `#[uniffi(default = ...)]` on a field of an enum variant is honoured. Only record fields were rendered with their
+  default; every field of a `sealed class` variant was emitted without one, so the defaults were dropped and callers
+  had to pass all of them explicitly. Optional fields still got a `= null` from a separate code path, which is what
+  made the gap easy to miss.
+- A default value on a custom type is converted with that type's `lift` expression. It was rendered as its builtin
+  instead - `= "42"` where the Kotlin type is the class named by `type_name` - which does not compile. It now renders
+  as `= MyCustomType("42".toLong())` for a `[custom_types.MyType]` config with `lift = "MyCustomType({}.toLong())"`,
+  including when the custom type sits inside an `Option<T>`. Custom types without such a config are typealiases to
+  their builtin and were already correct.
 - A crate that uses types from another uniffi crate now initialises that crate too, so its callback interface vtables
   are registered before Rust can reach one ([uniffi #2343](https://github.com/mozilla/uniffi-rs/issues/2343)). Every
   namespace registers its vtables from its own lazily loaded `UniffiLib`, so passing a Kotlin implementation of a trait

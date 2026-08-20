@@ -1112,6 +1112,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "uniffi-kmm-fixture-defaults"
+version = "0.1.0"
+dependencies = [
+ "once_cell",
+ "thiserror 1.0.69",
+ "uniffi",
+ "uniffi-kmm-fixture-build-common",
+]
+
+[[package]]
 name = "uniffi-kmm-fixture-docstring"
 version = "0.1.0"
 dependencies = [

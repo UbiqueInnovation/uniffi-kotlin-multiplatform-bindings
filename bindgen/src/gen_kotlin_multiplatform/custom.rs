@@ -4,7 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use uniffi_bindgen::interface::DefaultValue;
 use uniffi_bindgen::ComponentInterface;
 
@@ -31,12 +31,21 @@ impl CodeType for CustomCodeType {
         format!("Type{}", self.name)
     }
 
-    // A custom type is its builtin at the Kotlin level, so a default is whatever the
-    // builtin renders. Without this the base impl would reach `literal`, which a custom
-    // type does not implement.
-    fn default(&self, default: &DefaultValue, ci: &ComponentInterface) -> Result<String> {
-        self.builtin
-            .default(default, ci)
-            .map_err(|_e| anyhow!("Unsupported default value for {}", self.type_label(ci)))
+    // Without a config a custom type is a typealias to its builtin, so whatever the
+    // builtin renders is already the right Kotlin expression. A config makes it a
+    // distinct type instead, and the builtin's rendering has to go through the
+    // configured `lift` to be assignable. Either way the override is needed: the base
+    // impl renders `{}()`, and a custom type has no such constructor.
+    fn default(
+        &self,
+        default: &DefaultValue,
+        ci: &ComponentInterface,
+        config: &super::Config,
+    ) -> Result<String> {
+        let default = self.builtin.default(default, ci, config)?;
+        match config.custom_types.get(&self.name) {
+            Some(custom) => Ok(custom.lift(&default)),
+            None => Ok(default),
+        }
     }
 }

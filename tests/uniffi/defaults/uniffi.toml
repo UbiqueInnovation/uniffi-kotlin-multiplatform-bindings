@@ -1,0 +1,7 @@
+package_name = "defaults"
+
+[custom_types.CustomType]
+type_name = "MyCustomType"
+imports = ["defaults.custom.MyCustomType"]
+lift = "MyCustomType({}.toLong())"
+lower = "{}.value.toString()"

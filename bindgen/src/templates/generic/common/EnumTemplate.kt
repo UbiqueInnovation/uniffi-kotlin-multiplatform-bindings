@@ -164,7 +164,12 @@ sealed class {{ type_name }}
         @kotlinx.serialization.SerialName("{{ field.name() }}")
         {%- endif %}
         {% endif %}
-        val {% call kt::field_name(field, loop.index) %}{% endcall %}: {{ field|type_name(ci) }} {% if field|is_optional %} = null {% endif %} {% if loop.last %}{% else %}, {% endif %}
+        val {% call kt::field_name(field, loop.index) %}{% endcall %}: {{ field|type_name(ci) }}
+        {%- match field.default_value() %}
+        {%- when Some with(literal) %} = {{ literal|render_default(field, ci, config) }}
+        {%- else %}
+        {% if field|is_optional %} = null {% endif %}
+        {%- endmatch %}{% if loop.last %}{% else %}, {% endif %}
         {%- endfor -%}
     ) : {{ type_name }}() {
         {#- A `data class` generates `equals`/`hashCode`/`toString` of its own, which would

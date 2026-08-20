@@ -11,6 +11,7 @@ members = [
     "tests/uniffi/callbacks",
     "tests/uniffi/chronological",
     "tests/uniffi/coverall",
+    "tests/uniffi/defaults",
     "tests/uniffi/docstring",
     "tests/uniffi/docstring-proc-macro",
     "tests/uniffi/enum-types",

@@ -46,12 +46,17 @@ impl CodeType for OptionalCodeType {
     // Overridden rather than left to `literal` because uniffi 0.30 changed
     // `Literal::Some`'s payload from `Box<Literal>` to `Box<DefaultValue>`, so the
     // inner value has to be resolved through `default` rather than `literal`.
-    fn default(&self, default: &DefaultValue, ci: &ComponentInterface) -> Result<String> {
+    fn default(
+        &self,
+        default: &DefaultValue,
+        ci: &ComponentInterface,
+        config: &super::Config,
+    ) -> Result<String> {
         match default {
             DefaultValue::Default | DefaultValue::Literal(Literal::None) => Ok("null".into()),
-            DefaultValue::Literal(Literal::Some { inner }) => {
-                super::KotlinCodeOracle.find(&self.inner).default(inner, ci)
-            }
+            DefaultValue::Literal(Literal::Some { inner }) => super::KotlinCodeOracle
+                .find(&self.inner)
+                .default(inner, ci, config),
             _ => bail!("Invalid default for Optional type: {default:?}"),
         }
     }
@@ -86,7 +91,12 @@ impl CodeType for SequenceCodeType {
         )
     }
 
-    fn default(&self, default: &DefaultValue, _ci: &ComponentInterface) -> Result<String> {
+    fn default(
+        &self,
+        default: &DefaultValue,
+        _ci: &ComponentInterface,
+        _config: &super::Config,
+    ) -> Result<String> {
         match default {
             DefaultValue::Default | DefaultValue::Literal(Literal::EmptySequence) => {
                 Ok("listOf()".into())
@@ -133,7 +143,12 @@ impl CodeType for MapCodeType {
         )
     }
 
-    fn default(&self, default: &DefaultValue, _ci: &ComponentInterface) -> Result<String> {
+    fn default(
+        &self,
+        default: &DefaultValue,
+        _ci: &ComponentInterface,
+        _config: &super::Config,
+    ) -> Result<String> {
         match default {
             DefaultValue::Default | DefaultValue::Literal(Literal::EmptyMap) => {
                 Ok("mapOf()".into())
@@ -176,7 +191,12 @@ impl CodeType for SetCodeType {
     // encodes `#[uniffi(default = [])]` as `LIT_EMPTY_SEQ` whatever the field's type, so a
     // set's empty-literal default arrives as `EmptySequence`. Both are accepted so the
     // reading doesn't depend on that encoding detail.
-    fn default(&self, default: &DefaultValue, _ci: &ComponentInterface) -> Result<String> {
+    fn default(
+        &self,
+        default: &DefaultValue,
+        _ci: &ComponentInterface,
+        _config: &super::Config,
+    ) -> Result<String> {
         match default {
             DefaultValue::Default
             | DefaultValue::Literal(Literal::EmptySequence)
