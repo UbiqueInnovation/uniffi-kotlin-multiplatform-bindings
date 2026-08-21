@@ -2,10 +2,12 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.2.0...HEAD)
 
+## [1.2.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.1) - 2026-08-21
+
 ### Fixed
 
 - Correctly import exceptions from external crates
-- Add `--lib` argument to cargo to resolve conflics when a rust library has bin targets
+- Add `--lib` argument to rustc invocations to disambiguate conflics when a rust package has bin targets
 
 ## [1.2.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.0) - 2026-08-21
 
