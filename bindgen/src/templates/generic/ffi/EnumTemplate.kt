@@ -49,7 +49,7 @@ object {{ e|ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}>{
             (
                 4UL
                 {%- for field in variant.fields() %}
-                + {{ field|allocation_size_fn }}(value.{%- call kt::field_name(field, loop.index) -%})
+                + {{ field|allocation_size_fn }}(value.{%- call kt::field_name(field, loop.index) %}{% endcall -%})
                 {%- endfor %}
             )
         }
@@ -62,7 +62,7 @@ object {{ e|ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}>{
             is {{ type_name }}.{{ variant|variant_type_name(ci) }} -> {
                 buf.putInt({{ loop.index }})
                 {%- for field in variant.fields() %}
-                {{ field|write_fn }}(value.{%- call kt::field_name(field, loop.index) -%}, buf)
+                {{ field|write_fn }}(value.{%- call kt::field_name(field, loop.index) %}{% endcall -%}, buf)
                 {%- endfor %}
                 Unit
             }
@@ -72,3 +72,8 @@ object {{ e|ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}>{
 }
 
 {% endif %}
+
+{#- The `actual` side of the shims `generic/common/EnumTemplate.kt` declared for this
+    enum's methods and uniffi trait exports; see `self_shim_expect` in `macros.kt`. -#}
+{%- let uniffi_trait_methods = e.uniffi_trait_methods() %}
+{%- call kt::self_shims_actual(e.methods(), uniffi_trait_methods, type_name, e.is_flat()) %}{% endcall %}

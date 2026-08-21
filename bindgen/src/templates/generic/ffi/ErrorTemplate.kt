@@ -41,7 +41,7 @@ object {{ e|ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}> {
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
                 {%- for field in variant.fields() %}
-                + {{ field|allocation_size_fn }}(value.{% call kt::field_name(field, loop.index) %})
+                + {{ field|allocation_size_fn }}(value.{% call kt::field_name(field, loop.index) %}{% endcall %})
                 {%- endfor %}
             )
             {%- endfor %}
@@ -55,7 +55,7 @@ object {{ e|ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}> {
             is {{ type_name }}.{{ variant|error_variant_name }} -> {
                 buf.putInt({{ loop.index }})
                 {%- for field in variant.fields() %}
-                {{ field|write_fn }}(value.{% call kt::field_name(field, loop.index) %}, buf)
+                {{ field|write_fn }}(value.{% call kt::field_name(field, loop.index) %}{% endcall %}, buf)
                 {%- endfor %}
                 Unit
             }
@@ -64,3 +64,8 @@ object {{ e|ffi_converter_name }} : FfiConverterRustBuffer<{{ type_name }}> {
     }
 
 }
+
+{#- The `actual` side of the shims `generic/common/ErrorTemplate.kt` declared for this
+    error enum's methods and uniffi trait exports; see `self_shim_expect` in `macros.kt`. -#}
+{%- let uniffi_trait_methods = e.uniffi_trait_methods() %}
+{%- call kt::self_shims_actual(e.methods(), uniffi_trait_methods, type_name, false) %}{% endcall %}

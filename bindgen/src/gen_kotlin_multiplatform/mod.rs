@@ -9,20 +9,17 @@ use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Debug;
 
-use crate::gen_kotlin_multiplatform::filters::header_noescape_name;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use askama::Template;
-use filters::header_escape_name;
 use heck::{ToLowerCamelCase, ToShoutySnakeCase, ToUpperCamelCase};
 use serde::{Deserialize, Serialize};
-use uniffi_bindgen::backend::TemplateExpression;
 use uniffi_bindgen::interface::*;
 
+mod backend;
 mod callback_interface;
 mod compounds;
 mod custom;
 mod enum_;
-mod external;
 mod miscellany;
 mod object;
 mod primitives;
@@ -46,6 +43,18 @@ const CPP_KEYWORDS: &[&str] = &[
     "xor", "xor_eq"
 ];
 
+/// Append a `_` if the name is a c/c++ keyword.
+///
+/// Plain helper so `KotlinCodeOracle` can call this directly; the askama filter of
+/// the same name wraps it (filters are no longer ordinary callable fns in askama 0.14+).
+fn header_escape_name_str(nm: &str) -> String {
+    if CPP_KEYWORDS.contains(&nm) {
+        format!("{nm}_")
+    } else {
+        nm.to_owned()
+    }
+}
+
 trait CodeType: Debug {
     /// The language specific label used to reference this type. This will be used in
     /// method signatures and property declarations.
@@ -61,9 +70,28 @@ trait CodeType: Debug {
     #[cfg_attr(feature = "runtime", allow(dead_code))]
     fn canonical_name(&self) -> String;
 
+    /// Render a default value.
+    ///
+    /// This base impl only covers named types - records and objects - where "own
+    /// default" is a no-argument constructor call and a literal is meaningless. Every
+    /// type whose Kotlin rendering has no such constructor (primitives, sequences,
+    /// maps, options, enums, custom types) overrides this.
     #[cfg_attr(feature = "runtime", allow(dead_code))]
-    fn literal(&self, _literal: &Literal, ci: &ComponentInterface) -> String {
-        unimplemented!("Unimplemented for {}", self.type_label(ci))
+    fn default(
+        &self,
+        default: &DefaultValue,
+        ci: &ComponentInterface,
+        _config: &Config,
+    ) -> Result<String> {
+        match default {
+            DefaultValue::Default => Ok(format!("{}()", self.type_label(ci))),
+            DefaultValue::Literal(_) => {
+                bail!(
+                    "Literals are not supported as a default for {}",
+                    self.type_label(ci)
+                )
+            }
+        }
     }
 
     #[cfg_attr(feature = "runtime", allow(dead_code))]
@@ -103,6 +131,10 @@ pub struct Config {
     pub(super) package_name: Option<String>,
     pub(super) cdylib_name: Option<String>,
     generate_immutable_records: Option<bool>,
+    #[serde(default)]
+    mutable_records: HashSet<String>,
+    #[serde(default)]
+    omit_checksums: bool,
     generate_serializable_records: Option<bool>,
     skip_serializer_for: Option<Vec<String>>,
     import_pointer_from: Option<Vec<String>>,
@@ -117,11 +149,34 @@ pub struct Config {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct CustomTypeConfig {
     imports: Option<Vec<String>>,
     type_name: Option<String>,
-    into_custom: TemplateExpression,
-    from_custom: TemplateExpression,
+    into_custom: String,
+    lift: String,
+    from_custom: String,
+    lower: String,
+}
+
+impl CustomTypeConfig {
+    fn lift(&self, name: &str) -> String {
+        let converter = if self.lift.is_empty() {
+            &self.into_custom
+        } else {
+            &self.lift
+        };
+        converter.replace("{}", name)
+    }
+
+    fn lower(&self, name: &str) -> String {
+        let converter = if self.lower.is_empty() {
+            &self.from_custom
+        } else {
+            &self.lower
+        };
+        converter.replace("{}", name)
+    }
 }
 
 impl Config {
@@ -140,9 +195,44 @@ impl Config {
             .clone()
     }
 
-    /// Whether to generate immutable records (`val` instead of `var`)
-    pub fn generate_immutable_records(&self) -> bool {
+    /// The Kotlin package another crate's types live in.
+    ///
+    /// Config overrides are keyed by the crate name, and since uniffi 0.31 `module_path`
+    /// is a full path rather than just the crate name. The fallback is unreachable in
+    /// library mode - all deps are in our config with the correct namespace.
+    pub fn external_package_name(&self, module_path: &str, namespace: &str) -> String {
+        let crate_name = module_path.split("::").next().unwrap_or(module_path);
+        match self.external_packages.get(crate_name) {
+            Some(name) => name.clone(),
+            None => format!("uniffi.{namespace}"),
+        }
+    }
+
+    /// Whether to generate immutable records (`val` instead of `var`).
+    fn generate_immutable_records(&self) -> bool {
         self.generate_immutable_records.unwrap_or(false)
+    }
+
+    /// Whether one specific record gets immutable fields.
+    ///
+    /// A record is immutable only if `generate_immutable_records` is on and the record is
+    /// not listed in `mutable_records`, which is keyed by the record's name as Rust or the
+    /// UDL declares it.
+    pub fn is_record_immutable(&self, name: &str) -> bool {
+        self.generate_immutable_records() && !self.mutable_records.contains(name)
+    }
+
+    /// Whether to leave the per-function API checksum check out of the generated
+    /// `UniffiLib` initialiser.
+    ///
+    /// The check compares a checksum baked into the bindings against one the library
+    /// reports, so that bindings and scaffolding built from different versions of the
+    /// same API fail loudly at load time instead of corrupting arguments. Omitting it
+    /// costs one FFI call per exported function at startup, and is only safe where the
+    /// two are built together from the same source. The contract version check is not
+    /// affected and always runs.
+    pub fn omit_checksums(&self) -> bool {
+        self.omit_checksums
     }
     /// Whether to use kotlinx Serializable annotation on the data class
     pub fn generate_serializable_records(&self) -> bool {
@@ -292,24 +382,26 @@ impl ImportRequirement {
     }
 }
 
+/// FFI definitions that are identical for every namespace, and so are emitted once into
+/// the shared `common.h` rather than into each namespace's own header.
 const FFI_BUILTINS: &'static [&'static str] = &[
     "RustFutureContinuationCallback",
-    "ForeignFutureFree",
+    "ForeignFutureDroppedCallback",
     "CallbackInterfaceFree",
-    "ForeignFuture",
-    "ForeignFutureStructU8",
-    "ForeignFutureStructI8",
-    "ForeignFutureStructU16",
-    "ForeignFutureStructI16",
-    "ForeignFutureStructU32",
-    "ForeignFutureStructI32",
-    "ForeignFutureStructU64",
-    "ForeignFutureStructI64",
-    "ForeignFutureStructF32",
-    "ForeignFutureStructF64",
-    "ForeignFutureStructPointer",
-    "ForeignFutureStructRustBuffer",
-    "ForeignFutureStructVoid",
+    "CallbackInterfaceClone",
+    "ForeignFutureDroppedCallbackStruct",
+    "ForeignFutureResultU8",
+    "ForeignFutureResultI8",
+    "ForeignFutureResultU16",
+    "ForeignFutureResultI16",
+    "ForeignFutureResultU32",
+    "ForeignFutureResultI32",
+    "ForeignFutureResultU64",
+    "ForeignFutureResultI64",
+    "ForeignFutureResultF32",
+    "ForeignFutureResultF64",
+    "ForeignFutureResultRustBuffer",
+    "ForeignFutureResultVoid",
     "ForeignFutureCompleteU8",
     "ForeignFutureCompleteI8",
     "ForeignFutureCompleteU16",
@@ -320,7 +412,6 @@ const FFI_BUILTINS: &'static [&'static str] = &[
     "ForeignFutureCompleteI64",
     "ForeignFutureCompleteF32",
     "ForeignFutureCompleteF64",
-    "ForeignFutureCompletePointer",
     "ForeignFutureCompleteRustBuffer",
     "ForeignFutureCompleteVoid",
 ];
@@ -358,13 +449,23 @@ macro_rules! kotlin_type_renderer {
 
             // Get the package name for an external type
             fn external_type_package_name(&self, module_path: &str, namespace: &str) -> String {
-                // config overrides are keyed by the crate name, default fallback is the namespace.
-                let crate_name = module_path.split("::").next().unwrap();
-                match self.config.external_packages.get(crate_name) {
-                    Some(name) => name.clone(),
-                    // unreachable in library mode - all deps are in our config with correct namespace.
-                    None => format!("uniffi.{namespace}"),
-                }
+                self.config.external_package_name(module_path, namespace)
+            }
+
+            /// The bare name of an external type.
+            fn external_type_name(&self, ty: &Type) -> String {
+                ty.name().unwrap_or_default().to_owned()
+            }
+
+            /// The Kotlin package an external type lives in.
+            fn external_type_package(&self, ty: &Type) -> String {
+                let module_path = ty.module_path().unwrap_or_default();
+                // The namespace is no longer carried on the type; look it up on the CI.
+                let namespace = self
+                    .ci
+                    .namespace_for_module_path(module_path)
+                    .unwrap_or(module_path);
+                self.external_type_package_name(module_path, namespace)
             }
 
             // The following methods are used by the `Types.kt` macros.
@@ -407,10 +508,12 @@ macro_rules! kotlin_type_renderer {
                 }
                 for f in rec.fields() {
                     for inner_ty in f.iter_types() {
+                        if self.ci.is_external(inner_ty) {
+                            return false;
+                        }
                         match inner_ty {
                             Type::Object { .. }
                             | Type::CallbackInterface { .. }
-                            | Type::External { .. }
                             | Type::Custom { .. } => return false,
                             _ => return true,
                         }
@@ -432,10 +535,12 @@ macro_rules! kotlin_type_renderer {
                 }
                 for f in rec.fields() {
                     for inner_ty in f.iter_types() {
+                        if self.ci.is_external(inner_ty) {
+                            return false;
+                        }
                         match inner_ty {
                             Type::Object { .. }
                             | Type::CallbackInterface { .. }
-                            | Type::External { .. }
                             | Type::Custom { .. } => return false,
                             _ => return true,
                         }
@@ -486,12 +591,39 @@ macro_rules! kotlin_wrapper {
                 }
             }
 
+            /// Statements to run inside `UniffiLib.INSTANCE`'s initialiser, where the
+            /// loaded library is bound as `lib`.
             pub fn initialization_fns(&self) -> Vec<String> {
-                self.ci
-                    .iter_types()
+                let local_init_fns = self
+                    .ci
+                    .iter_local_types()
                     .map(|t| KotlinCodeOracle.find(t))
                     .filter_map(|ct| ct.initialization_fn())
-                    .collect()
+                    .map(|fn_name| format!("{fn_name}(lib)"));
+
+                // Also initialise every external crate we use, so that its callback
+                // interface vtables get registered before Rust can call into one of
+                // them (upstream #2343). Each namespace has its own lazy `UniffiLib`,
+                // so without this an external crate's vtables stay unregistered until
+                // that namespace is first touched from Kotlin - and a Rust-side call
+                // through an unset vtable aborts the process rather than throwing.
+                let external_init_fns = self
+                    .ci
+                    .iter_external_types()
+                    .filter_map(|ty| ty.module_path())
+                    .map(|module_path| {
+                        let namespace = self
+                            .ci
+                            .namespace_for_module_path(module_path)
+                            .unwrap_or(module_path);
+                        let package_name =
+                            self.config.external_package_name(module_path, namespace);
+                        format!("{package_name}.uniffiEnsureInitialized()")
+                    })
+                    // Collect into a btree set to de-dup and order
+                    .collect::<BTreeSet<_>>();
+
+                local_init_fns.chain(external_init_fns).collect()
             }
 
             pub fn imports(&self) -> Vec<ImportRequirement> {
@@ -652,11 +784,11 @@ impl KotlinCodeOracle {
 
     /// `var_name` without the backticks.  Useful for using in `@Structure.FieldOrder`.
     pub fn var_name_raw(&self, nm: &str) -> String {
-        header_escape_name(&nm.to_lower_camel_case()).unwrap()
+        header_escape_name_str(&nm.to_lower_camel_case())
     }
 
     pub fn var_name_raw_noescape(&self, nm: &str) -> String {
-        header_noescape_name(&nm.to_lower_camel_case()).unwrap()
+        nm.to_lower_camel_case()
     }
 
     /// Get the idiomatic Kotlin rendering of an individual enum variant.
@@ -682,21 +814,25 @@ impl KotlinCodeOracle {
         format!("Uniffi{}", nm.to_upper_camel_case())
     }
 
-    fn ffi_type_label_by_value(&self, ffi_type: &FfiType) -> String {
+    fn ffi_type_label_by_value(&self, ffi_type: &FfiType, ci: &ComponentInterface) -> String {
         match ffi_type {
-            FfiType::RustBuffer(_) => format!("{}ByValue", self.ffi_type_label(ffi_type)),
+            FfiType::RustBuffer(_) => format!("{}ByValue", self.ffi_type_label(ffi_type, ci)),
             FfiType::Struct(name) => format!("{}UniffiByValue", self.ffi_struct_name(name)),
             FfiType::Callback(name) => self.ffi_callback_name(name).to_string(),
-            _ => self.ffi_type_label(ffi_type),
+            _ => self.ffi_type_label(ffi_type, ci),
         }
     }
 
-    fn ffi_type_label_for_ffi_function(&self, ffi_type: &FfiType) -> String {
+    fn ffi_type_label_for_ffi_function(
+        &self,
+        ffi_type: &FfiType,
+        ci: &ComponentInterface,
+    ) -> String {
         match ffi_type {
-            FfiType::RustBuffer(_) => format!("{}ByValue", self.ffi_type_label(ffi_type)),
+            FfiType::RustBuffer(_) => format!("{}ByValue", self.ffi_type_label(ffi_type, ci)),
             FfiType::Struct(name) => format!("{}UniffiByValue", self.ffi_struct_name(name)),
             // FfiType::Callback(name) => self.ffi_callback_name(name).to_string(),
-            _ => self.ffi_type_label(ffi_type),
+            _ => self.ffi_type_label(ffi_type, ci),
         }
     }
 
@@ -704,13 +840,13 @@ impl KotlinCodeOracle {
     ///
     /// The main requirement here is that all types must have default values or else the struct
     /// won't work in some JNA contexts.
-    fn ffi_type_label_for_ffi_struct(&self, ffi_type: &FfiType) -> String {
+    fn ffi_type_label_for_ffi_struct(&self, ffi_type: &FfiType, ci: &ComponentInterface) -> String {
         match ffi_type {
             // Make callbacks function pointers nullable. This matches the semantics of a C
             // function pointer better and allows for `null` as a default value.
             // NOTE: Type any used here, as native and jvm types differ.
             FfiType::Callback(_name) => "Any?".into(), // format!("{}?", self.ffi_callback_name(name)),
-            _ => self.ffi_type_label_by_value(ffi_type),
+            _ => self.ffi_type_label_by_value(ffi_type, ci),
         }
     }
 
@@ -718,13 +854,17 @@ impl KotlinCodeOracle {
     ///
     /// The main requirement here is that all types must have default values or else the struct
     /// won't work in some JNA contexts.
-    fn ffi_type_label_for_ffi_struct_inner(&self, ffi_type: &FfiType) -> String {
+    fn ffi_type_label_for_ffi_struct_inner(
+        &self,
+        ffi_type: &FfiType,
+        ci: &ComponentInterface,
+    ) -> String {
         match ffi_type {
             // Make callbacks function pointers nullable. This matches the semantics of a C
             // function pointer better and allows for `null` as a default value.
             // NOTE: Type any used here, as native and jvm types differ.
             FfiType::Callback(name) => format!("{}?", self.ffi_callback_name(name)),
-            _ => self.ffi_type_label_by_value(ffi_type),
+            _ => self.ffi_type_label_by_value(ffi_type, ci),
         }
     }
 
@@ -751,8 +891,7 @@ impl KotlinCodeOracle {
             FfiType::UInt64 | FfiType::Int64 => "0.toLong()".to_owned(),
             FfiType::Float32 => "0.0f".to_owned(),
             FfiType::Float64 => "0.0".to_owned(),
-            // NOTE: NullPointer is the same as Pointer.NULL
-            FfiType::RustArcPtr(_) => "NullPointer".to_owned(),
+            FfiType::Handle => "0.toLong()".to_owned(),
             FfiType::RustBuffer(_) => "RustBufferHelper.allocValue()".to_owned(),
             FfiType::Callback(_) => "null".to_owned(),
             FfiType::RustCallStatus => "UniffiRustCallStatusHelper.allocValue()".to_owned(),
@@ -760,7 +899,7 @@ impl KotlinCodeOracle {
         }
     }
 
-    fn ffi_type_label_by_reference(&self, ffi_type: &FfiType) -> String {
+    fn ffi_type_label_by_reference(&self, ffi_type: &FfiType, ci: &ComponentInterface) -> String {
         match ffi_type {
             FfiType::Int8
             | FfiType::UInt8
@@ -771,15 +910,19 @@ impl KotlinCodeOracle {
             | FfiType::Int64
             | FfiType::UInt64
             | FfiType::Float32
-            | FfiType::Float64 => format!("{}ByReference", self.ffi_type_label(ffi_type)),
-            FfiType::RustArcPtr(_) => "PointerByReference".to_owned(),
+            | FfiType::Float64
+            | FfiType::Handle => format!("{}ByReference", self.ffi_type_label(ffi_type, ci)),
             // JNA structs default to ByReference
-            FfiType::RustBuffer(_) | FfiType::Struct(_) => self.ffi_type_label(ffi_type),
+            FfiType::RustBuffer(_) | FfiType::Struct(_) => self.ffi_type_label(ffi_type, ci),
             _ => panic!("{ffi_type:?} by reference is not implemented"),
         }
     }
 
-    fn ffi_type_label_by_reference_header(&self, ffi_type: &FfiType) -> String {
+    fn ffi_type_label_by_reference_header(
+        &self,
+        ffi_type: &FfiType,
+        ci: &ComponentInterface,
+    ) -> String {
         match ffi_type {
             FfiType::Int8
             | FfiType::UInt8
@@ -790,17 +933,17 @@ impl KotlinCodeOracle {
             | FfiType::Int64
             | FfiType::UInt64
             | FfiType::Float32
-            | FfiType::Float64 => format!("{} *", self.ffi_type_label_header(ffi_type)),
-            FfiType::RustArcPtr(_) => "void **".to_owned(),
+            | FfiType::Float64
+            | FfiType::Handle => format!("{} *", self.ffi_type_label_header(ffi_type, ci)),
             // JNA structs default to ByReference
             FfiType::RustBuffer(_) | FfiType::Struct(_) => {
-                format!("{} *", self.ffi_type_label_header(ffi_type))
+                format!("{} *", self.ffi_type_label_header(ffi_type, ci))
             }
             _ => panic!("{ffi_type:?} by reference is not implemented"),
         }
     }
 
-    fn ffi_type_label(&self, ffi_type: &FfiType) -> String {
+    fn ffi_type_label(&self, ffi_type: &FfiType, ci: &ComponentInterface) -> String {
         match ffi_type {
             // Note that unsigned integers in Kotlin are currently experimental, but java.nio.ByteBuffer does not
             // support them yet. Thus, we use the signed variants to represent both signed and unsigned
@@ -812,21 +955,24 @@ impl KotlinCodeOracle {
             FfiType::Float32 => "Float".to_string(),
             FfiType::Float64 => "Double".to_string(),
             FfiType::Handle => "Long".to_string(),
-            FfiType::RustArcPtr(_) => "Pointer?".to_string(),
             FfiType::RustBuffer(maybe_external) => match maybe_external {
-                Some(external_meta) => format!("RustBuffer{}", external_meta.name),
-                None => "RustBuffer".to_string(),
+                Some(external_meta) if external_meta.crate_name() != ci.crate_name() => {
+                    format!("RustBuffer{}", external_meta.name)
+                }
+                _ => "RustBuffer".to_string(),
             },
             FfiType::RustCallStatus => "UniffiRustCallStatusByValue".to_string(),
             FfiType::ForeignBytes => "ForeignBytesByValue".to_string(),
             FfiType::Callback(_) => "Any".to_string(),
             FfiType::Struct(name) => self.ffi_struct_name(name),
-            FfiType::Reference(inner) => self.ffi_type_label_by_reference(inner),
+            FfiType::Reference(inner) | FfiType::MutReference(inner) => {
+                self.ffi_type_label_by_reference(inner, ci)
+            }
             FfiType::VoidPointer => "Pointer".to_string(),
         }
     }
 
-    fn ffi_type_label_header(&self, ffi_type: &FfiType) -> String {
+    fn ffi_type_label_header(&self, ffi_type: &FfiType, ci: &ComponentInterface) -> String {
         match ffi_type {
             // Note that unsigned integers in Kotlin are currently experimental, but java.nio.ByteBuffer does not
             // support them yet. Thus, we use the signed variants to represent both signed and unsigned
@@ -838,16 +984,19 @@ impl KotlinCodeOracle {
             FfiType::Float32 => "float".to_string(),
             FfiType::Float64 => "double".to_string(),
             FfiType::Handle => "int64_t".to_string(),
-            FfiType::RustArcPtr(_) => "void *".to_string(),
             FfiType::RustBuffer(maybe_external) => match maybe_external {
-                Some(external_meta) => format!("RustBuffer{}", external_meta.name),
-                None => "RustBuffer".to_string(),
+                Some(external_meta) if external_meta.crate_name() != ci.crate_name() => {
+                    format!("RustBuffer{}", external_meta.name)
+                }
+                _ => "RustBuffer".to_string(),
             },
             FfiType::RustCallStatus => "UniffiRustCallStatus".to_string(),
             FfiType::ForeignBytes => "ForeignBytes".to_string(),
             FfiType::Callback(name) => self.ffi_callback_name_header(name),
             FfiType::Struct(name) => self.ffi_struct_name_header(name),
-            FfiType::Reference(inner) => self.ffi_type_label_by_reference_header(inner),
+            FfiType::Reference(inner) | FfiType::MutReference(inner) => {
+                self.ffi_type_label_by_reference_header(inner, ci)
+            }
             FfiType::VoidPointer => "void *".to_string(),
         }
     }
@@ -918,78 +1067,207 @@ impl<T: AsType> AsCodeType for T {
                 key_type,
                 value_type,
             } => Box::new(compounds::MapCodeType::new(*key_type, *value_type)),
-            Type::External { name, .. } => Box::new(external::ExternalCodeType::new(name)),
-            Type::Custom { name, .. } => Box::new(custom::CustomCodeType::new(name)),
+            Type::Custom { name, builtin, .. } => {
+                Box::new(custom::CustomCodeType::new(name, builtin.as_codetype()))
+            }
+            Type::Box { inner_type } => inner_type.as_codetype(),
+            Type::Set { inner_type } => Box::new(compounds::SetCodeType::new(*inner_type)),
         }
     }
 }
 
 #[cfg_attr(feature = "runtime", allow(dead_code))]
 mod filters {
-    pub use uniffi_bindgen::backend::filters::*;
+    pub use super::backend::*;
+    use uniffi_bindgen::to_askama_error;
     use uniffi_meta::LiteralMetadata;
     use variant::VariantCodeType;
 
     use super::*;
 
+    #[askama::filter_fn]
     pub(super) fn type_name(
         as_ct: &impl AsCodeType,
+        _: &dyn askama::Values,
         ci: &ComponentInterface,
     ) -> Result<String, askama::Error> {
         Ok(as_ct.as_codetype().type_label(ci))
     }
 
     // Workaround problem with impl AsCodeType for &Variant (see variant.rs).
+    #[askama::filter_fn]
     pub fn variant_type_name(
         v: &Variant,
+        _: &dyn askama::Values,
         ci: &ComponentInterface,
     ) -> Result<String, askama::Error> {
         Ok(VariantCodeType { v: v.clone() }.type_label(ci))
     }
 
-    pub(super) fn canonical_name(as_ct: &impl AsCodeType) -> Result<String, askama::Error> {
+    #[askama::filter_fn]
+    pub(super) fn canonical_name(
+        as_ct: &impl AsCodeType,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
         Ok(as_ct.as_codetype().canonical_name())
     }
 
-    pub(super) fn ffi_converter_name(as_ct: &impl AsCodeType) -> Result<String, askama::Error> {
+    #[askama::filter_fn]
+    pub(super) fn ffi_converter_name(
+        as_ct: &impl AsCodeType,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
         Ok(as_ct.as_codetype().ffi_converter_name())
     }
 
-    pub(super) fn lower_fn(as_ct: &impl AsCodeType) -> Result<String, askama::Error> {
+    #[askama::filter_fn]
+    pub(super) fn lower_fn(
+        as_ct: &impl AsCodeType,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
         Ok(format!(
             "{}.lower",
             as_ct.as_codetype().ffi_converter_name()
         ))
     }
 
-    pub(super) fn allocation_size_fn(as_ct: &impl AsCodeType) -> Result<String, askama::Error> {
+    /// True for an argument that crosses the FFI as a borrowed `ForeignBytes` rather than
+    /// an owned `RustBuffer`: `&[u8]` in Rust, `[ByRef] bytes` in UDL (uniffi 0.32).
+    ///
+    /// Such an argument cannot be lowered by an expression, because the buffer it points
+    /// at has to stay alive and unmoved for the whole call. `macros.kt` therefore wraps
+    /// the call in `withForeignBytes { ... }` - see `borrowed_bytes_var_name`.
+    #[askama::filter_fn]
+    pub(super) fn is_borrowed_bytes(
+        arg: &Argument,
+        _: &dyn askama::Values,
+    ) -> Result<bool, askama::Error> {
+        Ok(arg.is_borrowed_bytes())
+    }
+
+    /// The name `macros.kt` binds a borrowed-bytes argument's `ForeignBytes` to for the
+    /// duration of the call.
+    ///
+    /// The prefix is what keeps this from needing `var_name`'s backticks: no Kotlin
+    /// keyword survives it. Two arguments can only collide here if they already collide
+    /// as parameters.
+    #[askama::filter_fn]
+    pub(super) fn borrowed_bytes_var_name(
+        arg: &Argument,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
+        Ok(format!(
+            "uniffiByRefBytes_{}",
+            KotlinCodeOracle.var_name_raw(arg.name())
+        ))
+    }
+
+    /// Per-argument lifting, used for the arguments of a callback interface vtable method.
+    ///
+    /// Borrowed bytes are rejected in this direction. `ForeignBytes` implements `Lift` but
+    /// not `Lower` in `uniffi_core`, and the vtable shim lowers every argument it passes
+    /// out, so a `&[u8]` on a callback or trait-interface method cannot compile on the Rust
+    /// side in the first place - upstream has the same hole. Failing here turns what would
+    /// be a Kotlin type error into a message naming the argument.
+    #[askama::filter_fn]
+    pub(super) fn lift_fn_for_arg(
+        arg: &Argument,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
+        if arg.is_borrowed_bytes() {
+            return Err(to_askama_error(&format!(
+                "borrowed bytes (`&[u8]` in Rust, `[ByRef] bytes` in UDL) cannot be passed \
+                 from Rust to a foreign implementation, found one as argument `{}` of a \
+                 callback or trait interface method. Take `Vec<u8>` (`bytes`) instead.",
+                arg.name()
+            )));
+        }
+        Ok(format!("{}.lift", arg.as_codetype().ffi_converter_name()))
+    }
+
+    /// Reject a borrowed-bytes argument on an async callable, rendering nothing otherwise.
+    ///
+    /// `withForeignBytes` only keeps the caller's bytes alive until the call returns, and an
+    /// async call returns a future handle immediately - the Rust future would outlive the
+    /// borrow. Today this is unreachable: `rust_future_new` moves the lifted arguments into
+    /// an `async move` block and needs them `Send`, which `ForeignBytes` (a raw pointer) is
+    /// not, so such a function does not compile in Rust. This is the guard for the day that
+    /// changes, because the failure it would otherwise produce is a use-after-free rather
+    /// than a compile error.
+    #[askama::filter_fn]
+    pub(super) fn reject_async_borrowed_bytes(
+        callable: impl Callable,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
+        if callable.is_async() {
+            if let Some(arg) = callable
+                .arguments()
+                .into_iter()
+                .find(|arg| arg.is_borrowed_bytes())
+            {
+                return Err(to_askama_error(&format!(
+                    "borrowed bytes (`&[u8]` in Rust, `[ByRef] bytes` in UDL) cannot be \
+                     passed to an async function, found one as argument `{}`. The borrow \
+                     would end when the call returns its future handle, before Rust is done \
+                     reading it. Take `Vec<u8>` (`bytes`) instead.",
+                    arg.name()
+                )));
+            }
+        }
+        Ok(String::new())
+    }
+
+    #[askama::filter_fn]
+    pub(super) fn allocation_size_fn(
+        as_ct: &impl AsCodeType,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
         Ok(format!(
             "{}.allocationSize",
             as_ct.as_codetype().ffi_converter_name()
         ))
     }
 
-    pub(super) fn write_fn(as_ct: &impl AsCodeType) -> Result<String, askama::Error> {
+    #[askama::filter_fn]
+    pub(super) fn write_fn(
+        as_ct: &impl AsCodeType,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
         Ok(format!(
             "{}.write",
             as_ct.as_codetype().ffi_converter_name()
         ))
     }
 
-    pub(super) fn lift_fn(as_ct: &impl AsCodeType) -> Result<String, askama::Error> {
+    #[askama::filter_fn]
+    pub(super) fn lift_fn(
+        as_ct: &impl AsCodeType,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
         Ok(format!("{}.lift", as_ct.as_codetype().ffi_converter_name()))
     }
 
-    pub(super) fn read_fn(as_ct: &impl AsCodeType) -> Result<String, askama::Error> {
+    #[askama::filter_fn]
+    pub(super) fn read_fn(
+        as_ct: &impl AsCodeType,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
         Ok(format!("{}.read", as_ct.as_codetype().ffi_converter_name()))
     }
 
-    pub fn render_literal(
-        literal: &Literal,
-        as_ct: &impl AsType,
+    /// Render a default value.
+    #[askama::filter_fn]
+    pub fn render_default<T: AsType>(
+        default: &DefaultValue,
+        _: &dyn askama::Values,
+        as_ct: &T,
         ci: &ComponentInterface,
+        config: &Config,
     ) -> Result<String, askama::Error> {
-        Ok(as_ct.as_codetype().literal(literal, ci))
+        as_ct
+            .as_codetype()
+            .default(default, ci, config)
+            .map_err(|e| to_askama_error(&e))
     }
 
     // Get the idiomatic Kotlin rendering of an integer.
@@ -998,155 +1276,225 @@ mod filters {
             match t {
                 Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 => Ok(base10),
                 Type::UInt8 | Type::UInt16 | Type::UInt32 | Type::UInt64 => Ok(base10 + "u"),
-                _ => Err(askama::Error::Custom(Box::new(UniFFIError::new(
-                    "Only ints are supported.".to_string(),
-                )))),
+                _ => Err(to_askama_error(&format!(
+                    "Only ints are supported for enum literals: {t:?}"
+                ))),
             }
         } else {
-            Err(askama::Error::Custom(Box::new(UniFFIError::new(
-                "Enum hasn't defined a repr".to_string(),
-            ))))
+            Err(to_askama_error("Enum hasn't defined a repr"))
         }
     }
 
     // Get the idiomatic Kotlin rendering of an individual enum variant's discriminant
-    pub fn variant_discr_literal(e: &Enum, index: &usize) -> Result<String, askama::Error> {
+    #[askama::filter_fn]
+    pub fn variant_discr_literal(
+        e: &Enum,
+        _: &dyn askama::Values,
+        index: &usize,
+    ) -> Result<String, askama::Error> {
         let literal = e.variant_discr(*index).expect("invalid index");
         match literal {
             // Kotlin doesn't convert between signed and unsigned by default
             // so we'll need to make sure we define the type as appropriately
             LiteralMetadata::UInt(v, _, _) => int_literal(e.variant_discr_type(), v.to_string()),
             LiteralMetadata::Int(v, _, _) => int_literal(e.variant_discr_type(), v.to_string()),
-            _ => Err(askama::Error::Custom(Box::new(UniFFIError::new(
-                "Only ints are supported.".to_string(),
-            )))),
+            _ => Err(to_askama_error(&format!(
+                "Only ints are supported: {literal:?}"
+            ))),
         }
     }
 
-    pub fn ffi_type_name_by_value(type_: &FfiType) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.ffi_type_label_by_value(type_))
+    #[askama::filter_fn]
+    pub fn ffi_type_name_by_value(
+        type_: &FfiType,
+        _: &dyn askama::Values,
+        ci: &ComponentInterface,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.ffi_type_label_by_value(type_, ci))
     }
 
-    pub fn ffi_type_name_for_ffi_function(type_: &FfiType) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_function(type_))
+    #[askama::filter_fn]
+    pub fn ffi_type_name_for_ffi_function(
+        type_: &FfiType,
+        _: &dyn askama::Values,
+        ci: &ComponentInterface,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_function(type_, ci))
     }
 
-    pub fn ffi_type_name(type_: &FfiType) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.ffi_type_label(type_))
+    #[askama::filter_fn]
+    pub fn ffi_type_name(
+        type_: &FfiType,
+        _: &dyn askama::Values,
+        ci: &ComponentInterface,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.ffi_type_label(type_, ci))
     }
 
-    pub fn is_callback(type_: &FfiType) -> Result<bool, askama::Error> {
+    #[askama::filter_fn]
+    pub fn is_callback(type_: &FfiType, _: &dyn askama::Values) -> Result<bool, askama::Error> {
         Ok(matches!(type_, FfiType::Callback(_)))
     }
 
-    pub fn is_rustbuffer(type_: &FfiType) -> Result<bool, askama::Error> {
+    #[askama::filter_fn]
+    pub fn is_rustbuffer(type_: &FfiType, _: &dyn askama::Values) -> Result<bool, askama::Error> {
         Ok(matches!(type_, FfiType::RustBuffer(_)))
     }
 
-    pub fn is_foreignbytes(type_: &FfiType) -> Result<bool, askama::Error> {
+    #[askama::filter_fn]
+    pub fn is_foreignbytes(type_: &FfiType, _: &dyn askama::Values) -> Result<bool, askama::Error> {
         Ok(matches!(type_, FfiType::ForeignBytes))
     }
 
-    /// Append a `_` if the name is a valid c/c++ keyword
-    pub fn header_escape_name(nm: &str) -> Result<String, askama::Error> {
-        if CPP_KEYWORDS.contains(&nm) {
-            Ok(format!("{nm}_"))
-        } else {
-            Ok(nm.to_owned())
-        }
+    #[askama::filter_fn]
+    pub fn header_ffi_type_name(
+        type_: &FfiType,
+        _: &dyn askama::Values,
+        ci: &ComponentInterface,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.ffi_type_label_header(type_, ci))
     }
 
-    /// Append a `_` if the name is a valid c/c++ keyword
-    pub fn header_noescape_name(nm: &str) -> Result<String, askama::Error> {
-        Ok(nm.to_owned())
+    #[askama::filter_fn]
+    pub fn ffi_type_name_for_ffi_struct(
+        type_: &FfiType,
+        _: &dyn askama::Values,
+        ci: &ComponentInterface,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct(type_, ci))
     }
 
-    pub fn header_ffi_type_name(type_: &FfiType) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.ffi_type_label_header(type_))
+    #[askama::filter_fn]
+    pub fn ffi_type_name_for_ffi_struct_inner(
+        type_: &FfiType,
+        _: &dyn askama::Values,
+        ci: &ComponentInterface,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct_inner(type_, ci))
     }
 
-    pub fn ffi_type_name_for_ffi_struct(type_: &FfiType) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct(type_))
+    /// Whether the Kotlin/Native mapping of this FFI type is a raw cinterop pointer
+    /// that needs wrapping in `Pointer`.
+    ///
+    /// uniffi 0.30 turned object references from `RustArcPtr` into an opaque `u64`
+    /// `Handle`, which cinterop maps straight to `Long` -- so handles deliberately do
+    /// *not* belong here any more.
+    #[askama::filter_fn]
+    pub fn is_pointer_type(type_: &FfiType, _: &dyn askama::Values) -> Result<bool, askama::Error> {
+        Ok(matches!(type_, FfiType::VoidPointer))
     }
 
-    pub fn ffi_type_name_for_ffi_struct_inner(type_: &FfiType) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct_inner(type_))
-    }
-
-    pub fn is_pointer_type(type_: &FfiType) -> Result<bool, askama::Error> {
-        Ok(match type_ {
-            FfiType::RustArcPtr(_) | FfiType::VoidPointer => true,
-            _ => false,
-        })
-    }
-
-    pub fn ffi_type_name_for_ffi_callback(type_: &FfiType) -> Result<String, askama::Error> {
+    #[askama::filter_fn]
+    pub fn ffi_type_name_for_ffi_callback(
+        type_: &FfiType,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.callback_label_name(type_))
     }
 
-    pub fn ffi_default_value(type_: FfiType) -> Result<String, askama::Error> {
+    #[askama::filter_fn]
+    pub fn ffi_default_value(
+        type_: FfiType,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.ffi_default_value(&type_))
     }
 
-    /// Get the idiomatic Kotlin rendering of a function name.
-    pub fn class_name(nm: &str, ci: &ComponentInterface) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.class_name(ci, nm))
+    /// Get the idiomatic Kotlin rendering of a class name.
+    #[askama::filter_fn]
+    pub fn class_name<S: AsRef<str>>(
+        nm: S,
+        _: &dyn askama::Values,
+        ci: &ComponentInterface,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.class_name(ci, nm.as_ref()))
     }
 
     /// Get the idiomatic Kotlin rendering of a function name.
-    pub fn fn_name(nm: &str) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.fn_name(nm))
+    #[askama::filter_fn]
+    pub fn fn_name<S: AsRef<str>>(nm: S, _: &dyn askama::Values) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.fn_name(nm.as_ref()))
     }
 
     /// Get the idiomatic Kotlin rendering of a variable name.
-    pub fn var_name(nm: &str) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.var_name(nm))
+    #[askama::filter_fn]
+    pub fn var_name<S: AsRef<str>>(nm: S, _: &dyn askama::Values) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.var_name(nm.as_ref()))
     }
 
     /// Check if type is Option
-    pub fn is_optional(as_ct: &impl AsCodeType) -> Result<bool, askama::Error> {
+    #[askama::filter_fn]
+    pub fn is_optional(
+        as_ct: &impl AsCodeType,
+        _: &dyn askama::Values,
+    ) -> Result<bool, askama::Error> {
         Ok(as_ct.as_codetype().is_optional())
     }
 
     /// Get the idiomatic Kotlin rendering of a variable name.
-    pub fn var_name_raw_noescape(nm: &str) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.var_name_raw_noescape(nm))
+    #[askama::filter_fn]
+    pub fn var_name_raw_noescape<S: AsRef<str>>(
+        nm: S,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.var_name_raw_noescape(nm.as_ref()))
     }
 
     /// Get the idiomatic Kotlin rendering of a variable name.
-    pub fn var_name_raw(nm: &str) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.var_name_raw(nm))
+    #[askama::filter_fn]
+    pub fn var_name_raw<S: AsRef<str>>(
+        nm: S,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.var_name_raw(nm.as_ref()))
     }
 
     /// Get a String representing the name used for an individual enum variant.
-    pub fn variant_name(v: &Variant) -> Result<String, askama::Error> {
+    #[askama::filter_fn]
+    pub fn variant_name(v: &Variant, _: &dyn askama::Values) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.enum_variant_name(v.name()))
     }
 
-    pub fn error_variant_name(v: &Variant) -> Result<String, askama::Error> {
+    #[askama::filter_fn]
+    pub fn error_variant_name(
+        v: &Variant,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
         let name = v.name().to_string().to_upper_camel_case();
         Ok(KotlinCodeOracle.convert_error_suffix(&name))
     }
 
     /// Get the idiomatic Kotlin rendering of an FFI callback function name
-    pub fn ffi_callback_name(nm: &str) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.ffi_callback_name(nm))
+    #[askama::filter_fn]
+    pub fn ffi_callback_name<S: AsRef<str>>(
+        nm: S,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.ffi_callback_name(nm.as_ref()))
     }
 
     /// Get the idiomatic Kotlin rendering of an FFI struct name
-    pub fn ffi_struct_name(nm: &str) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.ffi_struct_name(nm))
+    #[askama::filter_fn]
+    pub fn ffi_struct_name<S: AsRef<str>>(
+        nm: S,
+        _: &dyn askama::Values,
+    ) -> Result<String, askama::Error> {
+        Ok(KotlinCodeOracle.ffi_struct_name(nm.as_ref()))
     }
 
+    #[askama::filter_fn]
     pub fn object_names(
         obj: &Object,
+        _: &dyn askama::Values,
         ci: &ComponentInterface,
     ) -> Result<(String, String), askama::Error> {
         Ok(KotlinCodeOracle.object_names(ci, obj))
     }
 
+    #[askama::filter_fn]
     pub fn async_poll(
         callable: impl Callable,
+        _: &dyn askama::Values,
         ci: &ComponentInterface,
     ) -> Result<String, askama::Error> {
         let ffi_func = callable.ffi_rust_future_poll(ci);
@@ -1155,29 +1503,40 @@ mod filters {
         ))
     }
 
+    #[askama::filter_fn]
     pub fn async_complete(
         callable: impl Callable,
+        _: &dyn askama::Values,
         ci: &ComponentInterface,
     ) -> Result<String, askama::Error> {
         let ffi_func = callable.ffi_rust_future_complete(ci);
         let call = format!("UniffiLib.INSTANCE.{ffi_func}(future, continuation)");
+        // May need to convert the RustBuffer from our package to the RustBuffer of the
+        // external package.
         let call = match callable.return_type() {
-            Some(Type::External {
-                kind: ExternalKind::DataClass,
-                name,
-                ..
-            }) => {
-                // Need to convert the RustBuffer from our package to the RustBuffer of the external package
-                let suffix = KotlinCodeOracle.class_name(ci, &name);
-                format!("{call}.let {{ RustBuffer{suffix}ByValue(it.capacity, it.len, it.data) }}")
-            }
-            _ => call,
+            Some(return_type) => match FfiType::from(return_type) {
+                FfiType::RustBuffer(Some(external_meta))
+                    if external_meta.crate_name() != ci.crate_name() =>
+                {
+                    // Not `class_name`: the typealias this refers to is declared by
+                    // `ExternalTypeTemplate.kt` / `headers/Types.h` as `RustBuffer{name}`,
+                    // using the raw name. `UniffiOneUDLTrait` must not become `...UdlTrait`.
+                    let suffix = &external_meta.name;
+                    format!(
+                        "{call}.let {{ RustBuffer{suffix}ByValue(it.capacity, it.len, it.data) }}"
+                    )
+                }
+                _ => call,
+            },
+            None => call,
         };
         Ok(format!("{{ future, continuation -> {call} }}"))
     }
 
+    #[askama::filter_fn]
     pub fn async_free(
         callable: impl Callable,
+        _: &dyn askama::Values,
         ci: &ComponentInterface,
     ) -> Result<String, askama::Error> {
         let ffi_func = callable.ffi_rust_future_free(ci);
@@ -1186,8 +1545,10 @@ mod filters {
         ))
     }
 
+    #[askama::filter_fn]
     pub fn async_cancel(
         callable: impl Callable,
+        _: &dyn askama::Values,
         ci: &ComponentInterface,
     ) -> Result<String, askama::Error> {
         let ffi_func = callable.ffi_rust_future_cancel(ci);
@@ -1201,13 +1562,19 @@ mod filters {
     /// These are used to avoid name clashes with kotlin identifiers, but sometimes you want to
     /// render the name unquoted.  One example is the message property for errors where we want to
     /// display the name for the user.
-    pub fn unquote(nm: &str) -> Result<String, askama::Error> {
-        Ok(nm.trim_matches('`').to_string())
+    #[askama::filter_fn]
+    pub fn unquote<S: AsRef<str>>(nm: S, _: &dyn askama::Values) -> Result<String, askama::Error> {
+        Ok(nm.as_ref().trim_matches('`').to_string())
     }
 
     /// Get the idiomatic Kotlin rendering of docstring
-    pub fn docstring(docstring: &str, spaces: &i32) -> Result<String, askama::Error> {
-        let middle = textwrap::indent(&textwrap::dedent(docstring), " * ");
+    #[askama::filter_fn]
+    pub fn docstring<S: AsRef<str>>(
+        docstring: S,
+        _: &dyn askama::Values,
+        spaces: &i32,
+    ) -> Result<String, askama::Error> {
+        let middle = textwrap::indent(&textwrap::dedent(docstring.as_ref()), " * ");
         let wrapped = format!("/**\n{middle}\n */");
 
         let spaces = usize::try_from(*spaces).unwrap_or_default();
@@ -1239,5 +1606,229 @@ mod test {
         assert!(KotlinVersion::new(1, 2, 3) > KotlinVersion::new(0, 1, 2));
         assert!(KotlinVersion::new(1, 2, 3) > KotlinVersion::new(0, 100, 0));
         assert!(KotlinVersion::new(10, 0, 0) > KotlinVersion::new(1, 10, 0));
+    }
+
+    fn ci_from_udl(udl: &str) -> ComponentInterface {
+        ComponentInterface::from_webidl(udl, "probe").unwrap()
+    }
+
+    /// The two names `update_component_configs` would normally have filled in.
+    fn probe_config() -> Config {
+        Config {
+            package_name: Some("probe".to_string()),
+            cdylib_name: Some("uniffi_probe".to_string()),
+            ..Config::default()
+        }
+    }
+
+    /// A borrowed byte slice is only borrowed until the call returns, and an async call
+    /// returns a future handle immediately. Rust rejects such a function first - the lifted
+    /// `ForeignBytes` is not `Send` - so this is the guard for the day that changes.
+    #[test]
+    fn test_async_borrowed_bytes_is_rejected() {
+        let ci = ci_from_udl(
+            r#"
+            namespace probe {
+                [Async]
+                u64 sum_bytes([ByRef] bytes data);
+            };
+        "#,
+        );
+        let err = AndroidJvmKotlinWrapper::new("jvm", probe_config(), &ci)
+            .render()
+            .expect_err("an async borrowed-bytes argument should not generate");
+        let message = err.to_string();
+        assert!(message.contains("async"), "{message}");
+        assert!(message.contains("data"), "{message}");
+    }
+
+    /// Borrowed bytes cannot travel Rust -> Kotlin: `ForeignBytes` implements `Lift` but not
+    /// `Lower`, so the vtable shim that would pass one out does not compile in Rust.
+    #[test]
+    fn test_callback_interface_borrowed_bytes_is_rejected() {
+        let ci = ci_from_udl(
+            r#"
+            namespace probe {};
+
+            callback interface Watcher {
+                u64 observe([ByRef] bytes data);
+            };
+        "#,
+        );
+        let config = probe_config();
+        let err = AndroidJvmTypeRenderer::new("jvm", &config, &ci)
+            .render()
+            .expect_err("a borrowed-bytes vtable argument should not generate");
+        let message = err.to_string();
+        assert!(message.contains("callback or trait interface"), "{message}");
+        assert!(message.contains("data"), "{message}");
+    }
+
+    /// The fields of one record, as they were rendered between the `data class` parens.
+    fn rendered_record_fields<'a>(rendered: &'a str, name: &str) -> &'a str {
+        let header = format!("data class {name} (");
+        let start = rendered
+            .find(&header)
+            .unwrap_or_else(|| panic!("no `{header}` in:\n{rendered}"))
+            + header.len();
+        let rest = &rendered[start..];
+        &rest[..rest.find(')').expect("unterminated data class")]
+    }
+
+    const TWO_RECORDS: &str = r#"
+        namespace probe {};
+
+        dictionary Frozen {
+            i64 count;
+        };
+
+        dictionary Thawed {
+            i64 count;
+        };
+    "#;
+
+    /// `mutable_records` exempts the records it names from `generate_immutable_records`;
+    /// every other record in the same binding stays `val`. A name that matches no record is
+    /// ignored rather than being an error, the same as upstream.
+    #[test]
+    fn test_mutable_records_exempts_listed_records() {
+        let ci = ci_from_udl(TWO_RECORDS);
+        let config = Config {
+            generate_immutable_records: Some(true),
+            mutable_records: HashSet::from(["Thawed".to_string(), "NoSuchRecord".to_string()]),
+            ..probe_config()
+        };
+        let rendered = CommonKotlinWrapper::new("common", config, &ci)
+            .render()
+            .unwrap();
+        assert!(
+            rendered_record_fields(&rendered, "Frozen").contains("val `count`"),
+            "{rendered}"
+        );
+        assert!(
+            rendered_record_fields(&rendered, "Thawed").contains("var `count`"),
+            "{rendered}"
+        );
+    }
+
+    /// `mutable_records` only ever exempts - with `generate_immutable_records` turned off
+    /// every record is already mutable, and listing one changes nothing.
+    #[test]
+    fn test_mutable_records_without_immutable_records_is_a_no_op() {
+        let ci = ci_from_udl(TWO_RECORDS);
+        let config = Config {
+            generate_immutable_records: Some(false),
+            mutable_records: HashSet::from(["Thawed".to_string()]),
+            ..probe_config()
+        };
+        let rendered = CommonKotlinWrapper::new("common", config, &ci)
+            .render()
+            .unwrap();
+        for name in ["Frozen", "Thawed"] {
+            assert!(
+                rendered_record_fields(&rendered, name).contains("var `count`"),
+                "{rendered}"
+            );
+        }
+    }
+
+    /// Records keep `var` fields unless a binding opts in, matching upstream's default. This
+    /// is the baseline `mutable_records` carves an exemption out of.
+    #[test]
+    fn test_records_are_mutable_by_default() {
+        let ci = ci_from_udl(TWO_RECORDS);
+        let rendered = CommonKotlinWrapper::new("common", probe_config(), &ci)
+            .render()
+            .unwrap();
+        for name in ["Frozen", "Thawed"] {
+            assert!(
+                rendered_record_fields(&rendered, name).contains("var `count`"),
+                "{rendered}"
+            );
+        }
+    }
+
+    const ONE_FUNCTION: &str = r#"
+        namespace probe {
+            u64 double(u64 value);
+        };
+    "#;
+
+    /// The API checksum check is generated by default: one comparison per exported
+    /// function, run when the library is loaded.
+    #[test]
+    fn test_checksums_are_checked_by_default() {
+        let ci = ci_from_udl(ONE_FUNCTION);
+        let rendered = AndroidJvmKotlinWrapper::new("jvm", probe_config(), &ci)
+            .render()
+            .unwrap();
+        assert!(rendered.contains("uniffiCheckApiChecksums"), "{rendered}");
+
+        assert!(
+            rendered.contains(&format!(
+                "if (lib.{}()",
+                ci.iter_checksums().next().expect("no checksum function").0
+            )),
+            "{rendered}"
+        );
+    }
+
+    /// `omit_checksums` drops both the call and the function it would call. The contract
+    /// version check is a separate guarantee and stays.
+    #[test]
+    fn test_omit_checksums_drops_the_check() {
+        let ci = ci_from_udl(ONE_FUNCTION);
+        let config = Config {
+            omit_checksums: true,
+            ..probe_config()
+        };
+        let rendered = AndroidJvmKotlinWrapper::new("jvm", config, &ci)
+            .render()
+            .unwrap();
+        assert!(!rendered.contains("uniffiCheckApiChecksums"), "{rendered}");
+        assert!(
+            rendered.contains("uniffiCheckContractApiVersion(lib)"),
+            "{rendered}"
+        );
+    }
+
+    /// The checksum functions stay declared on `UniffiLib` either way - they are part of
+    /// the library's FFI, and the native source set reads the same list out of the
+    /// generated header.
+    #[test]
+    fn test_omit_checksums_keeps_the_ffi_declarations() {
+        let ci = ci_from_udl(ONE_FUNCTION);
+        let checksum_fn = ci.iter_checksums().next().expect("no checksum function").0;
+        let config = Config {
+            omit_checksums: true,
+            ..probe_config()
+        };
+        let rendered = AndroidJvmKotlinWrapper::new("jvm", config, &ci)
+            .render()
+            .unwrap();
+        assert!(
+            rendered.contains(&format!("fun {checksum_fn}(")),
+            "{rendered}"
+        );
+    }
+
+    /// The name a borrow is bound to has to be a bare identifier: `var_name` backticks Kotlin
+    /// keywords, and `uniffiByRefBytes_` + `` `object` `` would not parse.
+    #[test]
+    fn test_borrowed_bytes_var_name_is_not_backticked() {
+        let ci = ci_from_udl(
+            r#"
+            namespace probe {
+                u64 sum_bytes([ByRef] bytes object);
+            };
+        "#,
+        );
+        let rendered = AndroidJvmKotlinWrapper::new("jvm", probe_config(), &ci)
+            .render()
+            .unwrap();
+        assert!(
+            rendered.contains("withForeignBytes(`object`) { uniffiByRefBytes_object ->"),
+            "{rendered}"
+        );
     }
 }

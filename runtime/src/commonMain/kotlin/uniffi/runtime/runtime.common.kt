@@ -46,5 +46,5 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
         }
     }
 
-/** Used to instantiate an interface without an actual pointer, for fakes in tests, mostly. */
-object NoPointer
+/** Used to instantiate an interface without an actual handle, for fakes in tests, mostly. */
+object NoHandle

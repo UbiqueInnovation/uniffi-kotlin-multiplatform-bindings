@@ -5,10 +5,9 @@
  */
 
 use std::sync::Arc;
-use uniffi_kmm_fixture_ext_types_uniffi_one::{UniffiOneEnum, UniffiOneInterface, UniffiOneTrait};
-
-uniffi::use_udl_object!(uniffi_kmm_fixture_ext_types_uniffi_one, UniffiOneInterface);
-uniffi::use_udl_enum!(uniffi_kmm_fixture_ext_types_uniffi_one, UniffiOneEnum);
+use uniffi_kmm_fixture_ext_types_uniffi_one::{
+    UniffiOneEnum, UniffiOneInterface, UniffiOneTrait, UniffiOneUDLTrait,
+};
 
 #[derive(Default, uniffi::Record)]
 pub struct SubLibType {
@@ -33,6 +32,23 @@ impl UniffiOneTrait for OneImpl {
 #[uniffi::export]
 fn get_trait_impl() -> Arc<dyn UniffiOneTrait> {
     Arc::new(OneImpl {})
+}
+
+/// Call back into a trait that belongs to *another* crate in this library.
+///
+/// Regression test for upstream #2343: `uniffi_one`'s vtables live behind its own lazy
+/// `UniffiLib`, so unless `sub_lib`'s initialiser chains into it, Rust reaches an
+/// unregistered vtable here and the process aborts. Lowering a Kotlin implementation
+/// touches only the handle map, so nothing else on this path would have registered it.
+#[uniffi::export]
+fn call_uniffi_one_trait(t: Arc<dyn UniffiOneTrait>) -> String {
+    t.hello()
+}
+
+/// As above, for the UDL-declared trait - it has a separate vtable of its own.
+#[uniffi::export]
+fn call_uniffi_one_udl_trait(t: Arc<dyn UniffiOneUDLTrait>) -> String {
+    t.hello()
 }
 
 uniffi::setup_scaffolding!("sub_lib");

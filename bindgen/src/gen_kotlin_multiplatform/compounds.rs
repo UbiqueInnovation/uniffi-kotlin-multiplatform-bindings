@@ -4,7 +4,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use uniffi_bindgen::backend::{Literal, Type};
+use anyhow::{bail, Result};
+use uniffi_bindgen::interface::{DefaultValue, Literal, Type};
 use uniffi_bindgen::ComponentInterface;
 
 use super::{AsCodeType, CodeType};
@@ -42,11 +43,18 @@ impl CodeType for OptionalCodeType {
         )
     }
 
-    fn literal(&self, literal: &Literal, ci: &ComponentInterface) -> String {
-        match literal {
-            Literal::None => "null".into(),
-            Literal::Some { inner } => super::KotlinCodeOracle.find(&self.inner).literal(inner, ci),
-            _ => panic!("Invalid literal for Optional type: {literal:?}"),
+    fn default(
+        &self,
+        default: &DefaultValue,
+        ci: &ComponentInterface,
+        config: &super::Config,
+    ) -> Result<String> {
+        match default {
+            DefaultValue::Default | DefaultValue::Literal(Literal::None) => Ok("null".into()),
+            DefaultValue::Literal(Literal::Some { inner }) => super::KotlinCodeOracle
+                .find(&self.inner)
+                .default(inner, ci, config),
+            _ => bail!("Invalid default for Optional type: {default:?}"),
         }
     }
 }
@@ -80,10 +88,18 @@ impl CodeType for SequenceCodeType {
         )
     }
 
-    fn literal(&self, literal: &Literal, _ci: &ComponentInterface) -> String {
-        match literal {
-            Literal::EmptySequence => "listOf()".into(),
-            _ => panic!("Invalid literal for List type: {literal:?}"),
+    fn default(
+        &self,
+        default: &DefaultValue,
+        _ci: &ComponentInterface,
+        _config: &super::Config,
+    ) -> Result<String> {
+        // Uniffi supports only empty as default values for sequences
+        match default {
+            DefaultValue::Default | DefaultValue::Literal(Literal::EmptySequence) => {
+                Ok("listOf()".into())
+            }
+            _ => bail!("Invalid default for List type: {default:?}"),
         }
     }
 }
@@ -125,10 +141,63 @@ impl CodeType for MapCodeType {
         )
     }
 
-    fn literal(&self, literal: &Literal, _ci: &ComponentInterface) -> String {
-        match literal {
-            Literal::EmptyMap => "mapOf()".into(),
-            _ => panic!("Invalid literal for Map type: {literal:?}"),
+    fn default(
+        &self,
+        default: &DefaultValue,
+        _ci: &ComponentInterface,
+        _config: &super::Config,
+    ) -> Result<String> {
+        // Uniffi supports only empty as default values for maps
+        match default {
+            DefaultValue::Default | DefaultValue::Literal(Literal::EmptyMap) => {
+                Ok("mapOf()".into())
+            }
+            _ => bail!("Invalid default for Map type: {default:?}"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct SetCodeType {
+    inner: Type,
+}
+
+impl SetCodeType {
+    pub fn new(inner: Type) -> Self {
+        Self { inner }
+    }
+    fn inner(&self) -> &Type {
+        &self.inner
+    }
+}
+
+impl CodeType for SetCodeType {
+    fn type_label(&self, ci: &ComponentInterface) -> String {
+        format!(
+            "Set<{}>",
+            super::KotlinCodeOracle.find(self.inner()).type_label(ci)
+        )
+    }
+
+    fn canonical_name(&self) -> String {
+        format!(
+            "Set{}",
+            super::KotlinCodeOracle.find(self.inner()).canonical_name()
+        )
+    }
+
+    fn default(
+        &self,
+        default: &DefaultValue,
+        _ci: &ComponentInterface,
+        _config: &super::Config,
+    ) -> Result<String> {
+        // Uniffi supports only empty as default values for sets
+        match default {
+            DefaultValue::Default
+            | DefaultValue::Literal(Literal::EmptySequence)
+            | DefaultValue::Literal(Literal::EmptySet) => Ok("setOf()".into()),
+            _ => bail!("Invalid default for Set type: {default:?}"),
         }
     }
 }

@@ -6,15 +6,15 @@
 // Put the implementation in an object so we don't pollute the top-level namespace
 internal object {{ trait_impl }} {
     {%- for (ffi_callback, meth) in vtable_methods.iter() %}
-    internal fun {{ meth.name()|var_name }}({%- call kt::arg_list_ffi_decl(ffi_callback) -%})
+    internal fun {{ meth.name()|var_name }}({%- call kt::arg_list_ffi_decl(ffi_callback) %}{% endcall -%})
     {%- if let Some(return_type) = ffi_callback.return_type() %}
-        : {{ return_type|ffi_type_name_by_value }},
+        : {{ return_type|ffi_type_name_by_value(ci) }},
     {%- endif %} {
         val uniffiObj = {{ ffi_converter_name }}.handleMap.get(uniffiHandle)
         val makeCall = {% if meth.is_async() %}suspend {% endif %}{ ->
             uniffiObj.{{ meth.name()|fn_name() }}(
                 {%- for arg in meth.arguments() %}
-                {{ arg|lift_fn }}({{ arg.name()|var_name }}!!),
+                {{ arg|lift_fn_for_arg }}({{ arg.name()|var_name }}!!),
                 {%- endfor %}
             )
         }
@@ -73,7 +73,7 @@ internal object {{ trait_impl }} {
             uniffiFutureCallback.invoke(uniffiCallbackData, uniffiResult)
         }
 
-        uniffiOutReturn.uniffiSetValue(
+        uniffiOutDroppedCallback.uniffiSetValue(
             {%- match meth.throws_type() %}
             {%- when None %}
             uniffiTraitInterfaceCallAsync(
@@ -97,7 +97,11 @@ internal object {{ trait_impl }} {
         {{ ffi_converter_name }}.handleMap.remove(handle)
     }
 
-    internal val vtable = nativeHeap.alloc<cinterop.{{ vtable|ffi_type_name }}> {
+    internal fun uniffiClone(handle: Long): Long {
+        return {{ ffi_converter_name }}.handleMap.clone(handle)
+    }
+
+    internal val vtable = nativeHeap.alloc<cinterop.{{ vtable|ffi_type_name(ci) }}> {
         {%- for (ffi_callback, meth) in vtable_methods.iter() %}
         this.{{ meth.name()|var_name }} = staticCFunction {
             {%- for arg in ffi_callback.arguments() -%}
@@ -105,7 +109,7 @@ internal object {{ trait_impl }} {
             {%- if arg.type_().borrow()|is_pointer_type -%}
                 GenericPointer
             {%- else -%}
-                {{ arg.type_().borrow()|ffi_type_name_by_value }}
+                {{ arg.type_().borrow()|ffi_type_name_by_value(ci) }}
             {%- endif -%},
 
             {%- endfor -%}
@@ -128,6 +132,9 @@ internal object {{ trait_impl }} {
         this.uniffiFree = staticCFunction { handle: Long ->
             {{ trait_impl }}.uniffiFree(handle)
         } as cinterop.{{ "CallbackInterfaceFree"|ffi_callback_name }}
+        this.uniffiClone = staticCFunction { handle: Long ->
+            {{ trait_impl }}.uniffiClone(handle)
+        } as cinterop.{{ "CallbackInterfaceClone"|ffi_callback_name }}
     }.ptr
 
     internal fun register(lib: UniffiLib) {

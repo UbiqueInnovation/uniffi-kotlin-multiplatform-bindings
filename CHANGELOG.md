@@ -2,6 +2,30 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.1.1...HEAD)
 
+### Added
+
+- `mutable_records` in `uniffi.toml`
+- `omit_checksums` in `uniffi.toml`
+- Borrowed bytes support
+- `HashSet` support
+- Methods on records and enums
+- uniffi trait exports on records and enums: `Display`/`Debug`, `Eq`, `Hash`
+- `Ord` on objects implements `Comparable<T>` and gets a `compareTo` backed by the Rust `Ord` impl
+
+### Changed
+
+- Update uniffi-rs to `v0.32.0` from `v0.28.3`
+- The marker object for constructing an interface fake is called `NoHandle`, matching the upstream rename from `NoPointer`.
+- The callback interface vtable gained a `uniffi_clone` entry and `uniffi_free` moved from last to first.
+- The Rust toolchain moved to `1.97.1`.
+
+### Fixed
+
+- `#[uniffi(default = ...)]` on a field of an enum variant is honoured.
+- A default value on a custom type is converted with that type's `lift` expression.
+- A crate that uses types from another uniffi crate now initialises that crate too, so its callback interface vtables are registered before Rust can reach one ([uniffi #2343](https://github.com/mozilla/uniffi-rs/issues/2343)).
+- Kotlin/Native links no longer fail with `duplicate symbol` when two uniffi modules share a Rust dependency.
+
 ### Removed
 
 - Workaround for `spmForKmp` as it is no longer needed since version 1.9.5.

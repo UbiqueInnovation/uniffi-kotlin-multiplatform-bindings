@@ -30,6 +30,13 @@ class FuturesTest {
             // init UniFFI to get good measurements after that
             alwaysReady()
 
+            // The `async_runtime = "tokio"` exports start their own runtime on first use, which
+            // is a separate one-time cost from the line above - `alwaysReady` never touches it.
+            // Without this, whichever timing test JUnit happens to schedule first absorbs the
+            // runtime start-up and fails once the machine is busy enough. `ms = 0` and no shared
+            // resource, so this warms the runtime without perturbing anything under test.
+            sayAfterWithTokio(0u, "warmup")
+
             // init kotest as well, as some comparison takes much time on the first invocation
             1U shouldBe 1U
         }

@@ -8,14 +8,14 @@
 internal interface {{ callback.name()|ffi_callback_name }}: com.sun.jna.Callback {
     fun callback(
         {%- for arg in callback.arguments() -%}
-        {{ arg.name().borrow()|var_name }}: {{ arg.type_().borrow()|ffi_type_name_by_value }},
+        {{ arg.name().borrow()|var_name }}: {{ arg.type_().borrow()|ffi_type_name_by_value(ci) }},
         {%- endfor -%}
         {%- if callback.has_rust_call_status_arg() -%}
         uniffiCallStatus: UniffiRustCallStatus,
         {%- endif -%}
     )
     {%- match callback.return_type() %}
-    {%- when Some(return_type) %}: {{ return_type|ffi_type_name_by_value }}
+    {%- when Some(return_type) %}: {{ return_type|ffi_type_name_by_value(ci) }}
     {%- when None %}
     {%- endmatch %}
 }
@@ -23,11 +23,11 @@ internal interface {{ callback.name()|ffi_callback_name }}: com.sun.jna.Callback
 @Structure.FieldOrder({% for field in ffi_struct.fields() %}"{{ field.name()|var_name_raw }}"{% if !loop.last %}, {% endif %}{% endfor %})
 internal open class {{ ffi_struct.name()|ffi_struct_name }}Struct(
     {%- for field in ffi_struct.fields() %}
-    {{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }},
+    {{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) }},
     {%- endfor %}
 ) : com.sun.jna.Structure() {
     {% for field in ffi_struct.fields() %}
-    @JvmField internal var {{ field.name()|var_name }}: {{ (field.type_().borrow()|ffi_type_name_for_ffi_struct_inner) }} = {{ field.name()|var_name }} as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner }}
+    @JvmField internal var {{ field.name()|var_name }}: {{ (field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci)) }} = {{ field.name()|var_name }} as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci) }}
     {% endfor %}
 
     constructor(): this(
@@ -38,16 +38,16 @@ internal open class {{ ffi_struct.name()|ffi_struct_name }}Struct(
 
     internal class UniffiByValue(
         {%- for field in ffi_struct.fields() %}
-        {{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }},
+        {{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) }},
         {%- endfor %}
     ): {{ ffi_struct.name()|ffi_struct_name }}({%- for field in ffi_struct.fields() %}{{ field.name()|var_name }}, {%- endfor %}), Structure.ByValue
 }
 
 internal typealias {{ ffi_struct.name()|ffi_struct_name }} = {{ ffi_struct.name()|ffi_struct_name }}Struct
 {% for field in ffi_struct.fields() %}
-internal var {{ ffi_struct.name()|ffi_struct_name }}.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }}
+internal var {{ ffi_struct.name()|ffi_struct_name }}.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) }}
     get() = this.{{ field.name()|var_name }}
-    set(value) { this.{{ field.name()|var_name }} = value as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner }} }
+    set(value) { this.{{ field.name()|var_name }} = value as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci) }} }
 {% endfor %}
 
 internal fun {{ ffi_struct.name()|ffi_struct_name }}.uniffiSetValue(other: {{ ffi_struct.name()|ffi_struct_name }}) {
@@ -63,7 +63,7 @@ internal fun {{ ffi_struct.name()|ffi_struct_name }}.uniffiSetValue(other: {{ ff
 
 internal typealias {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue = {{ ffi_struct.name()|ffi_struct_name }}Struct.UniffiByValue
 {% for field in ffi_struct.fields() %}
-internal val {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct }}
+internal val {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) }}
     get() = this.{{ field.name()|var_name }}
 {% endfor %}
 
@@ -96,9 +96,11 @@ internal interface UniffiLib : Library {
             loadIndirect<UniffiLib>(componentName = "{{ ci.namespace() }}")
             .also { lib: UniffiLib ->
                 uniffiCheckContractApiVersion(lib)
+                {%- if !config.omit_checksums() %}
                 uniffiCheckApiChecksums(lib)
-                {% for fn in self.initialization_fns() -%}
-                {{ fn }}(lib)
+                {%- endif %}
+                {% for init_fn in self.initialization_fns() -%}
+                {{ init_fn }}
                 {% endfor -%}
             }
         }
@@ -112,8 +114,8 @@ internal interface UniffiLib : Library {
 
     {% for func in ci.iter_ffi_function_definitions() -%}
     fun {{ func.name() }}(
-        {%- call kt::arg_list_ffi_decl_for_ffi_function(func) %}
-    ): {% match func.return_type() %}{% when Some with (return_type) %}{{ return_type.borrow()|ffi_type_name_for_ffi_function }}{% when None %}Unit{% endmatch %}
+        {%- call kt::arg_list_ffi_decl_for_ffi_function(func) %}{% endcall %}
+    ): {% match func.return_type() %}{% when Some with (return_type) %}{{ return_type.borrow()|ffi_type_name_for_ffi_function(ci) }}{% when None %}Unit{% endmatch %}
     {% endfor %}
 }
 
@@ -126,7 +128,7 @@ private fun uniffiCheckContractApiVersion(lib: UniffiLib) {
         throw RuntimeException("UniFFI contract version mismatch: try cleaning and rebuilding your project")
     }
 }
-
+{% if !config.omit_checksums() %}
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     {%- for (name, expected_checksum) in ci.iter_checksums() %}
@@ -134,4 +136,17 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     {%- endfor %}
+}
+{%- endif %}
+
+/**
+ * Force this namespace's library initialisation, registering its callback interface
+ * vtables with Rust. Generated bindings for a crate that uses one of our types call
+ * this from their own `UniffiLib` initialiser, so that Rust can never reach an
+ * unregistered vtable (upstream #2343). Public because the caller is in another module.
+ *
+ * @suppress
+ */
+public fun uniffiEnsureInitialized() {
+    UniffiLib.INSTANCE
 }

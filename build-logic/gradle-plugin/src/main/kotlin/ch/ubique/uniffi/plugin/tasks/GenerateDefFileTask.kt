@@ -69,9 +69,21 @@ abstract class GenerateDefFileTask : DefaultTask() {
 			""".trimIndent()
         )
 
-        val opts = getLinkerOpts()
-        if (opts != null) {
-            output.appendText("\nlinkerOpts = $opts")
+        val opts = listOfNotNull(getLinkerOpts(), duplicateSymbolOpt())
+        if (opts.isNotEmpty()) {
+            output.appendText("\nlinkerOpts = ${opts.joinToString(" ")}")
+        }
+    }
+
+    private fun duplicateSymbolOpt(): String? {
+        val target = targetString.get()
+        return when {
+            // Kotlin/Native drives the mingw link through clang++, so the flag needs forwarding.
+            target.contains("windows") -> "-Wl,--allow-multiple-definition"
+            // ld.lld is invoked directly for linux targets.
+            target.contains("linux") -> "--allow-multiple-definition"
+            // Apple's ld64 already resolves duplicates this way.
+            else -> null
         }
     }
 

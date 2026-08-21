@@ -4,20 +4,15 @@ dictionary Zero {
 };
 
 // And all of these for the opposite - proc-macro types used in UDL.
-[Rust="record"]
-typedef extern One;
+typedef record One;
 
-[Rust="enum"]
-typedef extern MaybeBool;
+typedef enum MaybeBool;
 
-[Rust="interface"]
-typedef extern Object;
+typedef interface Object;
 
-[Rust="trait"]
-typedef extern Trait;
+typedef trait Trait;
 
-[Rust="trait_with_foreign"]
-typedef extern TraitWithForeign;
+typedef trait_with_foreign TraitWithForeign;
 
 // Then stuff defined here but referencing the imported types.
 dictionary Externals {

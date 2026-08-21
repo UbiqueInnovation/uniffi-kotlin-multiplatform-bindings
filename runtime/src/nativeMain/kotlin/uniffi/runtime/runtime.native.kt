@@ -66,6 +66,7 @@ fun <U> UniffiRustCallStatusHelper.withReference(
 /////// CALLBACKS ////////
 // Define FFI callback types
 typealias UniffiRustFutureContinuationCallback = cinterop.UniffiRustFutureContinuationCallback
-typealias UniffiForeignFutureFree = cinterop.UniffiForeignFutureFree
+typealias UniffiForeignFutureDroppedCallback = cinterop.UniffiForeignFutureDroppedCallback
 typealias UniffiCallbackInterfaceFree = cinterop.UniffiCallbackInterfaceFree
+typealias UniffiCallbackInterfaceClone = cinterop.UniffiCallbackInterfaceClone
 

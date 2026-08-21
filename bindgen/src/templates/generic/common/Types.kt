@@ -9,6 +9,11 @@
 //
 // The easiest way to ensure this method is called is to use the `.use`
 // helper method to execute a block and destroy the object at the end.
+//
+// N.B. this is declared here rather than taken from `uniffi.runtime` on purpose:
+// it is a supertype of every generated object, so sourcing it from the runtime
+// would make the runtime part of this module's public ABI and force consumers of
+// these bindings to depend on it too.
 interface Disposable : AutoCloseable {
     fun destroy()
     override fun close() = destroy()
@@ -32,10 +37,13 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
         }
     }
 
-/** Used to instantiate an interface without an actual pointer, for fakes in tests, mostly. */
-object NoPointer
+/** Used to instantiate an interface without an actual handle, for fakes in tests, mostly. */
+object NoHandle
 
-{%- for type_ in ci.iter_types() %}
+// Marker for the internal "wrap an existing Rust handle" constructor.
+object UniffiWithHandle
+
+{%- for type_ in ci.iter_local_types() %}
 {%- let type_name = type_|type_name(ci) %}
 {%- let ffi_converter_name = type_|ffi_converter_name %}
 {%- let canonical_type_name = type_|canonical_name %}
@@ -73,11 +81,14 @@ object NoPointer
 {%- when Type::Custom { module_path, name, builtin } %}
 {% include "CustomTypeTemplate.kt" %}
 
-{%- when Type::External { module_path, name, namespace, kind, tagged } %}
-{% include "ExternalTypeTemplate.kt" %}
-
 {%- else %}
 {%- endmatch %}
+{%- endfor %}
+
+{%- for type_ in ci.iter_external_types() %}
+{%- let name = type_|type_name(ci) %}
+{%- let package_name = self.external_type_package(type_) %}
+{% include "ExternalTypeTemplate.kt" %}
 {%- endfor %}
 
 {%- if ci.has_async_fns() %}

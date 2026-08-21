@@ -11,7 +11,7 @@ public typealias {{ type_name }} = {{ builtin|type_name(ci) }}
 
 {%- when Some with (config) %}
 
-{%- let ffi_type_name=builtin|ffi_type|ffi_type_name_by_value %}
+{%- let ffi_type_name=builtin|ffi_type|ref|ffi_type_name_by_value(ci) %}
 
 {# When the config specifies a different type name, create a typealias for it #}
 {%- match config.type_name %}

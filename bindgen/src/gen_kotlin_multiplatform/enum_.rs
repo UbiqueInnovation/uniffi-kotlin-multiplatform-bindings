@@ -4,7 +4,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use uniffi_bindgen::backend::Literal;
+use anyhow::{bail, Result};
+use uniffi_bindgen::interface::{DefaultValue, Literal};
 use uniffi_bindgen::ComponentInterface;
 
 use super::CodeType;
@@ -29,15 +30,20 @@ impl CodeType for EnumCodeType {
         format!("Type{}", self.id)
     }
 
-    fn literal(&self, literal: &Literal, ci: &ComponentInterface) -> String {
-        if let Literal::Enum(v, _) = literal {
-            format!(
+    fn default(
+        &self,
+        default: &DefaultValue,
+        ci: &ComponentInterface,
+        _config: &super::Config,
+    ) -> Result<String> {
+        if let DefaultValue::Literal(Literal::Enum(v, _)) = default {
+            Ok(format!(
                 "{}.{}",
                 self.type_label(ci),
                 super::KotlinCodeOracle.enum_variant_name(v)
-            )
+            ))
         } else {
-            unreachable!();
+            bail!("Invalid default for enum type: {default:?}")
         }
     }
 }

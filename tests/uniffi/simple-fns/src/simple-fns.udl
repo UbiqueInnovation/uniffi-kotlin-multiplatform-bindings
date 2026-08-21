@@ -1,3 +1,4 @@
 namespace simple_fns {};
 
+[Remote]
 interface MyHashSet {};

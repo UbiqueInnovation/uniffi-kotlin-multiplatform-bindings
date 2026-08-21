@@ -7,7 +7,7 @@ public object FfiConverterString: FfiConverter<String, RustBufferByValue> {
     // store our length and avoid writing it out to the buffer.
     override fun lift(value: RustBufferByValue): String {
         try {
-            {% call kt::check_rust_buffer_length("value.len") %}
+            {% call kt::check_rust_buffer_length("value.len") %}{% endcall %}
             val byteArr =  value.asByteBuffer()!!.get(value.len.toInt())
             return byteArr.decodeToString()
         } finally {

@@ -1,7 +1,7 @@
 
 {%- import "macros.kt" as kt %}
 
-{%- for type_ in ci.iter_types() %}
+{%- for type_ in ci.iter_local_types() %}
 {%- let type_name = type_|type_name(ci) %}
 {%- let ffi_converter_name = type_|ffi_converter_name %}
 {%- let canonical_type_name = type_|canonical_name %}
@@ -91,6 +91,9 @@
 {%- when Type::Map { key_type, value_type } %}
 {% include "generic/ffi/MapTemplate.kt" %}
 
+{%- when Type::Set { inner_type } %}
+{% include "generic/ffi/SetTemplate.kt" %}
+
 {%- when Type::CallbackInterface { module_path, name } %}
 {% include "CallbackInterfaceTemplate.kt" %}
 
@@ -103,11 +106,15 @@
 {%- when Type::Custom { module_path, name, builtin } %}
 {% include "generic/ffi/CustomTypeTemplate.kt" %}
 
-{%- when Type::External { module_path, name, namespace, kind, tagged } %}
-{% include "ExternalTypeTemplate.kt" %}
-
 {%- else %}
 {%- endmatch %}
+{%- endfor %}
+
+{%- for type_ in ci.iter_external_types() %}
+{%- let name = type_|type_name(ci) %}
+{%- let ffi_converter_name = type_|ffi_converter_name %}
+{%- let package_name = self.external_type_package(type_) %}
+{% include "ExternalTypeTemplate.kt" %}
 {%- endfor %}
 
 {%- if ci.has_async_fns() %}

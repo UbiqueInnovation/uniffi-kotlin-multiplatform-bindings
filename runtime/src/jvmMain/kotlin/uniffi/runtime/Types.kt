@@ -6,12 +6,12 @@ import com.sun.jna.Callback
 import com.sun.jna.Structure
 
 @Structure.FieldOrder("handle", "free")
-open class UniffiForeignFutureStruct(
+open class UniffiForeignFutureDroppedCallbackStructStruct(
     handle: Long,
     free: Any?,
 ) : Structure() {
     @JvmField var handle: Long = handle
-    @JvmField var free: UniffiForeignFutureFree? = free as UniffiForeignFutureFree?
+    @JvmField var free: UniffiForeignFutureDroppedCallback? = free as UniffiForeignFutureDroppedCallback?
 
     constructor() : this(
         handle = 0.toLong(),
@@ -21,43 +21,43 @@ open class UniffiForeignFutureStruct(
     class UniffiByValue(
         handle: Long,
         free: Any?,
-    ) : UniffiForeignFuture(handle, free), ByValue
+    ) : UniffiForeignFutureDroppedCallbackStruct(handle, free), ByValue
 }
 
-typealias UniffiForeignFuture = UniffiForeignFutureStruct
+typealias UniffiForeignFutureDroppedCallbackStruct = UniffiForeignFutureDroppedCallbackStructStruct
 
-var UniffiForeignFuture.handle: Long
+var UniffiForeignFutureDroppedCallbackStruct.handle: Long
     get() = this.handle
     set(value) {
         this.handle = value
     }
 
-var UniffiForeignFuture.free: Any?
+var UniffiForeignFutureDroppedCallbackStruct.free: Any?
     get() = this.free
     set(value) {
-        this.free = value as UniffiForeignFutureFree?
+        this.free = value as UniffiForeignFutureDroppedCallback?
     }
 
-fun UniffiForeignFuture.uniffiSetValue(other: UniffiForeignFuture) {
+fun UniffiForeignFutureDroppedCallbackStruct.uniffiSetValue(other: UniffiForeignFutureDroppedCallbackStruct) {
     handle = other.handle
     free = other.free
 }
 
-fun UniffiForeignFuture.uniffiSetValue(other: UniffiForeignFutureUniffiByValue) {
+fun UniffiForeignFutureDroppedCallbackStruct.uniffiSetValue(other: UniffiForeignFutureDroppedCallbackStructUniffiByValue) {
     handle = other.handle
     free = other.free
 }
 
-typealias UniffiForeignFutureUniffiByValue = UniffiForeignFutureStruct.UniffiByValue
+typealias UniffiForeignFutureDroppedCallbackStructUniffiByValue = UniffiForeignFutureDroppedCallbackStructStruct.UniffiByValue
 
-val UniffiForeignFutureUniffiByValue.handle: Long
+val UniffiForeignFutureDroppedCallbackStructUniffiByValue.handle: Long
     get() = this.handle
 
-val UniffiForeignFutureUniffiByValue.free: Any?
+val UniffiForeignFutureDroppedCallbackStructUniffiByValue.free: Any?
     get() = this.free
 
 @Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureStructU8Struct(
+open class UniffiForeignFutureResultU8Struct(
     returnValue: Byte,
     callStatus: UniffiRustCallStatusByValue,
 ) : Structure() {
@@ -72,32 +72,32 @@ open class UniffiForeignFutureStructU8Struct(
     class UniffiByValue(
         returnValue: Byte,
         callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructU8(returnValue, callStatus), ByValue
+    ) : UniffiForeignFutureResultU8(returnValue, callStatus), ByValue
 }
 
-typealias UniffiForeignFutureStructU8 = UniffiForeignFutureStructU8Struct
+typealias UniffiForeignFutureResultU8 = UniffiForeignFutureResultU8Struct
 
-fun UniffiForeignFutureStructU8.uniffiSetValue(other: UniffiForeignFutureStructU8) {
+fun UniffiForeignFutureResultU8.uniffiSetValue(other: UniffiForeignFutureResultU8) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-fun UniffiForeignFutureStructU8.uniffiSetValue(other: UniffiForeignFutureStructU8UniffiByValue) {
+fun UniffiForeignFutureResultU8.uniffiSetValue(other: UniffiForeignFutureResultU8UniffiByValue) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructU8UniffiByValue = UniffiForeignFutureStructU8Struct.UniffiByValue
+typealias UniffiForeignFutureResultU8UniffiByValue = UniffiForeignFutureResultU8Struct.UniffiByValue
 
 interface UniffiForeignFutureCompleteU8 : Callback {
     fun callback(
         callbackData: Long,
-        result: UniffiForeignFutureStructU8UniffiByValue,
+        result: UniffiForeignFutureResultU8UniffiByValue,
     )
 }
 
 @Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureStructI8Struct(
+open class UniffiForeignFutureResultI8Struct(
     returnValue: Byte,
     callStatus: UniffiRustCallStatusByValue,
 ) : Structure() {
@@ -112,32 +112,32 @@ open class UniffiForeignFutureStructI8Struct(
     class UniffiByValue(
         returnValue: Byte,
         callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructI8(returnValue, callStatus), ByValue
+    ) : UniffiForeignFutureResultI8(returnValue, callStatus), ByValue
 }
 
-typealias UniffiForeignFutureStructI8 = UniffiForeignFutureStructI8Struct
+typealias UniffiForeignFutureResultI8 = UniffiForeignFutureResultI8Struct
 
-fun UniffiForeignFutureStructI8.uniffiSetValue(other: UniffiForeignFutureStructI8) {
+fun UniffiForeignFutureResultI8.uniffiSetValue(other: UniffiForeignFutureResultI8) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-fun UniffiForeignFutureStructI8.uniffiSetValue(other: UniffiForeignFutureStructI8UniffiByValue) {
+fun UniffiForeignFutureResultI8.uniffiSetValue(other: UniffiForeignFutureResultI8UniffiByValue) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructI8UniffiByValue = UniffiForeignFutureStructI8Struct.UniffiByValue
+typealias UniffiForeignFutureResultI8UniffiByValue = UniffiForeignFutureResultI8Struct.UniffiByValue
 
 interface UniffiForeignFutureCompleteI8 : Callback {
     fun callback(
         callbackData: Long,
-        result: UniffiForeignFutureStructI8UniffiByValue,
+        result: UniffiForeignFutureResultI8UniffiByValue,
     )
 }
 
 @Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureStructU16Struct(
+open class UniffiForeignFutureResultU16Struct(
     returnValue: Short,
     callStatus: UniffiRustCallStatusByValue,
 ) : Structure() {
@@ -152,32 +152,32 @@ open class UniffiForeignFutureStructU16Struct(
     class UniffiByValue(
         returnValue: Short,
         callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructU16(returnValue, callStatus), ByValue
+    ) : UniffiForeignFutureResultU16(returnValue, callStatus), ByValue
 }
 
-typealias UniffiForeignFutureStructU16 = UniffiForeignFutureStructU16Struct
+typealias UniffiForeignFutureResultU16 = UniffiForeignFutureResultU16Struct
 
-fun UniffiForeignFutureStructU16.uniffiSetValue(other: UniffiForeignFutureStructU16) {
+fun UniffiForeignFutureResultU16.uniffiSetValue(other: UniffiForeignFutureResultU16) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-fun UniffiForeignFutureStructU16.uniffiSetValue(other: UniffiForeignFutureStructU16UniffiByValue) {
+fun UniffiForeignFutureResultU16.uniffiSetValue(other: UniffiForeignFutureResultU16UniffiByValue) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructU16UniffiByValue = UniffiForeignFutureStructU16Struct.UniffiByValue
+typealias UniffiForeignFutureResultU16UniffiByValue = UniffiForeignFutureResultU16Struct.UniffiByValue
 
 interface UniffiForeignFutureCompleteU16 : Callback {
     fun callback(
         callbackData: Long,
-        result: UniffiForeignFutureStructU16UniffiByValue,
+        result: UniffiForeignFutureResultU16UniffiByValue,
     )
 }
 
 @Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureStructI16Struct(
+open class UniffiForeignFutureResultI16Struct(
     returnValue: Short,
     callStatus: UniffiRustCallStatusByValue,
 ) : Structure() {
@@ -192,32 +192,32 @@ open class UniffiForeignFutureStructI16Struct(
     class UniffiByValue(
         returnValue: Short,
         callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructI16(returnValue, callStatus),ByValue
+    ) : UniffiForeignFutureResultI16(returnValue, callStatus),ByValue
 }
 
-typealias UniffiForeignFutureStructI16 = UniffiForeignFutureStructI16Struct
+typealias UniffiForeignFutureResultI16 = UniffiForeignFutureResultI16Struct
 
-fun UniffiForeignFutureStructI16.uniffiSetValue(other: UniffiForeignFutureStructI16) {
+fun UniffiForeignFutureResultI16.uniffiSetValue(other: UniffiForeignFutureResultI16) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-fun UniffiForeignFutureStructI16.uniffiSetValue(other: UniffiForeignFutureStructI16UniffiByValue) {
+fun UniffiForeignFutureResultI16.uniffiSetValue(other: UniffiForeignFutureResultI16UniffiByValue) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructI16UniffiByValue = UniffiForeignFutureStructI16Struct.UniffiByValue
+typealias UniffiForeignFutureResultI16UniffiByValue = UniffiForeignFutureResultI16Struct.UniffiByValue
 
 interface UniffiForeignFutureCompleteI16 : Callback {
     fun callback(
         callbackData: Long,
-        result: UniffiForeignFutureStructI16UniffiByValue,
+        result: UniffiForeignFutureResultI16UniffiByValue,
     )
 }
 
 @Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureStructU32Struct(
+open class UniffiForeignFutureResultU32Struct(
     returnValue: Int,
     callStatus: UniffiRustCallStatusByValue,
 ) : Structure() {
@@ -232,32 +232,32 @@ open class UniffiForeignFutureStructU32Struct(
     class UniffiByValue(
         returnValue: Int,
         callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructU32(returnValue, callStatus), ByValue
+    ) : UniffiForeignFutureResultU32(returnValue, callStatus), ByValue
 }
 
-typealias UniffiForeignFutureStructU32 = UniffiForeignFutureStructU32Struct
+typealias UniffiForeignFutureResultU32 = UniffiForeignFutureResultU32Struct
 
-fun UniffiForeignFutureStructU32.uniffiSetValue(other: UniffiForeignFutureStructU32) {
+fun UniffiForeignFutureResultU32.uniffiSetValue(other: UniffiForeignFutureResultU32) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-fun UniffiForeignFutureStructU32.uniffiSetValue(other: UniffiForeignFutureStructU32UniffiByValue) {
+fun UniffiForeignFutureResultU32.uniffiSetValue(other: UniffiForeignFutureResultU32UniffiByValue) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructU32UniffiByValue = UniffiForeignFutureStructU32Struct.UniffiByValue
+typealias UniffiForeignFutureResultU32UniffiByValue = UniffiForeignFutureResultU32Struct.UniffiByValue
 
 interface UniffiForeignFutureCompleteU32 : Callback {
     fun callback(
         callbackData: Long,
-        result: UniffiForeignFutureStructU32UniffiByValue,
+        result: UniffiForeignFutureResultU32UniffiByValue,
     )
 }
 
 @Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureStructI32Struct(
+open class UniffiForeignFutureResultI32Struct(
     returnValue: Int,
     callStatus: UniffiRustCallStatusByValue,
 ) : Structure() {
@@ -272,32 +272,32 @@ open class UniffiForeignFutureStructI32Struct(
     class UniffiByValue(
         returnValue: Int,
         callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructI32(returnValue, callStatus), ByValue
+    ) : UniffiForeignFutureResultI32(returnValue, callStatus), ByValue
 }
 
-typealias UniffiForeignFutureStructI32 = UniffiForeignFutureStructI32Struct
+typealias UniffiForeignFutureResultI32 = UniffiForeignFutureResultI32Struct
 
-fun UniffiForeignFutureStructI32.uniffiSetValue(other: UniffiForeignFutureStructI32) {
+fun UniffiForeignFutureResultI32.uniffiSetValue(other: UniffiForeignFutureResultI32) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-fun UniffiForeignFutureStructI32.uniffiSetValue(other: UniffiForeignFutureStructI32UniffiByValue) {
+fun UniffiForeignFutureResultI32.uniffiSetValue(other: UniffiForeignFutureResultI32UniffiByValue) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructI32UniffiByValue = UniffiForeignFutureStructI32Struct.UniffiByValue
+typealias UniffiForeignFutureResultI32UniffiByValue = UniffiForeignFutureResultI32Struct.UniffiByValue
 
 interface UniffiForeignFutureCompleteI32 : Callback {
     fun callback(
         callbackData: Long,
-        result: UniffiForeignFutureStructI32UniffiByValue,
+        result: UniffiForeignFutureResultI32UniffiByValue,
     )
 }
 
 @Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureStructU64Struct(
+open class UniffiForeignFutureResultU64Struct(
     returnValue: Long,
     callStatus: UniffiRustCallStatusByValue,
 ) : Structure() {
@@ -312,32 +312,32 @@ open class UniffiForeignFutureStructU64Struct(
     class UniffiByValue(
         returnValue: Long,
         callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructU64(returnValue, callStatus), ByValue
+    ) : UniffiForeignFutureResultU64(returnValue, callStatus), ByValue
 }
 
-typealias UniffiForeignFutureStructU64 = UniffiForeignFutureStructU64Struct
+typealias UniffiForeignFutureResultU64 = UniffiForeignFutureResultU64Struct
 
-fun UniffiForeignFutureStructU64.uniffiSetValue(other: UniffiForeignFutureStructU64) {
+fun UniffiForeignFutureResultU64.uniffiSetValue(other: UniffiForeignFutureResultU64) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-fun UniffiForeignFutureStructU64.uniffiSetValue(other: UniffiForeignFutureStructU64UniffiByValue) {
+fun UniffiForeignFutureResultU64.uniffiSetValue(other: UniffiForeignFutureResultU64UniffiByValue) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructU64UniffiByValue = UniffiForeignFutureStructU64Struct.UniffiByValue
+typealias UniffiForeignFutureResultU64UniffiByValue = UniffiForeignFutureResultU64Struct.UniffiByValue
 
 interface UniffiForeignFutureCompleteU64 : Callback {
     fun callback(
         callbackData: Long,
-        result: UniffiForeignFutureStructU64UniffiByValue,
+        result: UniffiForeignFutureResultU64UniffiByValue,
     )
 }
 
 @Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureStructI64Struct(
+open class UniffiForeignFutureResultI64Struct(
     returnValue: Long,
     callStatus: UniffiRustCallStatusByValue,
 ) : Structure() {
@@ -352,32 +352,32 @@ open class UniffiForeignFutureStructI64Struct(
     class UniffiByValue(
         returnValue: Long,
         callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructI64(returnValue, callStatus), ByValue
+    ) : UniffiForeignFutureResultI64(returnValue, callStatus), ByValue
 }
 
-typealias UniffiForeignFutureStructI64 = UniffiForeignFutureStructI64Struct
+typealias UniffiForeignFutureResultI64 = UniffiForeignFutureResultI64Struct
 
-fun UniffiForeignFutureStructI64.uniffiSetValue(other: UniffiForeignFutureStructI64) {
+fun UniffiForeignFutureResultI64.uniffiSetValue(other: UniffiForeignFutureResultI64) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-fun UniffiForeignFutureStructI64.uniffiSetValue(other: UniffiForeignFutureStructI64UniffiByValue) {
+fun UniffiForeignFutureResultI64.uniffiSetValue(other: UniffiForeignFutureResultI64UniffiByValue) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructI64UniffiByValue = UniffiForeignFutureStructI64Struct.UniffiByValue
+typealias UniffiForeignFutureResultI64UniffiByValue = UniffiForeignFutureResultI64Struct.UniffiByValue
 
 interface UniffiForeignFutureCompleteI64 : Callback {
     fun callback(
         callbackData: Long,
-        result: UniffiForeignFutureStructI64UniffiByValue,
+        result: UniffiForeignFutureResultI64UniffiByValue,
     )
 }
 
 @Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureStructF32Struct(
+open class UniffiForeignFutureResultF32Struct(
     returnValue: Float,
     callStatus: UniffiRustCallStatusByValue,
 ) : Structure() {
@@ -392,32 +392,32 @@ open class UniffiForeignFutureStructF32Struct(
     class UniffiByValue(
         returnValue: Float,
         callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructF32(returnValue, callStatus), ByValue
+    ) : UniffiForeignFutureResultF32(returnValue, callStatus), ByValue
 }
 
-typealias UniffiForeignFutureStructF32 = UniffiForeignFutureStructF32Struct
+typealias UniffiForeignFutureResultF32 = UniffiForeignFutureResultF32Struct
 
-fun UniffiForeignFutureStructF32.uniffiSetValue(other: UniffiForeignFutureStructF32) {
+fun UniffiForeignFutureResultF32.uniffiSetValue(other: UniffiForeignFutureResultF32) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-fun UniffiForeignFutureStructF32.uniffiSetValue(other: UniffiForeignFutureStructF32UniffiByValue) {
+fun UniffiForeignFutureResultF32.uniffiSetValue(other: UniffiForeignFutureResultF32UniffiByValue) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructF32UniffiByValue = UniffiForeignFutureStructF32Struct.UniffiByValue
+typealias UniffiForeignFutureResultF32UniffiByValue = UniffiForeignFutureResultF32Struct.UniffiByValue
 
 interface UniffiForeignFutureCompleteF32 : Callback {
     fun callback(
         callbackData: Long,
-        result: UniffiForeignFutureStructF32UniffiByValue,
+        result: UniffiForeignFutureResultF32UniffiByValue,
     )
 }
 
 @Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureStructF64Struct(
+open class UniffiForeignFutureResultF64Struct(
     returnValue: Double,
     callStatus: UniffiRustCallStatusByValue,
 ) : Structure() {
@@ -432,72 +432,32 @@ open class UniffiForeignFutureStructF64Struct(
     class UniffiByValue(
         returnValue: Double,
         callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructF64(returnValue, callStatus), ByValue
+    ) : UniffiForeignFutureResultF64(returnValue, callStatus), ByValue
 }
 
-typealias UniffiForeignFutureStructF64 = UniffiForeignFutureStructF64Struct
+typealias UniffiForeignFutureResultF64 = UniffiForeignFutureResultF64Struct
 
-fun UniffiForeignFutureStructF64.uniffiSetValue(other: UniffiForeignFutureStructF64) {
+fun UniffiForeignFutureResultF64.uniffiSetValue(other: UniffiForeignFutureResultF64) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-fun UniffiForeignFutureStructF64.uniffiSetValue(other: UniffiForeignFutureStructF64UniffiByValue) {
+fun UniffiForeignFutureResultF64.uniffiSetValue(other: UniffiForeignFutureResultF64UniffiByValue) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructF64UniffiByValue = UniffiForeignFutureStructF64Struct.UniffiByValue
+typealias UniffiForeignFutureResultF64UniffiByValue = UniffiForeignFutureResultF64Struct.UniffiByValue
 
 interface UniffiForeignFutureCompleteF64 : Callback {
     fun callback(
         callbackData: Long,
-        result: UniffiForeignFutureStructF64UniffiByValue,
+        result: UniffiForeignFutureResultF64UniffiByValue,
     )
 }
 
 @Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureStructPointerStruct(
-    returnValue: Pointer?,
-    callStatus: UniffiRustCallStatusByValue,
-) : Structure() {
-    @JvmField var returnValue: Pointer? = returnValue
-    @JvmField var callStatus: UniffiRustCallStatusByValue = callStatus
-
-    constructor() : this(
-        returnValue = NullPointer,
-        callStatus = UniffiRustCallStatusHelper.allocValue(),
-    )
-
-    class UniffiByValue(
-        returnValue: Pointer?,
-        callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructPointer(returnValue, callStatus), ByValue
-}
-
-typealias UniffiForeignFutureStructPointer = UniffiForeignFutureStructPointerStruct
-
-fun UniffiForeignFutureStructPointer.uniffiSetValue(other: UniffiForeignFutureStructPointer) {
-    returnValue = other.returnValue
-    callStatus = other.callStatus
-}
-
-fun UniffiForeignFutureStructPointer.uniffiSetValue(other: UniffiForeignFutureStructPointerUniffiByValue) {
-    returnValue = other.returnValue
-    callStatus = other.callStatus
-}
-
-typealias UniffiForeignFutureStructPointerUniffiByValue = UniffiForeignFutureStructPointerStruct.UniffiByValue
-
-interface UniffiForeignFutureCompletePointer : Callback {
-    fun callback(
-        callbackData: Long,
-        result: UniffiForeignFutureStructPointerUniffiByValue,
-    )
-}
-
-@Structure.FieldOrder("returnValue", "callStatus")
-open class UniffiForeignFutureStructRustBufferStruct(
+open class UniffiForeignFutureResultRustBufferStruct(
     returnValue: RustBufferByValue,
     callStatus: UniffiRustCallStatusByValue,
 ) : Structure() {
@@ -512,32 +472,32 @@ open class UniffiForeignFutureStructRustBufferStruct(
     class UniffiByValue(
         returnValue: RustBufferByValue,
         callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructRustBuffer(returnValue, callStatus), ByValue
+    ) : UniffiForeignFutureResultRustBuffer(returnValue, callStatus), ByValue
 }
 
-typealias UniffiForeignFutureStructRustBuffer = UniffiForeignFutureStructRustBufferStruct
+typealias UniffiForeignFutureResultRustBuffer = UniffiForeignFutureResultRustBufferStruct
 
-fun UniffiForeignFutureStructRustBuffer.uniffiSetValue(other: UniffiForeignFutureStructRustBuffer) {
+fun UniffiForeignFutureResultRustBuffer.uniffiSetValue(other: UniffiForeignFutureResultRustBuffer) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-fun UniffiForeignFutureStructRustBuffer.uniffiSetValue(other: UniffiForeignFutureStructRustBufferUniffiByValue) {
+fun UniffiForeignFutureResultRustBuffer.uniffiSetValue(other: UniffiForeignFutureResultRustBufferUniffiByValue) {
     returnValue = other.returnValue
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructRustBufferUniffiByValue = UniffiForeignFutureStructRustBufferStruct.UniffiByValue
+typealias UniffiForeignFutureResultRustBufferUniffiByValue = UniffiForeignFutureResultRustBufferStruct.UniffiByValue
 
 interface UniffiForeignFutureCompleteRustBuffer : Callback {
     fun callback(
         callbackData: Long,
-        result: UniffiForeignFutureStructRustBufferUniffiByValue,
+        result: UniffiForeignFutureResultRustBufferUniffiByValue,
     )
 }
 
 @Structure.FieldOrder("callStatus")
-open class UniffiForeignFutureStructVoidStruct(
+open class UniffiForeignFutureResultVoidStruct(
     callStatus: UniffiRustCallStatusByValue,
 ) : Structure() {
     @JvmField var callStatus: UniffiRustCallStatusByValue = callStatus
@@ -548,21 +508,21 @@ open class UniffiForeignFutureStructVoidStruct(
 
     class UniffiByValue(
         callStatus: UniffiRustCallStatusByValue,
-    ) : UniffiForeignFutureStructVoid(callStatus), ByValue
+    ) : UniffiForeignFutureResultVoid(callStatus), ByValue
 }
 
-typealias UniffiForeignFutureStructVoid = UniffiForeignFutureStructVoidStruct
+typealias UniffiForeignFutureResultVoid = UniffiForeignFutureResultVoidStruct
 
-fun UniffiForeignFutureStructVoid.uniffiSetValue(other: UniffiForeignFutureStructVoid) {
+fun UniffiForeignFutureResultVoid.uniffiSetValue(other: UniffiForeignFutureResultVoid) {
     callStatus = other.callStatus
 }
 
-fun UniffiForeignFutureStructVoid.uniffiSetValue(other: UniffiForeignFutureStructVoidUniffiByValue) {
+fun UniffiForeignFutureResultVoid.uniffiSetValue(other: UniffiForeignFutureResultVoidUniffiByValue) {
     callStatus = other.callStatus
 }
 
-typealias UniffiForeignFutureStructVoidUniffiByValue = UniffiForeignFutureStructVoidStruct.UniffiByValue
+typealias UniffiForeignFutureResultVoidUniffiByValue = UniffiForeignFutureResultVoidStruct.UniffiByValue
 
 interface UniffiForeignFutureCompleteVoid: Callback {
-    fun callback(callbackData: Long, result: UniffiForeignFutureStructVoidUniffiByValue,)
+    fun callback(callbackData: Long, result: UniffiForeignFutureResultVoidUniffiByValue,)
 }

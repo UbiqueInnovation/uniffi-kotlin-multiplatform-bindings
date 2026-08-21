@@ -31,7 +31,7 @@ crate-type = ["lib", "cdylib", "staticlib"]
 path = "src/commonMain/rust/lib.rs"
 
 [dependencies]
-uniffi = "0.28.3"
+uniffi = "0.32.0"
 ```
 
 Then, create a `src/commonMain/rust/lib.rs` file with the following content:
@@ -77,13 +77,13 @@ To see the complete example, check out the [quickstart example](examples/quickst
 
 ## Requirements
 
-| Requirement | Version    |
-| ----------- | ---------- |
-| Rust        | `>=1.82.0` |
-| UniFFI      | `=0.28.3`  |
-| Gradle      | `>=9.6.1`  |
-| Kotlin      | `>=2.4.0`  |
-| AGP         | `9.x`      |
+| Requirement | Version   |
+| ----------- | --------- |
+| Rust        | `>=1.91`  |
+| UniFFI      | `=0.32.0` |
+| Gradle      | `>=9.6.1` |
+| Kotlin      | `>=2.4.0` |
+| AGP         | `9.x`     |
 
 `AGP` is only required if you build for Android, see [Android](#android). The project is built and tested against AGP `9.3.1`.
 
@@ -107,7 +107,7 @@ kotlin {
 }
 ```
 
-> **Migrating from `1.0.x`:** the old setup used `com.android.library` together with `androidTarget { }` and a top level `android { }` block. Both are replaced by the above. Note that the Android configuration now lives *inside* `kotlin { }`, and that `minSdk` / `compileSdk` are set directly on it instead of in a `defaultConfig { }` block.
+> **Migrating from `1.0.x`:** the old setup used `com.android.library` together with `androidTarget { }` and a top level `android { }` block. Both are replaced by the above. Note that the Android configuration now lives _inside_ `kotlin { }`, and that `minSdk` / `compileSdk` are set directly on it instead of in a `defaultConfig { }` block.
 
 If the NDK version picked up by default does not work for you, pin it explicitly, see [NDK version](#ndk-version).
 
@@ -127,7 +127,7 @@ Multi Module Support allows you to write modular and composable rust code and bi
 
 ### External Types
 
-[External Types](https://mozilla.github.io/uniffi-rs/0.28/udl/ext_types.html) are supported, but they are adviced against in favor of the multi module support.
+[External Types](https://mozilla.github.io/uniffi-rs/0.32/types/remote_ext_types.html) are supported, but they are adviced against in favor of the multi module support.
 
 The only case where external types are needed is if your rust library depends on a third-party rust library that also uses UniFFI. In this case, you need to generate bindings for both your rust library and the third-party rust library. To enable this, you need to set the `generateBindingsForExternalCrates` option to `true` in your `build.gradle.kts`:
 
@@ -176,7 +176,7 @@ uniffi {
 Per default, these dependencies are added to `commonMain`:
 
 | Dependency                                    | Version |
-|-----------------------------------------------|---------|
+| --------------------------------------------- | ------- |
 | com.squareup.okio:okio                        | 3.18.1  |
 | org.jetbrains.kotlinx:atomicfu                | 0.33.0  |
 | org.jetbrains.kotlinx:kotlinx-coroutines-core | 1.11.0  |
@@ -204,6 +204,38 @@ uniffi {
 ```
 
 For more information on how to use this feature, check out the [External Types](#external-types) section in the README.
+
+### Record mutability
+
+Records are generated as `data class`es with mutable `var` fields. You can have them generated with `val` fields instead:
+
+```toml
+generate_immutable_records = true
+```
+
+Individual records can be exempted from that, and keep their `var` fields:
+
+```toml
+generate_immutable_records = true
+mutable_records = ["Cursor", "Draft"]
+```
+
+### API checksum checks
+
+Every exported function has a checksum, computed from its signature. The generated bindings carry the checksums they
+were generated from and compare them against the ones the loaded library reports, once, when the library is first
+touched. A mismatch means the bindings and the rust library were built from different versions of the same API, and it
+throws rather than letting a call cross the FFI with arguments the other side reads differently.
+
+The check costs one FFI call per exported function at startup. If your bindings and your rust library are always built
+together from the same source, which is what the gradle plugin does, you can leave it out in `uniffi.toml`:
+
+```toml
+omit_checksums = true
+```
+
+The contract version check, which catches a library built against a different uniffi version altogether, is separate
+and always runs.
 
 ### Using `spmForKmp` alongside this plugin
 

@@ -1,0 +1,20 @@
+namespace mutable_records {
+    /// Round-trips a record so a test can prove a field it assigned to really crossed
+    /// the FFI, rather than only having changed the Kotlin copy.
+    UdlThawed echo_udl_thawed(UdlThawed value);
+
+    UdlFrozen echo_udl_frozen(UdlFrozen value);
+};
+
+/// Not named in `mutable_records`, so its fields are `val`.
+dictionary UdlFrozen {
+    i64 counter;
+    string label;
+};
+
+/// Named in `mutable_records`, so its fields stay `var` even though
+/// `generate_immutable_records` is on.
+dictionary UdlThawed {
+    i64 counter;
+    string label;
+};

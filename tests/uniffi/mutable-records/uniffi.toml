@@ -1,0 +1,3 @@
+package_name = "mutable_records"
+generate_immutable_records = true
+mutable_records = ["UdlThawed", "ProcThawed", "NoSuchRecord"]

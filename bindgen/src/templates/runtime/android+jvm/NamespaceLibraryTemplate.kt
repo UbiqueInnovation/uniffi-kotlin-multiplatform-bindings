@@ -22,9 +22,11 @@ internal interface UniffiLib : Library {
             loadIndirect<UniffiLib>(componentName = "{{ ci.namespace() }}")
             .also { lib: UniffiLib ->
                 uniffiCheckContractApiVersion(lib)
+                {%- if !config.omit_checksums() %}
                 uniffiCheckApiChecksums(lib)
-                {% for fn in self.initialization_fns() -%}
-                {{ fn }}(lib)
+                {%- endif %}
+                {% for init_fn in self.initialization_fns() -%}
+                {{ init_fn }}
                 {% endfor -%}
             }
         }
@@ -38,8 +40,8 @@ internal interface UniffiLib : Library {
 
     {% for func in ci.iter_ffi_function_definitions() -%}
     fun {{ func.name() }}(
-        {%- call kt::arg_list_ffi_decl_for_ffi_function(func) %}
-    ): {% match func.return_type() %}{% when Some with (return_type) %}{{ return_type.borrow()|ffi_type_name_for_ffi_function }}{% when None %}Unit{% endmatch %}
+        {%- call kt::arg_list_ffi_decl_for_ffi_function(func) %}{% endcall %}
+    ): {% match func.return_type() %}{% when Some with (return_type) %}{{ return_type.borrow()|ffi_type_name_for_ffi_function(ci) }}{% when None %}Unit{% endmatch %}
     {% endfor %}
 }
 
@@ -52,7 +54,7 @@ private fun uniffiCheckContractApiVersion(lib: UniffiLib) {
         throw RuntimeException("UniFFI contract version mismatch: try cleaning and rebuilding your project")
     }
 }
-
+{% if !config.omit_checksums() %}
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     {%- for (name, expected_checksum) in ci.iter_checksums() %}
@@ -61,3 +63,4 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     }
     {%- endfor %}
 }
+{%- endif %}
