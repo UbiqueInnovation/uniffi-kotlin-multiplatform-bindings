@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.2.0...HEAD)
+## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.2.1...HEAD)
 
 ## [1.2.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.1) - 2026-08-21
 
