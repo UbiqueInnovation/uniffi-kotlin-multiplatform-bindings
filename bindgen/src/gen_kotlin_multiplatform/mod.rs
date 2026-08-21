@@ -651,6 +651,56 @@ macro_rules! kotlin_wrapper {
                 local_init_fns.chain(external_init_fns).collect()
             }
 
+            /// Every crate whose Rust is statically linked into this namespace's library.
+            ///
+            /// `UniffiVtableRegistry` needs this to decide whether a given vtable's init
+            /// symbol can be resolved in a given library at all. In library mode
+            /// `all_component_interfaces()` is exactly the set of crates the library was
+            /// built from - it matches `nm` on the produced cdylib. A UDL-driven build
+            /// leaves that list empty, in which case the only crate we can honestly claim
+            /// is our own, and the registry simply installs nothing extra.
+            pub fn linked_crates(&self) -> Vec<String> {
+                self.ci
+                    .all_component_interfaces()
+                    .iter()
+                    .map(|ci| ci.crate_name().to_owned())
+                    .chain([self.ci.crate_name().to_owned()])
+                    .collect::<BTreeSet<_>>()
+                    .into_iter()
+                    .collect()
+            }
+
+            /// `(vtable holder object, init symbol)` for every callback interface this
+            /// namespace declares - a trait interface with a foreign implementation, or a
+            /// plain `callback interface`, which are two different definition lists.
+            ///
+            /// Walks `iter_local_types()` rather than either list so that it stays exactly
+            /// in step with the `uniffiCallbackInterface*` objects `Types.kt` renders.
+            pub fn callback_vtables(&self) -> Vec<(String, String)> {
+                self.ci
+                    .iter_local_types()
+                    .filter_map(|type_| match type_ {
+                        Type::Object { name, .. } => {
+                            let obj = self.ci.get_object_definition(name)?;
+                            // `ffi_init_callback()` panics for a plain interface.
+                            obj.has_callback_interface()
+                                .then(|| (name, obj.ffi_init_callback()))
+                        }
+                        Type::CallbackInterface { name, .. } => {
+                            let cbi = self.ci.get_callback_interface_definition(name)?;
+                            Some((name, cbi.ffi_init_callback()))
+                        }
+                        _ => None,
+                    })
+                    .map(|(name, init)| {
+                        (
+                            format!("uniffiCallbackInterface{name}"),
+                            init.name().to_owned(),
+                        )
+                    })
+                    .collect()
+            }
+
             pub fn imports(&self) -> Vec<ImportRequirement> {
                 self.type_imports.iter().cloned().collect()
             }

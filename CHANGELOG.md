@@ -94,7 +94,22 @@
   happened to call into that namespace first. Rust then called through a null vtable, which aborts the process rather
   than throwing, because the failing handle panics a second time while unwinding. The generated bindings now chain into
   `{package}.uniffiEnsureInitialized()` for each crate they use, and each binding exposes that function for its own
-  namespace. This only covers crates that end up in the same shared library; see the known limitation below.
+  namespace. That forces the declaring namespace to initialise; keeping its vtables reachable from every _library_ is
+  the separate fix below.
+
+- A trait declared `#[uniffi::export(with_foreign)]` (or `[Trait, WithForeign]`) can be implemented in Kotlin and
+  passed to a function of a _different_ Gradle module, on JVM and Android. Each module builds its own shared library
+  and links its Rust dependencies into it statically, so the declaring crate's vtable slot exists once per library,
+  while the Kotlin package for that crate is generated once and could only ever register with one of them - a call
+  through any other library's still-unset slot aborted the process (SIGABRT) rather than throwing. The `uniffi.runtime`
+  artifact resolves once for a whole app, so it now hosts a `UniffiVtableRegistry` that knows every vtable and every
+  loaded library and keeps the cross product installed: a namespace publishes its vtables when it initialises, a
+  library is registered when it loads, and either arriving later is filled in against everything already known. A
+  vtable is only installed into a library that actually links its crate, and each library's uniffi contract version is
+  checked before its slot is written. Nothing about lowering changed - each call mints a fresh handle, and the vtable
+  entries of every copy dispatch through the one handle map in the declaring namespace's package. Kotlin/Native needs
+  no registry - it has one binary, not one shared library per module - but see the known limitation below for the
+  link-order hazard that remains there.
 
 - Kotlin/Native links no longer fail with `duplicate symbol` when two uniffi modules share a Rust
   dependency. Each module's cinterop archive carries that dependency's object code, so the final link sees the same
@@ -111,14 +126,18 @@
 
 ### Known limitations
 
-- A trait declared `#[uniffi::export(with_foreign)]` (or `[Trait, WithForeign]`) cannot be implemented in Kotlin and
-  passed to a function of a _different_ Gradle module. Each module builds its own shared library and links its Rust
-  dependencies into it statically, so the shared crate's vtable slot exists once per library. The Kotlin package for
-  that crate is generated once and registers the vtable with one library only, leaving the other library's slot unset -
-  and a Rust-side call through it aborts the process. Implementing the trait and using it within the module that
-  declares it works, as does passing records, enums and objects of a shared crate between modules. Generating the
-  shared crate's bindings into the consuming module (`uniffi { generateBindingsForExternalCrates = true }`, without
-  also depending on the module that declares it) keeps everything in one library and avoids this.
+- On Kotlin/Native, a foreign vtable registered by one module can fail to reach another module's copy of the same
+  scaffolding. The declaring crate's vtable slot is a Rust-mangled global whose name carries that crate's `-Cmetadata`,
+  while the `..._fn_init_callback_vtable_...` writer is `#[no_mangle]` and always collapses to one definition. The
+  slots therefore collapse too - but only when every archive in the link compiled the declaring crate with the same
+  `-Cmetadata`. Bindings are built with one `cargo build --package` per Gradle module, so a feature difference anywhere
+  upstream of that crate (for example one module depending on `url`, which pulls in `synstructure` and turns on extra
+  `syn` features) gives it two disambiguators and two slots. The single surviving writer then fills one of them, and
+  calls arriving through the other module read a null slot and abort - SIGABRT, exit 134, no catchable exception.
+  The fix shipped above is JNA-based and does not apply here. The `multi-module` fixture passes because its crates have
+  no third-party dependencies to disagree about; `ext-types` does not, which is why its foreign-trait test runs only on
+  the JVM. Building every uniffi package in a single `cargo` invocation makes the disambiguators converge and is the
+  available workaround. JVM and Android are not affected.
 
 - Borrowed byte buffers (`&[u8]` in Rust, `[ByRef] bytes` in UDL, new in uniffi `0.32`) are not supported yet. They
   travel as a `ForeignBytes` that borrows the caller's buffer for the duration of the call, which needs the buffer

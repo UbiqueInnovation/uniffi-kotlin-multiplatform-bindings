@@ -99,9 +99,33 @@ internal interface UniffiLib : Library {
                 {%- if !config.omit_checksums() %}
                 uniffiCheckApiChecksums(lib)
                 {%- endif %}
+                // Make this library visible to every callback interface vtable in the app,
+                // including ones published later. Each Gradle module links its own copy of
+                // its Rust dependencies, so a `with_foreign` trait declared elsewhere has a
+                // vtable cell in *this* image that only the registry can reach.
+                //
+                // `Native.getNativeLibrary(lib)` is load-bearing: `NativeLibrary.getInstance`
+                // is a different entry in JNA's cache and, for a library shipped inside a jar,
+                // opens a second copy of the image - the vtable would land in the wrong one.
+                uniffi.runtime.UniffiVtableRegistry.addLibrary(
+                    findLibraryName("{{ ci.namespace() }}"),
+                    com.sun.jna.Native.getNativeLibrary(lib),
+                    setOf({% for linked_crate in self.linked_crates() %}"{{ linked_crate }}", {% endfor %}),
+                )
                 {% for init_fn in self.initialization_fns() -%}
                 {{ init_fn }}
                 {% endfor -%}
+                {%- for (vtable_holder, init_symbol) in self.callback_vtables() %}
+                // `register(lib)` above already filled this library's own cell, with a loud
+                // typed failure if the symbol is missing; this shares the same pointer with
+                // every other image that links us.
+                uniffi.runtime.UniffiVtableRegistry.addVtable(
+                    "{{ ci.crate_name() }}",
+                    "{{ init_symbol }}",
+                    {{ vtable_holder }}.vtable,
+                    {{ ci.uniffi_contract_version() }},
+                )
+                {%- endfor %}
             }
         }
         {% if ci.contains_object_types() %}
