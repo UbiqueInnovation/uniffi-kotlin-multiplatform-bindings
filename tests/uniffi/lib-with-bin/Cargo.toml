@@ -1,0 +1,18 @@
+[package]
+name = "uniffi-kmm-fixture-lib-with-bin"
+version = "0.1.0"
+edition = "2021"
+rust-version.workspace = true
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_lib_with_bin"
+crate-type = ["lib", "cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[[bin]]
+name = "uniffi-kmm-fixture-lib-with-bin"
+path = "src/commonMain/rust/main.rs"
+
+[dependencies]
+uniffi = { workspace = true }
