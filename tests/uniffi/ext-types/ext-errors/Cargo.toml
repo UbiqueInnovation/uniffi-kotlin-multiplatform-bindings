@@ -1,0 +1,15 @@
+[package]
+name = "uniffi-kmm-fixture-ext-types-ext-errors"
+version = "0.1.0"
+edition = "2021"
+rust-version.workspace = true
+publish = false
+
+[lib]
+name = "uniffi_kmm_fixture_ext_types_ext_errors"
+crate-type = ["lib", "cdylib", "staticlib"]
+path = "src/commonMain/rust/lib.rs"
+
+[dependencies]
+uniffi = { workspace = true }
+uniffi-kmm-fixture-ext-types-error-lib = { path = "../error-lib" }

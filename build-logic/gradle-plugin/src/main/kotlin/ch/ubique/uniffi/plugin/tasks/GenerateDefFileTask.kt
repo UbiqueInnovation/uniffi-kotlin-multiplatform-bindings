@@ -90,6 +90,7 @@ abstract class GenerateDefFileTask : DefaultTask() {
     private fun getLinkerOpts(): String? {
         val output = CargoRunner(logger, useCross = useCross.get()) {
             argument("rustc")
+            argument("--lib")
             argument("--target")
             argument(targetString.get())
             argument("--")
