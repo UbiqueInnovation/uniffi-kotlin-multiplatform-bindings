@@ -51,8 +51,6 @@ pub trait UniffiOneTrait: Send + Sync {
 }
 
 // Note `UDL` vs `Udl` is important here to test foreign binding name fixups.
-// UDL-declared trait interfaces need `#[uniffi::trait_interface]` since 0.32 - it is what
-// generates the `uniffi_foreign_handle` support the scaffolding expects.
 #[uniffi::trait_interface]
 pub trait UniffiOneUDLTrait: Send + Sync {
     fn hello(&self) -> String;

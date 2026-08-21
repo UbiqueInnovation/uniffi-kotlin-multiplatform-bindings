@@ -30,9 +30,6 @@ impl CodeType for EnumCodeType {
         format!("Type{}", self.id)
     }
 
-    // A bare `#[uniffi(default)]` has no meaning for an enum - there is no variant to
-    // pick - so only the explicit `Literal::Enum` form is accepted. The base `{}()`
-    // rendering would emit a constructor call for a type that has no constructor.
     fn default(
         &self,
         default: &DefaultValue,

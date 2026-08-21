@@ -69,9 +69,9 @@ class TraitMethodsTest {
         ProcTraitMethods("a").compareTo(ProcTraitMethods("a")) shouldBe 0
     }
 
-    // Methods and uniffi trait exports on a record (uniffi 0.31). The receiver crosses
-    // the FFI as a serialized value rather than a handle, so these exercise a different
-    // call shape than the object cases above.
+    // Methods and uniffi trait exports on a record. The receiver crosses the FFI as a serialized
+    // value rather than a handle, so these exercise a different call shape than the object cases
+    // above.
 
     @Test
     fun testRecordMethods() {

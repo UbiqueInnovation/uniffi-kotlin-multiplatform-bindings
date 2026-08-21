@@ -41,9 +41,9 @@ impl std::fmt::Display for ProcTraitMethods {
     }
 }
 
-// Records and enums can carry exported methods and uniffi trait impls since uniffi 0.31,
-// exactly like objects can. Unlike an object, the receiver travels as a serialized value
-// rather than a handle, so `self` is lowered through the type's own FfiConverter.
+// Records and enums can carry exported methods and uniffi trait impls exactly like objects can.
+// Unlike an object, the receiver travels as a serialized value rather than a handle, so `self` is
+// lowered through the type's own FfiConverter.
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, uniffi::Record)]
 #[uniffi::export(Debug, Display, Eq, Hash, Ord)]

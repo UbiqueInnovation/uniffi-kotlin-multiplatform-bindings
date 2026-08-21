@@ -110,10 +110,8 @@
 {%- endmatch %}
 {%- endfor %}
 
-{#- uniffi 0.29 removed `Type::External`; externals are ordinary types now
- # and are reached through their own iterator rather than a match arm. -#}
 {%- for type_ in ci.iter_external_types() %}
-{%- let name = self.external_type_name(type_) %}
+{%- let name = type_|type_name(ci) %}
 {%- let package_name = self.external_type_package(type_) %}
 {% include "ExternalTypeTemplate.kt" %}
 {%- endfor %}

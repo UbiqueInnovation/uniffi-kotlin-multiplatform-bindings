@@ -97,8 +97,6 @@ internal object {{ trait_impl }} {
         {{ ffi_converter_name }}.handleMap.remove(handle)
     }
 
-    // uniffi 0.30 added `uniffi_clone` to the callback interface vtable, so that Rust
-    // can take an extra reference to a foreign-implemented trait object.
     internal fun uniffiClone(handle: Long): Long {
         return {{ ffi_converter_name }}.handleMap.clone(handle)
     }

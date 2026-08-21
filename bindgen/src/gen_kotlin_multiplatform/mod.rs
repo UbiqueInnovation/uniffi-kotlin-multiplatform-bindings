@@ -72,9 +72,6 @@ trait CodeType: Debug {
 
     /// Render a default value.
     ///
-    /// uniffi 0.30 made `#[uniffi(default)]` literals optional, so a default is now
-    /// either an explicit literal or "whatever this type's own default is".
-    ///
     /// This base impl only covers named types - records and objects - where "own
     /// default" is a no-argument constructor call and a literal is meaningless. Every
     /// type whose Kotlin rendering has no such constructor (primitives, sequences,
@@ -156,9 +153,6 @@ pub struct Config {
 pub struct CustomTypeConfig {
     imports: Option<Vec<String>>,
     type_name: Option<String>,
-    // uniffi 0.29.1 replaced `TemplateExpression` with plain strings in which a
-    // literal `{}` is substituted, and added `lift`/`lower` as the preferred
-    // spelling of `into_custom`/`from_custom`. Both spellings stay supported.
     into_custom: String,
     lift: String,
     from_custom: String,
@@ -390,15 +384,6 @@ impl ImportRequirement {
 
 /// FFI definitions that are identical for every namespace, and so are emitted once into
 /// the shared `common.h` rather than into each namespace's own header.
-///
-/// Several of these were renamed in uniffi 0.29/0.30 (a name change only -- the FFI shape
-/// is unchanged). Keeping the list in sync matters: a name that falls off it gets emitted
-/// into every namespace header instead, which collides once more than one namespace is
-/// compiled into the same cinterop module.
-///   `ForeignFutureFree`        -> `ForeignFutureDroppedCallback`
-///   `ForeignFuture`            -> `ForeignFutureDroppedCallbackStruct`
-///   `ForeignFutureStruct{T}`   -> `ForeignFutureResult{T}`
-/// The `Pointer` variants are gone entirely, since objects now lower to a u64 handle.
 const FFI_BUILTINS: &'static [&'static str] = &[
     "RustFutureContinuationCallback",
     "ForeignFutureDroppedCallback",
@@ -467,11 +452,6 @@ macro_rules! kotlin_type_renderer {
                 self.config.external_package_name(module_path, namespace)
             }
 
-            // uniffi 0.29 removed `Type::External`, so external types are now ordinary
-            // Record/Enum/Object/... values and are iterated separately from local ones.
-            // These two helpers give `ExternalTypeTemplate.kt` what the old variant's
-            // `name` / `namespace` fields used to provide.
-
             /// The bare name of an external type.
             fn external_type_name(&self, ty: &Type) -> String {
                 ty.name().unwrap_or_default().to_owned()
@@ -528,8 +508,6 @@ macro_rules! kotlin_type_renderer {
                 }
                 for f in rec.fields() {
                     for inner_ty in f.iter_types() {
-                        // uniffi 0.29 removed `Type::External`; externality is now a
-                        // query on the ComponentInterface rather than a Type variant.
                         if self.ci.is_external(inner_ty) {
                             return false;
                         }
@@ -557,8 +535,6 @@ macro_rules! kotlin_type_renderer {
                 }
                 for f in rec.fields() {
                     for inner_ty in f.iter_types() {
-                        // uniffi 0.29 removed `Type::External`; externality is now a
-                        // query on the ComponentInterface rather than a Type variant.
                         if self.ci.is_external(inner_ty) {
                             return false;
                         }
@@ -618,7 +594,6 @@ macro_rules! kotlin_wrapper {
             /// Statements to run inside `UniffiLib.INSTANCE`'s initialiser, where the
             /// loaded library is bound as `lib`.
             pub fn initialization_fns(&self) -> Vec<String> {
-                // uniffi 0.31 replaced `iter_types` with an explicit local/external split.
                 let local_init_fns = self
                     .ci
                     .iter_local_types()
@@ -916,7 +891,6 @@ impl KotlinCodeOracle {
             FfiType::UInt64 | FfiType::Int64 => "0.toLong()".to_owned(),
             FfiType::Float32 => "0.0f".to_owned(),
             FfiType::Float64 => "0.0".to_owned(),
-            // uniffi 0.30: objects cross the FFI as an opaque u64 handle, not a pointer.
             FfiType::Handle => "0.toLong()".to_owned(),
             FfiType::RustBuffer(_) => "RustBufferHelper.allocValue()".to_owned(),
             FfiType::Callback(_) => "null".to_owned(),
@@ -981,8 +955,6 @@ impl KotlinCodeOracle {
             FfiType::Float32 => "Float".to_string(),
             FfiType::Float64 => "Double".to_string(),
             FfiType::Handle => "Long".to_string(),
-            // uniffi 0.32 attaches external metadata to *every* record/enum, so a bare
-            // `Some(..)` no longer means "external" -- compare crate names instead.
             FfiType::RustBuffer(maybe_external) => match maybe_external {
                 Some(external_meta) if external_meta.crate_name() != ci.crate_name() => {
                     format!("RustBuffer{}", external_meta.name)
@@ -1098,10 +1070,7 @@ impl<T: AsType> AsCodeType for T {
             Type::Custom { name, builtin, .. } => {
                 Box::new(custom::CustomCodeType::new(name, builtin.as_codetype()))
             }
-            // `Box<T>` (uniffi 0.32) only matters for scaffolding; bindings use the inner type.
             Type::Box { inner_type } => inner_type.as_codetype(),
-            // `HashSet` (uniffi 0.32). Like `Sequence` and `Map`, only the FFI source
-            // sets declare a converter; the common API just names `Set<T>`.
             Type::Set { inner_type } => Box::new(compounds::SetCodeType::new(*inner_type)),
         }
     }
@@ -1109,8 +1078,6 @@ impl<T: AsType> AsCodeType for T {
 
 #[cfg_attr(feature = "runtime", allow(dead_code))]
 mod filters {
-    // `uniffi_bindgen::backend` was removed in uniffi 0.30; these live in our own
-    // vendored copy now.
     pub use super::backend::*;
     use uniffi_bindgen::to_askama_error;
     use uniffi_meta::LiteralMetadata;
@@ -1193,18 +1160,6 @@ mod filters {
             "uniffiByRefBytes_{}",
             KotlinCodeOracle.var_name_raw(arg.name())
         ))
-    }
-
-    /// Per-argument lowering, used for the arguments of an FFI call.
-    ///
-    /// Never called for a borrowed-bytes argument: `arg_list_lowered` passes the name
-    /// bound by `withForeignBytes` instead of lowering anything.
-    #[askama::filter_fn]
-    pub(super) fn lower_fn_for_arg(
-        arg: &Argument,
-        _: &dyn askama::Values,
-    ) -> Result<String, askama::Error> {
-        Ok(format!("{}.lower", arg.as_codetype().ffi_converter_name()))
     }
 
     /// Per-argument lifting, used for the arguments of a callback interface vtable method.
@@ -1301,9 +1256,6 @@ mod filters {
     }
 
     /// Render a default value.
-    ///
-    /// Replaces `render_literal`: uniffi 0.30 changed `Field::default_value()` and
-    /// `Argument::default_value()` to return `DefaultValue` rather than `Literal`.
     #[askama::filter_fn]
     pub fn render_default<T: AsType>(
         default: &DefaultValue,
@@ -1560,8 +1512,7 @@ mod filters {
         let ffi_func = callable.ffi_rust_future_complete(ci);
         let call = format!("UniffiLib.INSTANCE.{ffi_func}(future, continuation)");
         // May need to convert the RustBuffer from our package to the RustBuffer of the
-        // external package. `Type::External` was removed in uniffi 0.29, so this is now
-        // decided from the lowered FFI type's crate name.
+        // external package.
         let call = match callable.return_type() {
             Some(return_type) => match FfiType::from(return_type) {
                 FfiType::RustBuffer(Some(external_meta))

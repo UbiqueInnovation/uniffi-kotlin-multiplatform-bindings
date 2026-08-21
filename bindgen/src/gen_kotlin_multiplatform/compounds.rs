@@ -43,9 +43,6 @@ impl CodeType for OptionalCodeType {
         )
     }
 
-    // Overridden rather than left to `literal` because uniffi 0.30 changed
-    // `Literal::Some`'s payload from `Box<Literal>` to `Box<DefaultValue>`, so the
-    // inner value has to be resolved through `default` rather than `literal`.
     fn default(
         &self,
         default: &DefaultValue,
@@ -97,6 +94,7 @@ impl CodeType for SequenceCodeType {
         _ci: &ComponentInterface,
         _config: &super::Config,
     ) -> Result<String> {
+        // Uniffi supports only empty as default values for sequences
         match default {
             DefaultValue::Default | DefaultValue::Literal(Literal::EmptySequence) => {
                 Ok("listOf()".into())
@@ -149,6 +147,7 @@ impl CodeType for MapCodeType {
         _ci: &ComponentInterface,
         _config: &super::Config,
     ) -> Result<String> {
+        // Uniffi supports only empty as default values for maps
         match default {
             DefaultValue::Default | DefaultValue::Literal(Literal::EmptyMap) => {
                 Ok("mapOf()".into())
@@ -187,16 +186,13 @@ impl CodeType for SetCodeType {
         )
     }
 
-    // `Literal::EmptySet` exists in the metadata but nothing produces it: the proc-macro
-    // encodes `#[uniffi(default = [])]` as `LIT_EMPTY_SEQ` whatever the field's type, so a
-    // set's empty-literal default arrives as `EmptySequence`. Both are accepted so the
-    // reading doesn't depend on that encoding detail.
     fn default(
         &self,
         default: &DefaultValue,
         _ci: &ComponentInterface,
         _config: &super::Config,
     ) -> Result<String> {
+        // Uniffi supports only empty as default values for sets
         match default {
             DefaultValue::Default
             | DefaultValue::Literal(Literal::EmptySequence)

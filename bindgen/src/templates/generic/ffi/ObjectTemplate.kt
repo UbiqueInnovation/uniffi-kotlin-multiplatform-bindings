@@ -187,8 +187,8 @@ public object {{ ffi_converter_name }}: FfiConverter<{%- call converter_type(obj
 
     override fun lower(value: {%- call converter_type(obj) %}{% endcall -%}): Long {
         {%- if obj.has_callback_interface() %}
-        // Since uniffi 0.30 a trait interface handle can originate on either side of the
-        // FFI, so which side this value came from decides how it is lowered.
+        // A trait interface handle can originate on either side of the FFI, so which side this
+        // value came from decides how it is lowered.
         if (value is {{ impl_class_name }}) {
             // Rust-implemented object: clone its handle and hand that over.
             return value.uniffiCloneHandle()

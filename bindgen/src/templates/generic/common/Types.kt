@@ -40,9 +40,7 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
 /** Used to instantiate an interface without an actual handle, for fakes in tests, mostly. */
 object NoHandle
 
-// Marker for the internal "wrap an existing Rust handle" constructor. Objects cross the
-// FFI as a plain Long since uniffi 0.30, so without a marker argument that constructor
-// could collide with a user-defined one taking a single Long.
+// Marker for the internal "wrap an existing Rust handle" constructor.
 object UniffiWithHandle
 
 {%- for type_ in ci.iter_local_types() %}
@@ -87,10 +85,8 @@ object UniffiWithHandle
 {%- endmatch %}
 {%- endfor %}
 
-{#- uniffi 0.29 removed `Type::External`; externals are ordinary types now
- # and are reached through their own iterator rather than a match arm. -#}
 {%- for type_ in ci.iter_external_types() %}
-{%- let name = self.external_type_name(type_) %}
+{%- let name = type_|type_name(ci) %}
 {%- let package_name = self.external_type_package(type_) %}
 {% include "ExternalTypeTemplate.kt" %}
 {%- endfor %}

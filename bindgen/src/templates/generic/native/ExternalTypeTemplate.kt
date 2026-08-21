@@ -20,26 +20,3 @@ internal fun {{ local_rustbuffer_by_value_name }}(
 	len: Long,
 	data: Pointer?,
 ): {{ local_rustbuffer_by_value_name }} = {{ fully_qualified_rustbuffer_by_value_name }}(capacity, len, data)
-
-/*
-fun {{ fully_qualified_ffi_converter_name }}.read(buf: ByteBuffer): {{ name|class_name(ci) }} {
-    return read(
-        {{ package_name }}.ByteBuffer(
-            pointer = buf.pointer(),
-            capacity = buf.capacity(),
-            position = buf.position(),
-        )
-    )
-}
-
-fun {{ fully_qualified_ffi_converter_name }}.write(value: {{ name|class_name(ci) }}, buf: ByteBuffer) {
-    write(
-        value,
-        {{ package_name }}.ByteBuffer(
-            pointer = buf.pointer(),
-            capacity = buf.capacity(),
-            position = buf.position(),
-        )
-    )
-}
-*/

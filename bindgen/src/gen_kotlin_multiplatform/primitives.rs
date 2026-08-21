@@ -71,9 +71,6 @@ macro_rules! impl_code_type_for_primitive {
                     $class_name.into()
                 }
 
-                // `#[uniffi(default)]` without a literal means "this type's own default",
-                // which the base `{}()` rendering cannot express for a primitive - there
-                // is no `kotlin.Int()`.
                 fn default(
                     &self,
                     default: &DefaultValue,

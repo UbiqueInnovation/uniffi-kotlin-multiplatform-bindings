@@ -5,13 +5,6 @@
  */
 
 //! Backend-agnostic askama filters.
-//!
-//! Vendored from `uniffi_bindgen::backend::filters`, which was removed upstream in
-//! uniffi 0.30. Upstream now keeps an equivalent set private to each language
-//! backend; external generators are expected to carry their own copy.
-//!
-//! Ported to the askama 0.14+ filter ABI: every filter carries `#[askama::filter_fn]`
-//! and takes `&dyn askama::Values` as its second argument.
 
 use askama::Result;
 use uniffi_bindgen::interface::{

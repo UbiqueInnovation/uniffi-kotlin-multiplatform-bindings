@@ -31,11 +31,6 @@ impl CodeType for CustomCodeType {
         format!("Type{}", self.name)
     }
 
-    // Without a config a custom type is a typealias to its builtin, so whatever the
-    // builtin renders is already the right Kotlin expression. A config makes it a
-    // distinct type instead, and the builtin's rendering has to go through the
-    // configured `lift` to be assignable. Either way the override is needed: the base
-    // impl renders `{}()`, and a custom type has no such constructor.
     fn default(
         &self,
         default: &DefaultValue,
@@ -44,6 +39,8 @@ impl CodeType for CustomCodeType {
     ) -> Result<String> {
         let default = self.builtin.default(default, ci, config)?;
         match config.custom_types.get(&self.name) {
+            // If a value is defined in the config, it means that the custom type is aliased on the
+            // kotlin side, and we need to lift the default value.
             Some(custom) => Ok(custom.lift(&default)),
             None => Ok(default),
         }

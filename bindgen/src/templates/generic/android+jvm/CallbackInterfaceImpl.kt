@@ -92,16 +92,12 @@ internal object {{ trait_impl }} {
         }
     }
 
-    // uniffi 0.30 added `uniffi_clone` to the callback interface vtable, so that Rust
-    // can take an extra reference to a foreign-implemented trait object.
     internal object uniffiClone: {{ "CallbackInterfaceClone"|ffi_callback_name }} {
         override fun callback(handle: Long): Long {
             return {{ ffi_converter_name }}.handleMap.clone(handle)
         }
     }
 
-    // Field order is part of the ABI: uniffi 0.30 moved `free` from last to first and
-    // added `clone` right after it, ahead of the interface methods.
     internal val vtable = {{ vtable|ffi_type_name(ci) }}(
         uniffiFree,
         uniffiClone,

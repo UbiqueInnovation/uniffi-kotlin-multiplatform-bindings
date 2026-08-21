@@ -13,12 +13,9 @@
 {%- endmacro %}
 
 {#-
-// Since uniffi 0.31 a method's receiver is not necessarily an object: records and enums
-// can carry methods too, and those lower their `self` into a `RustBuffer` like any other
-// value instead of passing a handle. Only the object case needs `callWithHandle`.
-//
-// A record/enum method never has its body on the type itself - see `self_shim_expect` -
-// so the receiver is always in scope under the name `uniffiSelf` when we get here.
+// A method's receiver is not necessarily an object: records and enums can carry methods too, and
+// those lower their `self` into a `RustBuffer` like any other value instead of passing a handle.
+// Only the object case needs `callWithHandle`.
 -#}
 {%- macro to_ffi_call(func) -%}
     {%- match func.self_type() %}
@@ -58,14 +55,12 @@
 // into the caller's buffer plus a length - rather than being copied into a `RustBuffer`.
 // Rust reads through that pointer and must not outlive the call, so the buffer has to be
 // held still for its whole duration: pinned on Kotlin/Native, copied into native memory
-// on JNA. That is a scope, not an expression, which is why lowering such an argument
-// cannot be done by `lower_fn_for_arg` like every other one.
+// on JNA.
 //
 // So the call gets wrapped: one `withForeignBytes` per borrowed argument, nesting if
 // there is more than one, with `arg_list_lowered` passing the bound name straight through
 // instead of lowering anything.
 -#}
-
 {%- macro byref_bytes_open(func) %}
 {%- for arg in func.arguments() %}
 {%- if arg|is_borrowed_bytes %}
@@ -204,7 +199,7 @@
     {%- if arg|is_borrowed_bytes %}
         {{ arg|borrowed_bytes_var_name }},
     {%- else %}
-        {{- arg|lower_fn_for_arg }}({{ arg.name()|var_name }}),
+        {{- arg|lower_fn }}({{ arg.name()|var_name }}),
     {%- endif %}
     {%- endfor %}
 {%- endmacro -%}
@@ -311,7 +306,7 @@ v{{- field_num -}}
 
 {#-
 // ---------------------------------------------------------------------------
-// Methods and uniffi trait exports on records and enums (uniffi 0.31).
+// Methods and uniffi trait exports on records and enums.
 //
 // An object's class is `expect`/`actual`, so its methods can simply have their
 // bodies in the platform source sets. A record or enum is a plain `data class` /
