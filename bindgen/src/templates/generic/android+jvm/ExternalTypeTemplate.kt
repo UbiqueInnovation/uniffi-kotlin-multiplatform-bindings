@@ -1,6 +1,9 @@
 
 {%- let fully_qualified_type_name = "{}.{}"|format(package_name, name|class_name(ci)) %}
-{%- let fully_qualified_ffi_converter_name = "{}.FfiConverterType{}"|format(package_name, name) %}
+{#- `name` is the Kotlin class name, which upper-camel-cases the Rust name (`UniffiOneUDLTrait`
+  -> `UniffiOneUdlTrait`). The FfiConverter is named after the *canonical* type name instead, so
+  it has to come from the `ffi_converter_name` filter rather than be rebuilt from `name`. #}
+{%- let fully_qualified_ffi_converter_name = "{}.{}"|format(package_name, ffi_converter_name) %}
 {%- let fully_qualified_rustbuffer_name = "{}.RustBuffer"|format("uniffi.runtime") %}
 {%- let local_rustbuffer_name = "RustBuffer{}"|format(name) %}
 {%- let fully_qualified_rustbuffer_by_value_name = "{}.RustBufferByValue"|format("uniffi.runtime") %}

@@ -62,6 +62,7 @@
 
 {%- for type_ in ci.iter_external_types() %}
 {%- let name = type_|type_name(ci) %}
+{%- let ffi_converter_name = type_|ffi_converter_name %}
 {%- let package_name = self.external_type_package(type_) %}
 {% include "ExternalTypeTemplate.kt" %}
 {%- endfor %}
