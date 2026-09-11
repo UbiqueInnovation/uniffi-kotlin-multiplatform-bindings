@@ -216,6 +216,15 @@ class UniffiPlugin : Plugin<Project> {
                     task.dependsOn(buildBindingsTask)
                 }
             }
+
+            // The filtered libraryFile provider does not reliably preserve the task dependency
+            // through Gradle's input validation. Add it explicitly once the DSL has selected
+            // library-based generation; UDL-based generation must not build a host library.
+            if (uniffiExtension.bindingsGeneration.get() is BindingsGenerationFromLibrary) {
+                buildBindingsTask.configure { task ->
+                    task.dependsOn(buildLibraryForBindingsTask)
+                }
+            }
         }
     }
 
@@ -356,6 +365,7 @@ class UniffiPlugin : Plugin<Project> {
             )
 
             cargoBuilds.forEach { (rustTarget, cargoBuild) ->
+                task.dependsOn(cargoBuild)
                 task.library(
                     directoryName = leafName(rustTarget),
                     files = cargoBuild.flatMap {
@@ -406,6 +416,7 @@ class UniffiPlugin : Plugin<Project> {
             Tasks.generateDefFile(buildTarget),
             GenerateDefFileTask::class.java,
         ) { task ->
+            task.dependsOn(cargoBuild)
             task.staticLibrary.set(cargoBuild.flatMap { it.staticLibraryFile })
             task.outputFile.set(
                 project.layout.buildDirectory.file("$CINTEROP_DEF_PATH/uniffi-${buildTarget.name}.def")
