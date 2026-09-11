@@ -2,6 +2,16 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.2.1...HEAD)
 
+### Added
+
+- Configure a shared Cargo target directory with `cargo { targetDirectory = ... }`.
+- Configure `RUSTC_WRAPPER` and `RUSTC_WORKSPACE_WRAPPER` through the Cargo DSL, including sccache.
+
+### Changed
+
+- Cargo build tasks now write directly to Cargo's shared target directory and emit only the crate
+  types required by the consuming Kotlin targets.
+
 ## [1.2.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.1) - 2026-08-21
 
 ### Fixed

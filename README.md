@@ -163,6 +163,38 @@ cargo {
 }
 ```
 
+### Shared Cargo target directory
+
+The plugin uses Cargo's target directory reported by `cargo metadata` by default. If the same
+Rust sources are built from more than one Gradle build, such as from an SDK checkout and an
+application using Gradle dependency substitution, configure one shared directory in both builds:
+
+```kotlin
+cargo {
+    targetDirectory = rootProject.layout.buildDirectory.dir("cargo-target")
+}
+```
+
+The directory must be shared by the Gradle builds that should reuse the cache. It should not be
+used as a shared Gradle `build` directory: Kotlin and Android task outputs remain project-local.
+The `CARGO_TARGET_DIR` environment variable can be used instead when changing the build scripts is
+not practical.
+
+### sccache
+
+Compiler wrappers are inherited from the environment and can also be configured through the
+plugin DSL. For example:
+
+```kotlin
+cargo {
+    rustcWrapper = "sccache"
+}
+```
+
+Alternatively, set `RUSTC_WRAPPER=sccache` (or `RUSTC_WORKSPACE_WRAPPER=sccache`) before invoking
+Gradle. The wrapper setting is passed to every Cargo compilation and is included in Gradle task
+inputs.
+
 ### Manual dependency management
 
 By default, the plugin will automatically manage the dependencies for the generated bindings, which means that it will add the necessary dependencies to your project. If you want to manage the dependencies yourself, for example if you want to use a different version of one of the dependencies, you can disable the automatic dependency insertion:

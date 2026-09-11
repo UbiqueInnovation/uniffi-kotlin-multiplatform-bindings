@@ -16,6 +16,30 @@ abstract class CargoExtension(project: Project) {
             .convention(project.layout.projectDirectory)
 
     /**
+     * Cargo's shared target directory. When unset, the directory reported by `cargo metadata`
+     * is used. Set this when several Gradle builds should reuse the same Cargo compilation
+     * cache, for example:
+     *
+     * ```kotlin
+     * cargo {
+     *     targetDirectory = rootProject.layout.buildDirectory.dir("cargo-target")
+     * }
+     * ```
+     */
+    val targetDirectory: DirectoryProperty = project.objects.directoryProperty()
+
+    /** Optional compiler wrapper, such as `sccache`. */
+    val rustcWrapper: Property<String> = project.objects.property(String::class.java).apply {
+        convention(project.providers.environmentVariable("RUSTC_WRAPPER"))
+    }
+
+    /** Optional workspace compiler wrapper, such as `sccache`. */
+    val rustcWorkspaceWrapper: Property<String> =
+        project.objects.property(String::class.java).apply {
+            convention(project.providers.environmentVariable("RUSTC_WORKSPACE_WRAPPER"))
+        }
+
+    /**
      * The Android NDK version to build the android targets with, e.g. `"28.1.13356709"`.
      *
      * `com.android.kotlin.multiplatform.library` has no `ndkVersion` of its own (it was
