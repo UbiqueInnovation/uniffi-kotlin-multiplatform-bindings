@@ -178,7 +178,9 @@ cargo {
 The directory must be shared by the Gradle builds that should reuse the cache. It should not be
 used as a shared Gradle `build` directory: Kotlin and Android task outputs remain project-local.
 The `CARGO_TARGET_DIR` environment variable can be used instead when changing the build scripts is
-not practical.
+not practical. This is useful without sccache as well: it lets Cargo reuse its local incremental
+artifacts. In CI, persist this directory through the CI cache if separate jobs or runs should reuse
+it; an ephemeral CI workspace will not benefit beyond the current build.
 
 ### sccache
 
