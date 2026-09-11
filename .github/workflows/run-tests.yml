@@ -11,8 +11,11 @@ jobs:
   build-and-test:
     name: Build and run tests
     runs-on: large-runner
-    container:
-      image: ubuntu:22.04
+    env:
+      # Avoid keeping per-build object files around. The dependency caches below
+      # are retained between runs, while the runner's working directory remains
+      # disposable.
+      CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -23,51 +26,99 @@ jobs:
           distribution: "zulu"
           java-version: "17"
 
-      - name: Install Dependencies
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache Kotlin/Native dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-konan-
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install required native build tools
         run: |
-          apt update && apt install -y \
-            build-essential binutils sdkmanager \
-            gcc-mingw-w64 mingw-w64-x86-64-dev \
-            libgtk-4-dev wget perl libssl-dev \
-            git curl unzip
-          rm -rf /var/lib/apt/lists/*
+          # The large-runner already provides GCC, binutils, curl, git, perl,
+          # unzip, the Android command-line tools, and the JDK. The previous
+          # ubuntu:22.04 container installed several hundred packages, including
+          # both 32-bit and 64-bit MinGW toolchains and an unused GTK stack.
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            g++-mingw-w64-x86-64 \
+            gcc-mingw-w64-x86-64
+          sudo rm -rf /var/lib/apt/lists/*
 
       - name: Install Zig
         run: |
-          export ZIG_VERSION=0.12.1 && \
-          export ZIG_BUILD=zig-linux-x86_64-$ZIG_VERSION && \
-          mkdir -p $HOME/zig && cd $HOME/zig && \
-          wget -c https://ziglang.org/download/$ZIG_VERSION/$ZIG_BUILD.tar.xz && \
-          tar -xf $ZIG_BUILD.tar.xz && \
-          printf "#! /bin/sh\n$HOME/zig/$ZIG_BUILD/zig cc -target aarch64-linux-gnu \"\$@\"" > aarch64-unknown-linux-gnu-cc.sh && \
-          chmod 777 aarch64-unknown-linux-gnu-cc.sh && \
-          mkdir -p $HOME/.cargo && \
-          echo "[target.aarch64-unknown-linux-gnu]
-          linker = \"$HOME/zig/aarch64-unknown-linux-gnu-cc.sh\"" > $HOME/.cargo/config.toml
+          ZIG_VERSION=0.12.1
+          ZIG_BUILD=zig-linux-x86_64-$ZIG_VERSION
+          ZIG_DIR="$HOME/zig/$ZIG_BUILD"
+          mkdir -p "$HOME/zig"
+          if [ ! -x "$ZIG_DIR/zig" ]; then
+            curl --fail --location --retry 3 \
+              "https://ziglang.org/download/$ZIG_VERSION/$ZIG_BUILD.tar.xz" \
+              --output "$HOME/zig/$ZIG_BUILD.tar.xz"
+            tar -xf "$HOME/zig/$ZIG_BUILD.tar.xz" -C "$HOME/zig"
+          fi
+          printf '#!/bin/sh\nexec "%s/zig" cc -target aarch64-linux-gnu "$@"\n' \
+            "$ZIG_DIR" > "$HOME/zig/aarch64-unknown-linux-gnu-cc.sh"
+          chmod +x "$HOME/zig/aarch64-unknown-linux-gnu-cc.sh"
+          mkdir -p "$HOME/.cargo"
+          cat > "$HOME/.cargo/config.toml" <<EOF
+          [target.aarch64-unknown-linux-gnu]
+          linker = "$HOME/zig/aarch64-unknown-linux-gnu-cc.sh"
+          EOF
 
       - name: Install ktlint
         run: |
-          export KTLINT_VERSION=1.8.0
-          curl -sSLO https://github.com/pinterest/ktlint/releases/download/$KTLINT_VERSION/ktlint
-          chmod +x ktlint
-          mv ktlint /usr/local/bin/
+          KTLINT_VERSION=1.8.0
+          mkdir -p "$HOME/.local/bin"
+          curl --fail --location --retry 3 \
+            "https://github.com/pinterest/ktlint/releases/download/$KTLINT_VERSION/ktlint" \
+            --output "$HOME/.local/bin/ktlint"
+          chmod +x "$HOME/.local/bin/ktlint"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Install rust
+      - name: Set up Rust toolchain
         run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          RUST_TOOLCHAIN=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)
+          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal --no-self-update
+          rustup target add --toolchain "$RUST_TOOLCHAIN" \
+            aarch64-unknown-linux-gnu \
+            aarch64-linux-android \
+            armv7-linux-androideabi \
+            x86_64-linux-android \
+            x86_64-pc-windows-gnu
 
       - name: Install Android SDK
         run: |
-          mkdir -p $HOME/android-sdk
-          export ANDROID_HOME=$HOME/android-sdk
-          yes | sdkmanager --install "build-tools;36.0.0" "platforms;android-37.0" "ndk;28.1.13356709"
-          yes | sdkmanager --licenses
+          ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+
+          SDKMANAGER=$(command -v sdkmanager || true)
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -print -quit)
+          fi
+          test -n "$SDKMANAGER"
+          # Android 37 is published under the versioned package id on the
+          # repository used by this project.
+          "$SDKMANAGER" "build-tools;36.0.0" "platforms;android-37.0" "ndk;28.1.13356709"
+          yes | "$SDKMANAGER" --licenses >/dev/null
 
       - name: Build and Test
         run: |
-          . $HOME/.cargo/env
-          export ANDROID_HOME=$HOME/android-sdk
-
           cargo test
           ./gradlew -p build-logic check
           ./gradlew build
