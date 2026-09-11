@@ -8,6 +8,7 @@ import ch.ubique.uniffi.plugin.android.AndroidSupport
 import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.model.CargoInfo
 import ch.ubique.uniffi.plugin.model.CargoMetadata
+import ch.ubique.uniffi.plugin.model.CrateType
 import ch.ubique.uniffi.plugin.services.CargoMetadataService
 import ch.ubique.uniffi.plugin.tasks.BuildBindingsTask
 import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
@@ -49,9 +50,6 @@ class UniffiPlugin : Plugin<Project> {
         /** The output directory of the bindgen */
         private const val BINDINGS_PATH: String = "$PREFIX/bindings"
 
-        /** The root of the per rust target library copies */
-        private const val RUST_LIBS_PATH: String = "$PREFIX/build/rust"
-
         /** The merged library directory of a source set, relative to the project */
         private fun librariesPath(sourceSetName: String): String =
             "$PREFIX/build/intermediates/$sourceSetName/libs"
@@ -91,7 +89,9 @@ class UniffiPlugin : Plugin<Project> {
         val cargoInfo = CargoInfo(
             packageName = targetPackage.map { it.name },
             libraryName = targetPackage.map { it.targets.first().name },
-            targetDirectory = project.layout.dir(metadata.map { File(it.targetDirectory) }),
+            targetDirectory = cargoExtension.targetDirectory.orElse(
+                project.layout.dir(metadata.map { File(it.targetDirectory) })
+            ),
         )
 
         // Set up the bindings tasks
@@ -145,7 +145,7 @@ class UniffiPlugin : Plugin<Project> {
                                 buildTarget = BuildTarget.Android,
                                 cargoInfo = cargoInfo,
                                 isRelease = isRelease,
-                                rustTargets = BuildTarget.Android.rustTargets(isRelease)
+                                rustTargets = project.androidRustTargets(isRelease)
                                     .filter { it.abiName != null },
                                 leafName = { it.abiName!! }
                             ),
@@ -176,7 +176,10 @@ class UniffiPlugin : Plugin<Project> {
                                 null
                             } else {
                                 project.registerCargoBuildTask(
-                                    buildTarget.checkedNativeTarget, isRelease, cargoInfo
+                                    rustTarget = buildTarget.checkedNativeTarget,
+                                    release = isRelease,
+                                    cargoInfo = cargoInfo,
+                                    crateType = CrateType.SystemStaticLibrary,
                                 ).flatMap { it.staticLibraryFile }
                             },
                         )
@@ -213,7 +216,55 @@ class UniffiPlugin : Plugin<Project> {
                     task.dependsOn(buildBindingsTask)
                 }
             }
+
+            // The filtered libraryFile provider does not reliably preserve the task dependency
+            // through Gradle's input validation. Add it explicitly once the DSL has selected
+            // library-based generation; UDL-based generation must not build a host library.
+            if (uniffiExtension.bindingsGeneration.get() is BindingsGenerationFromLibrary) {
+                buildBindingsTask.configure { task ->
+                    task.dependsOn(buildLibraryForBindingsTask)
+                }
+            }
         }
+    }
+
+    /**
+     * Select the Android Rust targets for this build.
+     *
+     * Debug builds retain the host-based defaults for backwards compatibility. A caller can
+     * override them with `cargo { androidDebugAbis.add("arm64-v8a") }` or with the convenient
+     * `-PandroidAbis=arm64-v8a` Gradle property. The property accepts a comma-separated list.
+     * Release builds deliberately keep the complete ABI set because their AAR must be usable on
+     * every supported device.
+     */
+    private fun Project.androidRustTargets(
+        isRelease: Boolean,
+    ): List<BuildTarget.RustTarget> {
+        if (isRelease) {
+            return BuildTarget.Android.rustTargets(release = true)
+        }
+
+        val requestedAbis = if (cargoExtension.androidDebugAbis.isPresent) {
+            cargoExtension.androidDebugAbis.get()
+        } else {
+            providers.gradleProperty("androidAbis")
+                .map { value -> value.split(',') }
+                .getOrElse(emptyList())
+        }.map(String::trim).filter(String::isNotEmpty).distinct()
+
+        if (requestedAbis.isEmpty()) {
+            return BuildTarget.Android.rustTargets(release = false)
+        }
+
+        val androidTargets = BuildTarget.RustTarget.entries.filter { it.isAndroid }
+        val supportedAbis = androidTargets.mapNotNull { it.abiName }.toSet()
+        val unsupportedAbis = requestedAbis.filterNot(supportedAbis::contains)
+        check(unsupportedAbis.isEmpty()) {
+            "Unsupported Android ABI(s): ${unsupportedAbis.joinToString()}. " +
+                "Supported ABIs: ${supportedAbis.joinToString()}"
+        }
+
+        return androidTargets.filter { it.abiName in requestedAbis }
     }
 
     /**
@@ -250,9 +301,9 @@ class UniffiPlugin : Plugin<Project> {
             task.packageName.set(cargoInfo.packageName)
             task.libraryName.set(cargoInfo.libraryName)
             task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
-            task.outputDirectory.set(
-                project.layout.buildDirectory.dir("$RUST_LIBS_PATH/host")
-            )
+            task.crateTypes.add(CrateType.SystemDynamicLibrary)
+            task.rustcWrapper.set(cargoExtension.rustcWrapper)
+            task.rustcWorkspaceWrapper.set(cargoExtension.rustcWorkspaceWrapper)
             task.useCross.set(false)
         }
 
@@ -290,6 +341,7 @@ class UniffiPlugin : Plugin<Project> {
         rustTarget: BuildTarget.RustTarget,
         release: Boolean,
         cargoInfo: CargoInfo,
+        crateType: CrateType,
     ): TaskProvider<CargoBuildTask> = tasks.maybeRegister(
         Tasks.cargoBuild(rustTarget, release),
         CargoBuildTask::class.java,
@@ -300,11 +352,9 @@ class UniffiPlugin : Plugin<Project> {
         task.packageName.set(cargoInfo.packageName)
         task.libraryName.set(cargoInfo.libraryName)
         task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
-        task.outputDirectory.set(
-            layout.buildDirectory.dir(
-                "$RUST_LIBS_PATH/${rustTarget.rustTriple}/${Strings.release(release)}"
-            )
-        )
+        task.crateTypes.add(crateType)
+        task.rustcWrapper.set(cargoExtension.rustcWrapper)
+        task.rustcWorkspaceWrapper.set(cargoExtension.rustcWorkspaceWrapper)
 
         val useCross = cargoExtension.compilations.getByName(rustTarget.name).useCross
         task.useCross.set(useCross)
@@ -337,7 +387,16 @@ class UniffiPlugin : Plugin<Project> {
         leafName: (BuildTarget.RustTarget) -> String = { it.jarLibraryPath },
     ): TaskProvider<MergeLibrariesTask> {
         val cargoBuilds = rustTargets.map { rustTarget ->
-            rustTarget to registerCargoBuildTask(rustTarget, isRelease, cargoInfo)
+            rustTarget to registerCargoBuildTask(
+                rustTarget = rustTarget,
+                release = isRelease,
+                cargoInfo = cargoInfo,
+                crateType = if (buildTarget.usesDynamicLibrary) {
+                    CrateType.SystemDynamicLibrary
+                } else {
+                    CrateType.SystemStaticLibrary
+                },
+            )
         }
         return tasks.register(taskName, MergeLibrariesTask::class.java) { task ->
             task.outputDirectory.convention(
@@ -345,6 +404,7 @@ class UniffiPlugin : Plugin<Project> {
             )
 
             cargoBuilds.forEach { (rustTarget, cargoBuild) ->
+                task.dependsOn(cargoBuild)
                 task.library(
                     directoryName = leafName(rustTarget),
                     files = cargoBuild.flatMap {
@@ -384,21 +444,30 @@ class UniffiPlugin : Plugin<Project> {
     ): TaskProvider<GenerateDefFileTask> {
         val rustTarget = buildTarget.checkedNativeTarget
         val config = cargoExtension.compilations.getByName(rustTarget.name)
-        val cargoBuild = registerCargoBuildTask(rustTarget, isRelease, cargoInfo)
+        val cargoBuild = registerCargoBuildTask(
+            rustTarget = rustTarget,
+            release = isRelease,
+            cargoInfo = cargoInfo,
+            crateType = CrateType.SystemStaticLibrary,
+        )
 
         return tasks.maybeRegister(
             Tasks.generateDefFile(buildTarget),
             GenerateDefFileTask::class.java,
         ) { task ->
+            task.dependsOn(cargoBuild)
             task.staticLibrary.set(cargoBuild.flatMap { it.staticLibraryFile })
             task.outputFile.set(
                 project.layout.buildDirectory.file("$CINTEROP_DEF_PATH/uniffi-${buildTarget.name}.def")
             )
             task.packageDirectory.set(cargoExtension.packageDirectory)
+            task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
             task.targetString.set(rustTarget.rustTriple)
             // Carries the dependency on the bindings.
             task.headersDir.set(headersDir)
             task.useCross.set(config.useCross)
+            task.rustcWrapper.set(cargoExtension.rustcWrapper)
+            task.rustcWorkspaceWrapper.set(cargoExtension.rustcWorkspaceWrapper)
         }
     }
 
@@ -518,14 +587,18 @@ class UniffiPlugin : Plugin<Project> {
     }
 
     /**
-     * Registers [name] if it is not registered yet, otherwise returns the existing
-     * provider without configuring it a second time.
+     * Registers [name] if it is not registered yet, otherwise returns the existing provider and
+     * applies [configure] so repeated requests can add requirements to the same Cargo task.
      */
     private fun <T : Task> TaskContainer.maybeRegister(
         name: String,
         type: Class<T>,
         configure: Action<T>,
-    ): TaskProvider<T> = if (name in names) named(name, type) else register(name, type, configure)
+    ): TaskProvider<T> = if (name in names) {
+        named(name, type).also { it.configure(configure) }
+    } else {
+        register(name, type, configure)
+    }
 
     private fun DependencySet.addIf(condition: Provider<Boolean>, vararg dependencies: Dependency) =
         addAllLater(

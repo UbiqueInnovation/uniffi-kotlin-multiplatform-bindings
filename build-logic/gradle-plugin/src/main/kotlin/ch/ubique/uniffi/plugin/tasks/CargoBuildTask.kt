@@ -1,6 +1,7 @@
 package ch.ubique.uniffi.plugin.tasks
 
 import ch.ubique.uniffi.plugin.model.BuildTarget
+import ch.ubique.uniffi.plugin.model.CrateType
 import ch.ubique.uniffi.plugin.utils.CargoRunner
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -11,16 +12,16 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
+import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
-import java.io.File
 
 @DisableCachingByDefault(because = "Cargo caches incrementally, and the rust toolchain is not a declared input")
 abstract class CargoBuildTask : DefaultTask() {
@@ -70,6 +71,21 @@ abstract class CargoBuildTask : DefaultTask() {
     @get:Input
     abstract val useCross: Property<Boolean>
 
+    /** The system crate types required by the consuming Kotlin targets. */
+    @get:Input
+    @get:Optional
+    abstract val crateTypes: SetProperty<CrateType>
+
+    /** Optional rustc wrapper, for example `sccache`. */
+    @get:Input
+    @get:Optional
+    abstract val rustcWrapper: Property<String>
+
+    /** Optional workspace rustc wrapper, for example `sccache`. */
+    @get:Input
+    @get:Optional
+    abstract val rustcWorkspaceWrapper: Property<String>
+
     /**
      * Cargo's own target directory, i.e. `CARGO_TARGET_DIR` / `target-dir` as reported by
      * `cargo metadata`. The per triple and per profile subdirectories below it are
@@ -86,32 +102,33 @@ abstract class CargoBuildTask : DefaultTask() {
             .zip(profile) { triple, profile -> "$triple$profile" }
     )
 
-    /** Where this task collects them, which is the layout the rest of the build sees. */
-    @get:OutputDirectory
-    abstract val outputDirectory: DirectoryProperty
-
-    @get:Internal
+    /** The dynamic library emitted directly into Cargo's shared output directory. */
+    @get:OutputFile
+    @get:Optional
     val dynamicLibraryFile: Provider<RegularFile> =
         libraryFile(BuildTarget.RustTarget::dynamicLibraryName)
 
-    @get:Internal
+    /** The static library emitted directly into Cargo's shared output directory. */
+    @get:OutputFile
+    @get:Optional
     val staticLibraryFile: Provider<RegularFile> =
         libraryFile(BuildTarget.RustTarget::staticLibraryName)
 
     private fun libraryFile(
         fileName: (BuildTarget.RustTarget, String) -> String?,
-    ): Provider<RegularFile> = outputDirectory.file(
+    ): Provider<RegularFile> = cargoOutputDirectory.zip(
         rustTarget.orElse(BuildTarget.RustTarget.forCurrentPlatform)
             .zip(libraryName) { target, library ->
                 fileName(target, library)
                     ?: throw GradleException("Could not determine library file name for $target")
             }
-    )
+    ) { directory, library -> directory.file(library) }
 
     @TaskAction
     fun build() {
         CargoRunner(logger, useCross = useCross.get()) {
-            argument("build")
+            argument("rustc")
+            argument("--lib")
             if (rustTarget.isPresent) {
                 argument("--target")
                 argument(rustTarget.get().rustTriple)
@@ -123,19 +140,20 @@ abstract class CargoBuildTask : DefaultTask() {
                 argument("--release")
             }
 
+            if (crateTypes.isPresent && crateTypes.get().isNotEmpty()) {
+                argument("--crate-type")
+                argument(crateTypes.get().sortedBy { it.toString() }.joinToString(","))
+            }
+
             workdir(packageDirectory.asFile.get())
+
+            env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
+            rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
+            rustcWorkspaceWrapper.orNull?.let { env("RUSTC_WORKSPACE_WRAPPER", it) }
 
             additionalEnvironment.get().forEach { (key, value) ->
                 env(key, value)
             }
         }.run()
-
-        val targetDir = outputDirectory.asFile.get()
-        targetDir.mkdirs()
-
-        cargoOutputDirectory.get()
-            .asFile
-            .listFiles { file -> file.name.contains(libraryName.get()) }
-            .forEach { file -> file.copyTo(File(targetDir, file.name), overwrite = true) }
     }
 }

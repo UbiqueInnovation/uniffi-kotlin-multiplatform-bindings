@@ -9,6 +9,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -36,6 +37,10 @@ abstract class GenerateDefFileTask : DefaultTask() {
     @get:Internal
     abstract val packageDirectory: DirectoryProperty
 
+    /** Cargo's shared target directory, also used by the linker-options probe below. */
+    @get:Internal
+    abstract val cargoTargetDirectory: DirectoryProperty
+
     @get:Input
     abstract val targetString: Property<String>
 
@@ -45,6 +50,16 @@ abstract class GenerateDefFileTask : DefaultTask() {
 
     @get:Input
     abstract val useCross: Property<Boolean>
+
+    /** Optional rustc wrapper, for example `sccache`. */
+    @get:Input
+    @get:Optional
+    abstract val rustcWrapper: Property<String>
+
+    /** Optional workspace rustc wrapper, for example `sccache`. */
+    @get:Input
+    @get:Optional
+    abstract val rustcWorkspaceWrapper: Property<String>
 
     @TaskAction
     fun generateDefFile() {
@@ -93,11 +108,17 @@ abstract class GenerateDefFileTask : DefaultTask() {
             argument("--lib")
             argument("--target")
             argument(targetString.get())
+            argument("--crate-type")
+            argument("staticlib")
             argument("--")
             argument("--print")
             argument("native-static-libs")
 
             workdir(packageDirectory.asFile.get())
+
+            env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
+            rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
+            rustcWorkspaceWrapper.orNull?.let { env("RUSTC_WORKSPACE_WRAPPER", it) }
 
             redirectErrorStream(true)
         }.run()

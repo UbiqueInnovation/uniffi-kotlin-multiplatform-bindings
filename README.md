@@ -111,6 +111,16 @@ kotlin {
 
 If the NDK version picked up by default does not work for you, pin it explicitly, see [NDK version](#ndk-version).
 
+For local debug builds, the plugin normally selects the Android Rust target(s) based on the host
+architecture. To compile only the ABI used by a connected device, pass an explicit ABI selector:
+
+```bash
+./gradlew :app:assembleDebug -PandroidAbis=arm64-v8a
+```
+
+The selector accepts a comma-separated list. It only affects debug builds; release builds continue
+to compile `arm64-v8a`, `x86_64`, and `armeabi-v7a`.
+
 ## Status
 
 This project provides a Gradle plugin and a binding generator for Rust libraries using UniFFI. This project is production-ready, but might be still a bit rough around the edges. If you encounter any issues, please report them in the [issue tracker](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues). Currently `uniffi-rs` version `0.28.3` is supported, but support for newer versions is on the roadmap. See the [HEIDI SDK](https://github.com/heidiverse/heidi-sdk) for an example of this project in production.
@@ -160,6 +170,49 @@ The rust code for the Android targets is compiled with the NDK toolchain. By def
 ```kotlin
 cargo {
     ndkVersion = "28.1.13356709"
+}
+```
+
+### Shared Cargo target directory
+
+The plugin uses Cargo's target directory reported by `cargo metadata` by default. If the same
+Rust sources are built from more than one Gradle build, such as from an SDK checkout and an
+application using Gradle dependency substitution, configure one shared directory in both builds:
+
+```kotlin
+cargo {
+    targetDirectory = rootProject.layout.buildDirectory.dir("cargo-target")
+}
+```
+
+The directory must be shared by the Gradle builds that should reuse the cache. It should not be
+used as a shared Gradle `build` directory: Kotlin and Android task outputs remain project-local.
+The `CARGO_TARGET_DIR` environment variable can be used instead when changing the build scripts is
+not practical. This is useful without sccache as well: it lets Cargo reuse its local incremental
+artifacts. In CI, persist this directory through the CI cache if separate jobs or runs should reuse
+it; an ephemeral CI workspace will not benefit beyond the current build.
+
+### sccache
+
+Compiler wrappers are inherited from the environment and can also be configured through the
+plugin DSL. For example:
+
+```kotlin
+cargo {
+    rustcWrapper = "sccache"
+}
+```
+
+Alternatively, set `RUSTC_WRAPPER=sccache` (or `RUSTC_WORKSPACE_WRAPPER=sccache`) before invoking
+Gradle. The wrapper setting is passed to every Cargo compilation and is included in Gradle task
+inputs.
+
+The same Android setting can be configured in the plugin DSL when it should be part of the build
+configuration rather than a command-line option:
+
+```kotlin
+cargo {
+    androidDebugAbis.add("arm64-v8a")
 }
 ```
 

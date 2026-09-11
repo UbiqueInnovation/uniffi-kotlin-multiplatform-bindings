@@ -5,6 +5,7 @@ import ch.ubique.uniffi.plugin.model.CargoBuildConfig
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 
 abstract class CargoExtension(project: Project) {
@@ -14,6 +15,39 @@ abstract class CargoExtension(project: Project) {
     val packageDirectory: DirectoryProperty =
         project.objects.directoryProperty()
             .convention(project.layout.projectDirectory)
+
+    /**
+     * Cargo's shared target directory. When unset, the directory reported by `cargo metadata`
+     * is used. Set this when several Gradle builds should reuse the same Cargo compilation
+     * cache, for example:
+     *
+     * ```kotlin
+     * cargo {
+     *     targetDirectory = rootProject.layout.buildDirectory.dir("cargo-target")
+     * }
+     * ```
+     */
+    val targetDirectory: DirectoryProperty = project.objects.directoryProperty()
+
+    /** Optional compiler wrapper, such as `sccache`. */
+    val rustcWrapper: Property<String> = project.objects.property(String::class.java).apply {
+        convention(project.providers.environmentVariable("RUSTC_WRAPPER"))
+    }
+
+    /** Optional workspace compiler wrapper, such as `sccache`. */
+    val rustcWorkspaceWrapper: Property<String> =
+        project.objects.property(String::class.java).apply {
+            convention(project.providers.environmentVariable("RUSTC_WORKSPACE_WRAPPER"))
+        }
+
+    /**
+     * Android ABIs to compile for debug builds.
+     *
+     * An empty list keeps the existing host-based defaults. Release builds always compile all
+     * supported ABIs unless a future release-specific option is added.
+     */
+    val androidDebugAbis: ListProperty<String> =
+        project.objects.listProperty(String::class.java)
 
     /**
      * The Android NDK version to build the android targets with, e.g. `"28.1.13356709"`.
