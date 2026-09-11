@@ -468,6 +468,7 @@ class UniffiPlugin : Plugin<Project> {
             task.useCross.set(config.useCross)
             task.rustcWrapper.set(cargoExtension.rustcWrapper)
             task.rustcWorkspaceWrapper.set(cargoExtension.rustcWorkspaceWrapper)
+            task.additionalEnvironment.set(cargoBuild.flatMap { it.additionalEnvironment })
         }
     }
 
