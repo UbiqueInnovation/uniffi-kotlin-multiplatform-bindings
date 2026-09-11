@@ -5,6 +5,7 @@ import ch.ubique.uniffi.plugin.model.CargoBuildConfig
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 
 abstract class CargoExtension(project: Project) {
@@ -38,6 +39,15 @@ abstract class CargoExtension(project: Project) {
         project.objects.property(String::class.java).apply {
             convention(project.providers.environmentVariable("RUSTC_WORKSPACE_WRAPPER"))
         }
+
+    /**
+     * Android ABIs to compile for debug builds.
+     *
+     * An empty list keeps the existing host-based defaults. Release builds always compile all
+     * supported ABIs unless a future release-specific option is added.
+     */
+    val androidDebugAbis: ListProperty<String> =
+        project.objects.listProperty(String::class.java)
 
     /**
      * The Android NDK version to build the android targets with, e.g. `"28.1.13356709"`.

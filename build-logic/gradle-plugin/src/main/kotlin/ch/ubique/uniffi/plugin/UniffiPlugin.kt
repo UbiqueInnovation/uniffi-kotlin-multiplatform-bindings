@@ -145,7 +145,7 @@ class UniffiPlugin : Plugin<Project> {
                                 buildTarget = BuildTarget.Android,
                                 cargoInfo = cargoInfo,
                                 isRelease = isRelease,
-                                rustTargets = BuildTarget.Android.rustTargets(isRelease)
+                                rustTargets = project.androidRustTargets(isRelease)
                                     .filter { it.abiName != null },
                                 leafName = { it.abiName!! }
                             ),
@@ -226,6 +226,45 @@ class UniffiPlugin : Plugin<Project> {
                 }
             }
         }
+    }
+
+    /**
+     * Select the Android Rust targets for this build.
+     *
+     * Debug builds retain the host-based defaults for backwards compatibility. A caller can
+     * override them with `cargo { androidDebugAbis.add("arm64-v8a") }` or with the convenient
+     * `-PandroidAbis=arm64-v8a` Gradle property. The property accepts a comma-separated list.
+     * Release builds deliberately keep the complete ABI set because their AAR must be usable on
+     * every supported device.
+     */
+    private fun Project.androidRustTargets(
+        isRelease: Boolean,
+    ): List<BuildTarget.RustTarget> {
+        if (isRelease) {
+            return BuildTarget.Android.rustTargets(release = true)
+        }
+
+        val requestedAbis = if (cargoExtension.androidDebugAbis.isPresent) {
+            cargoExtension.androidDebugAbis.get()
+        } else {
+            providers.gradleProperty("androidAbis")
+                .map { value -> value.split(',') }
+                .getOrElse(emptyList())
+        }.map(String::trim).filter(String::isNotEmpty).distinct()
+
+        if (requestedAbis.isEmpty()) {
+            return BuildTarget.Android.rustTargets(release = false)
+        }
+
+        val androidTargets = BuildTarget.RustTarget.entries.filter { it.isAndroid }
+        val supportedAbis = androidTargets.mapNotNull { it.abiName }.toSet()
+        val unsupportedAbis = requestedAbis.filterNot(supportedAbis::contains)
+        check(unsupportedAbis.isEmpty()) {
+            "Unsupported Android ABI(s): ${unsupportedAbis.joinToString()}. " +
+                "Supported ABIs: ${supportedAbis.joinToString()}"
+        }
+
+        return androidTargets.filter { it.abiName in requestedAbis }
     }
 
     /**

@@ -111,6 +111,16 @@ kotlin {
 
 If the NDK version picked up by default does not work for you, pin it explicitly, see [NDK version](#ndk-version).
 
+For local debug builds, the plugin normally selects the Android Rust target(s) based on the host
+architecture. To compile only the ABI used by a connected device, pass an explicit ABI selector:
+
+```bash
+./gradlew :app:assembleDebug -PandroidAbis=arm64-v8a
+```
+
+The selector accepts a comma-separated list. It only affects debug builds; release builds continue
+to compile `arm64-v8a`, `x86_64`, and `armeabi-v7a`.
+
 ## Status
 
 This project provides a Gradle plugin and a binding generator for Rust libraries using UniFFI. This project is production-ready, but might be still a bit rough around the edges. If you encounter any issues, please report them in the [issue tracker](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues). Currently `uniffi-rs` version `0.28.3` is supported, but support for newer versions is on the roadmap. See the [HEIDI SDK](https://github.com/heidiverse/heidi-sdk) for an example of this project in production.
@@ -196,6 +206,15 @@ cargo {
 Alternatively, set `RUSTC_WRAPPER=sccache` (or `RUSTC_WORKSPACE_WRAPPER=sccache`) before invoking
 Gradle. The wrapper setting is passed to every Cargo compilation and is included in Gradle task
 inputs.
+
+The same Android setting can be configured in the plugin DSL when it should be part of the build
+configuration rather than a command-line option:
+
+```kotlin
+cargo {
+    androidDebugAbis.add("arm64-v8a")
+}
+```
 
 ### Manual dependency management
 
