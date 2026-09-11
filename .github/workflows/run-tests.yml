@@ -112,7 +112,9 @@ jobs:
             SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -print -quit)
           fi
           test -n "$SDKMANAGER"
-          "$SDKMANAGER" "build-tools;36.0.0" "platforms;android-37" "ndk;28.1.13356709"
+          # Android 37 is published under the versioned package id on the
+          # repository used by this project.
+          "$SDKMANAGER" "build-tools;36.0.0" "platforms;android-37.0" "ndk;28.1.13356709"
           yes | "$SDKMANAGER" --licenses >/dev/null
 
       - name: Build and Test
