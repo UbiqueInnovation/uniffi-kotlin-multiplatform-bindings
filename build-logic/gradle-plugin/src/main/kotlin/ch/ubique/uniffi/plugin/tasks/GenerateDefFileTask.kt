@@ -4,6 +4,7 @@ import ch.ubique.uniffi.plugin.utils.CargoRunner
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
@@ -60,6 +61,10 @@ abstract class GenerateDefFileTask : DefaultTask() {
     @get:Input
     @get:Optional
     abstract val rustcWorkspaceWrapper: Property<String>
+
+    /** Additional environment variables passed to the Cargo linker-options probe. */
+    @get:Input
+    abstract val additionalEnvironment: MapProperty<String, String>
 
     @TaskAction
     fun generateDefFile() {
@@ -119,6 +124,9 @@ abstract class GenerateDefFileTask : DefaultTask() {
             env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
             rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
             rustcWorkspaceWrapper.orNull?.let { env("RUSTC_WORKSPACE_WRAPPER", it) }
+            additionalEnvironment.get().forEach { (key, value) ->
+                env(key, value)
+            }
 
             redirectErrorStream(true)
         }.run()
