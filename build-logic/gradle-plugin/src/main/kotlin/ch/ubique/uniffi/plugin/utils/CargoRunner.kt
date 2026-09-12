@@ -137,3 +137,28 @@ fun <T> withGlobalFileLock(lockFile: File, action: () -> T): T {
         lock.use { return action() }
     }
 }
+
+/**
+ * Cargo's package cache is shared by all Cargo processes for a user. Coordinate plugin-managed
+ * Cargo commands across Gradle projects as well as within one project, including CI matrix jobs
+ * that happen to share a runner.
+ */
+fun <T> withCargoPackageCacheLock(action: () -> T): T {
+    val lockFile = File(
+        System.getProperty("java.io.tmpdir"),
+        "ch.ubique.uniffi.cargo-package-cache.lock",
+    )
+    return withGlobalFileLock(lockFile, action)
+}
+
+/**
+ * Cargo serializes access to a target directory internally. Use a plugin-owned lock as well so
+ * several Gradle projects do not all sit inside Cargo waiting for the same lock.
+ */
+fun <T> withCargoTargetLock(targetDirectory: File, action: () -> T): T {
+    val lockFile = targetDirectory.resolve(".uniffi-cargo.lock")
+    lockFile.parentFile.mkdirs()
+    return withCargoPackageCacheLock {
+        withGlobalFileLock(lockFile, action)
+    }
+}

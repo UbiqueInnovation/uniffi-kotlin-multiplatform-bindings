@@ -1,6 +1,7 @@
 package ch.ubique.uniffi.plugin.services
 
 import ch.ubique.uniffi.plugin.utils.RustLocator
+import ch.ubique.uniffi.plugin.utils.withCargoPackageCacheLock
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ValueSource
 import org.gradle.api.provider.ValueSourceParameters
@@ -23,10 +24,12 @@ abstract class CargoMetadataService : ValueSource<String, CargoMetadataParams> {
     override fun obtain(): String {
         val stdout = ByteArrayOutputStream()
         val cargoCommand = RustLocator.findRustExecutable("cargo")
-        execOperations.exec { spec ->
-            spec.commandLine(cargoCommand.path, "metadata", "--format-version", "1")
-            spec.workingDir = parameters.packageDirectory.asFile.get()
-            spec.standardOutput = stdout
+        withCargoPackageCacheLock {
+            execOperations.exec { spec ->
+                spec.commandLine(cargoCommand.path, "metadata", "--format-version", "1")
+                spec.workingDir = parameters.packageDirectory.asFile.get()
+                spec.standardOutput = stdout
+            }
         }
 
         return String(stdout.toByteArray(), Charset.defaultCharset())
