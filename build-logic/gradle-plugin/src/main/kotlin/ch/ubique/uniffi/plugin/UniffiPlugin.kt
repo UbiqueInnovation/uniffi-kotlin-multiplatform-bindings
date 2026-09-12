@@ -41,7 +41,7 @@ class UniffiPlugin : Plugin<Project> {
     private companion object {
         private const val PREFIX: String = "uniffi"
 
-        /** The path where the bindgen binary will be installed relative to the project */
+        /** The shared path where bindgen binaries are installed relative to the root project. */
         private const val BINDGEN_INSTALL_PATH: String = "$PREFIX/bindgen"
 
         /** The path where the bindgen binary will be built relative to the *root* project */
@@ -98,6 +98,7 @@ class UniffiPlugin : Plugin<Project> {
         val installBindgenTask = project.registerInstallBindgenTask()
         val buildLibraryForBindingsTask = project.registerBuildLibraryForBindingsTask(cargoInfo)
         val buildBindingsTask = project.registerBuildBindingsTask(
+            installBindgenTask = installBindgenTask,
             bindgenBin = installBindgenTask.flatMap { it.bindgenBinPath },
             libraryForBindings = buildLibraryForBindingsTask.flatMap { it.dynamicLibraryFile },
             metadataJson = metadataJsonProvider,
@@ -268,17 +269,22 @@ class UniffiPlugin : Plugin<Project> {
     }
 
     /**
-     * Installs the bindgen for the project in the relative path [BINDGEN_INSTALL_PATH]. Sets the
-     * `CARGO_TARGET_DIR` to the path [BINDGEN_BUILD_PATH] relative to the **root project**, so that
-     * cargo can reuse the build files if the root project has multiple subprojects where the
-     * bindgen needs to be installed to.
+     * Installs bindgen into a source-keyed directory under the root project's build directory.
+     * This lets modules using the same bindgen share both the executable and Cargo's build files.
      */
     private fun Project.registerInstallBindgenTask(): TaskProvider<InstallBindgenTask> =
         project.tasks.register(Tasks.INSTALL_BINDGEN, InstallBindgenTask::class.java) { task ->
             task.source.set(uniffiExtension.bindgenSource)
-            task.bindgenInstallPath.set(project.layout.buildDirectory.dir(BINDGEN_INSTALL_PATH))
+            val bindgenSource = uniffiExtension.bindgenSource
+            task.bindgenInstallPath.set(
+                project.rootProject.layout.buildDirectory.dir(
+                    bindgenSource.map { source -> "$BINDGEN_INSTALL_PATH/${source.cacheKey}" }
+                )
+            )
             task.bindgenBuildPath.set(
-                project.rootProject.layout.buildDirectory.dir(BINDGEN_BUILD_PATH)
+                project.rootProject.layout.buildDirectory.dir(
+                    bindgenSource.map { source -> "$BINDGEN_BUILD_PATH/${source.cacheKey}" }
+                )
             )
             task.defaultBindgenBinName.set(Constants.BINDGEN_BIN_NAME)
         }
@@ -312,11 +318,16 @@ class UniffiPlugin : Plugin<Project> {
      * generated from a UDL file.
      */
     private fun Project.registerBuildBindingsTask(
+        installBindgenTask: TaskProvider<InstallBindgenTask>,
         bindgenBin: Provider<RegularFile>,
         libraryForBindings: Provider<RegularFile>,
         metadataJson: Provider<String>,
     ): TaskProvider<BuildBindingsTask> =
         tasks.register(Tasks.BUILD_BINDINGS, BuildBindingsTask::class.java) { task ->
+            // bindgen is installed into a shared, source-keyed directory. Its install task is
+            // deliberately not a Gradle output (the executable is reused across module tasks),
+            // so retain the dependency explicitly rather than relying on output inference.
+            task.dependsOn(installBindgenTask)
             task.packageDirectory.set(cargoExtension.packageDirectory)
             task.cargoMetadata.set(metadataJson)
             task.generateBindingsForExternalCrates.set(

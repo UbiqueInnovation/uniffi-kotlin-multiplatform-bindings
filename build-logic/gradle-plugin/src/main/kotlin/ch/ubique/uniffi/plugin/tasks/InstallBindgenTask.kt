@@ -2,6 +2,7 @@ package ch.ubique.uniffi.plugin.tasks
 
 import ch.ubique.uniffi.plugin.utils.BindgenSource
 import ch.ubique.uniffi.plugin.utils.CargoRunner
+import ch.ubique.uniffi.plugin.utils.withCargoTargetLock
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
@@ -9,7 +10,6 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
@@ -21,7 +21,7 @@ abstract class InstallBindgenTask : DefaultTask() {
     @get:Internal
     abstract val defaultBindgenBinName: Property<String>
 
-    @get:OutputDirectory
+    @get:Internal
     abstract val bindgenInstallPath: DirectoryProperty
 
     @get:Internal
@@ -32,67 +32,77 @@ abstract class InstallBindgenTask : DefaultTask() {
                 .map { "bin/$it" }
         )
 
-    @get:OutputDirectory
+    @get:Internal
     abstract val bindgenBuildPath: DirectoryProperty
 
     @TaskAction
     fun action() {
-        CargoRunner(logger) {
-            argument("install")
-            argument("--root")
-            argument(bindgenInstallPath.asFile.get().path)
-            argument("--force")
+        val bindgenBinary = bindgenBinPath.get().asFile
+        withCargoTargetLock(bindgenBuildPath.asFile.get()) {
+            // Recheck after acquiring the lock: sibling module tasks may have observed a missing
+            // executable at the same time and then waited for the first installation to finish.
+            if (bindgenBinary.isFile) {
+                logger.info("Reusing bindgen at $bindgenBinary")
+                return@withCargoTargetLock
+            }
 
-            val source = source.get()
-            when (source) {
-                is BindgenSource.Path -> {
-                    argument("--path")
-                    argument(source.path)
+            CargoRunner(logger) {
+                argument("install")
+                argument("--root")
+                argument(bindgenInstallPath.asFile.get().path)
+                argument("--force")
 
-                    if (source.features.isNotEmpty()) {
-                        argument("--features")
-                        argument(source.features.joinToString(","))
+                val source = source.get()
+                when (source) {
+                    is BindgenSource.Path -> {
+                        argument("--path")
+                        argument(source.path)
+
+                        if (source.features.isNotEmpty()) {
+                            argument("--features")
+                            argument(source.features.joinToString(","))
+                        }
+                    }
+
+                    is BindgenSource.Git -> {
+                        argument("--git")
+                        argument(source.repository)
+                        when (source.commit) {
+                            is BindgenSource.Git.Commit.Branch -> {
+                                argument("--branch")
+                                argument(source.commit.branch)
+                            }
+
+                            is BindgenSource.Git.Commit.Tag -> {
+                                argument("--tag")
+                                argument(source.commit.tag)
+                            }
+
+                            is BindgenSource.Git.Commit.Revision -> {
+                                argument("--rev")
+                                argument(source.commit.revision)
+                            }
+
+                            else -> {}
+                        }
+                    }
+
+                    is BindgenSource.Registry -> {
+                        argument("${source.packageName}@${source.version}")
                     }
                 }
 
-                is BindgenSource.Git -> {
-                    argument("--git")
-                    argument(source.repository)
-                    when (source.commit) {
-                        is BindgenSource.Git.Commit.Branch -> {
-                            argument("--branch")
-                            argument(source.commit.branch)
-                        }
-
-                        is BindgenSource.Git.Commit.Tag -> {
-                            argument("--tag")
-                            argument(source.commit.tag)
-                        }
-
-                        is BindgenSource.Git.Commit.Revision -> {
-                            argument("--rev")
-                            argument(source.commit.revision)
-                        }
-
-                        else -> {}
-                    }
+                source.bindgenName?.let {
+                    argument("--bin")
+                    argument(it)
                 }
 
-                is BindgenSource.Registry -> {
-                    argument("${source.packageName}@${source.version}")
+                source.packageName?.let {
+                    argument(it)
                 }
-            }
 
-            source.bindgenName?.let {
-                argument("--bin")
-                argument(it)
-            }
-
-            source.packageName?.let {
-                argument(it)
-            }
-
-            env("CARGO_TARGET_DIR", bindgenBuildPath.asFile.get().path)
-        }.run()
+                env("CARGO_TARGET_DIR", bindgenBuildPath.asFile.get().path)
+            }.run()
+        }
     }
 }
