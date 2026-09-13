@@ -55,8 +55,14 @@ class UniffiPlugin : Plugin<Project> {
         private fun librariesPath(sourceSetName: String): String =
             "$PREFIX/build/intermediates/$sourceSetName/libs"
 
-        /** C-Interop name for native targets */
-        private const val CINTEROP_NAME: String = "$PREFIX-cinterop"
+        /**
+         * C-Interop name for native targets.
+         *
+         * Keep this name stable: it becomes part of the Kotlin/Native KLIB identity. Changing
+         * it would make applications that consume previously published UniFFI/Kapun KLIBs
+         * unable to resolve the runtime cinterop dependency.
+         */
+        private const val CINTEROP_NAME: String = PREFIX
 
         /** C-Interop name for native targets */
         private const val CINTEROP_PACKAGE_NAME: String = "cinterop"
