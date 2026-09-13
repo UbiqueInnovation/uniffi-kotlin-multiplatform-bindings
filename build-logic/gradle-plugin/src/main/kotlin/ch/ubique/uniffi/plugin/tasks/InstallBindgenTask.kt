@@ -2,6 +2,7 @@ package ch.ubique.uniffi.plugin.tasks
 
 import ch.ubique.uniffi.plugin.utils.BindgenSource
 import ch.ubique.uniffi.plugin.utils.CargoRunner
+import ch.ubique.uniffi.plugin.utils.RustLocator
 import ch.ubique.uniffi.plugin.utils.withCargoTargetLock
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
@@ -132,7 +133,7 @@ abstract class InstallBindgenTask : DefaultTask() {
      * return null so that cargo install --force is run again instead of reusing a stale binary.
      */
     private fun sourceFingerprint(source: BindgenSource): String? = when (source) {
-        is BindgenSource.Path -> fingerprintDirectory(File(bindgenSourcePath.get()))
+        is BindgenSource.Path -> fingerprintPathSource(File(bindgenSourcePath.get()))
         is BindgenSource.Registry -> source.cacheKey
         is BindgenSource.Git -> when (source.commit) {
             is BindgenSource.Git.Commit.Tag,
@@ -160,25 +161,73 @@ abstract class InstallBindgenTask : DefaultTask() {
         return result.getOrNull()
     }
 
-    private fun fingerprintDirectory(directory: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        directory.walkTopDown()
-            .onEnter { file -> file.name !in setOf(".git", "target", "build") }
-            .filter { it.isFile }
-            .sortedBy { it.relativeTo(directory).invariantSeparatorsPath }
-            .forEach { file ->
-                digest.update(file.relativeTo(directory).invariantSeparatorsPath.toByteArray(StandardCharsets.UTF_8))
-                digest.update(0.toByte())
-                file.inputStream().use { input ->
-                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                    var bytesRead = input.read(buffer)
-                    while (bytesRead >= 0) {
-                        if (bytesRead > 0) digest.update(buffer, 0, bytesRead)
-                        bytesRead = input.read(buffer)
-                    }
+    /**
+     * A path source may use workspace dependencies, so the package directory alone is not the
+     * complete input to Cargo. Include the workspace manifests in the fingerprint as well; this
+     * invalidates the installed binary when a workspace dependency or its lockfile changes.
+     */
+    private fun fingerprintPathSource(directory: File): String? {
+        if (!directory.isDirectory) return null
+
+        val workspaceRoot = locateCargoWorkspace(directory) ?: return null
+        val files = buildList {
+            directory.walkTopDown()
+                .onEnter { file -> file.name !in setOf(".git", "target", "build") }
+                .filter { it.isFile }
+                .forEach { file ->
+                    add("source/${file.relativeTo(directory).invariantSeparatorsPath}" to file)
                 }
-                digest.update(0.toByte())
+
+            add("workspace/Cargo.toml" to workspaceRoot.resolve("Cargo.toml"))
+            workspaceRoot.resolve("Cargo.lock").takeIf(File::isFile)?.let {
+                add("workspace/Cargo.lock" to it)
             }
+        }.distinctBy { it.second.canonicalFile }
+
+        return fingerprintFiles(files)
+    }
+
+    private fun locateCargoWorkspace(directory: File): File? {
+        val manifest = directory.resolve("Cargo.toml")
+        if (!manifest.isFile) return null
+
+        return runCatching {
+            val process = ProcessBuilder(
+                RustLocator.findRustExecutable("cargo").path,
+                "locate-project",
+                "--workspace",
+                "--manifest-path",
+                manifest.path,
+                "--message-format",
+                "plain",
+            ).redirectErrorStream(true).start()
+            val output = process.inputStream.bufferedReader().use { it.readText() }
+            if (process.waitFor() != 0) return@runCatching null
+
+            output.lineSequence()
+                .map(String::trim)
+                .lastOrNull { it.endsWith("Cargo.toml") }
+                ?.let(::File)
+                ?.takeIf(File::isFile)
+                ?.parentFile
+        }.getOrNull()
+    }
+
+    private fun fingerprintFiles(files: List<Pair<String, File>>): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        files.sortedBy { it.first }.forEach { (path, file) ->
+            digest.update(path.toByteArray(StandardCharsets.UTF_8))
+            digest.update(0.toByte())
+            file.inputStream().use { input ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                var bytesRead = input.read(buffer)
+                while (bytesRead >= 0) {
+                    if (bytesRead > 0) digest.update(buffer, 0, bytesRead)
+                    bytesRead = input.read(buffer)
+                }
+            }
+            digest.update(0.toByte())
+        }
         return digest.digest().joinToString("") { byte -> "%02x".format(byte) }
     }
 }
