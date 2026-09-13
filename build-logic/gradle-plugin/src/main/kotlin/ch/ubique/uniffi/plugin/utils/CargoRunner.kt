@@ -89,7 +89,11 @@ class CargoRunner(
             builder.environment().putAll(environment)
             workingDir?.let { builder.directory(it) }
 
-            val lockFile = File(System.getProperty("java.io.tmpdir"), "ch.ubique.rustup.lock")
+            val lockDirectory = File(
+                System.getProperty("java.io.tmpdir"),
+                "ch.ubique.uniffi-${System.getProperty("user.name").replace(Regex("[^A-Za-z0-9._-]"), "_")}",
+            ).also { it.mkdirs() }
+            val lockFile = lockDirectory.resolve("rustup.lock")
 
 			val (output, exitCode) = withGlobalFileLock(lockFile) {
 				val process = builder.start()
@@ -130,25 +134,21 @@ fun <T> withGlobalFileLock(lockFile: File, action: () -> T): T {
             try {
                 lock = channel.tryLock()
             } catch (e: OverlappingFileLockException) {
-                // Already locked in this JVM – wait and retry
-                Thread.sleep(50)
+                // Already locked in this JVM – wait and retry.
+            }
+            if (lock == null) {
+                // tryLock() returns null, rather than throwing, when another process owns the lock.
+                // Avoid busy-spinning while a potentially long-running operation holds it.
+                try {
+                    Thread.sleep(50)
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    throw GradleException("Interrupted while waiting for file lock $lockFile", e)
+                }
             }
         }
         lock.use { return action() }
     }
-}
-
-/**
- * Cargo's package cache is shared by all Cargo processes for a user. Coordinate plugin-managed
- * Cargo commands across Gradle projects as well as within one project, including CI matrix jobs
- * that happen to share a runner.
- */
-fun <T> withCargoPackageCacheLock(action: () -> T): T {
-    val lockFile = File(
-        System.getProperty("java.io.tmpdir"),
-        "ch.ubique.uniffi.cargo-package-cache.lock",
-    )
-    return withGlobalFileLock(lockFile, action)
 }
 
 /**
@@ -158,7 +158,5 @@ fun <T> withCargoPackageCacheLock(action: () -> T): T {
 fun <T> withCargoTargetLock(targetDirectory: File, action: () -> T): T {
     val lockFile = targetDirectory.resolve(".uniffi-cargo.lock")
     lockFile.parentFile.mkdirs()
-    return withCargoPackageCacheLock {
-        withGlobalFileLock(lockFile, action)
-    }
+    return withGlobalFileLock(lockFile, action)
 }

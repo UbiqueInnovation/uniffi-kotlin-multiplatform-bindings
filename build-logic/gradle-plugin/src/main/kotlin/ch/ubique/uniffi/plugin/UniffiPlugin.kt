@@ -16,6 +16,7 @@ import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
 import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
 import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
 import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
+import ch.ubique.uniffi.plugin.utils.BindgenSource
 import ch.ubique.uniffi.plugin.utils.targetPackage
 import org.gradle.api.Action
 import org.gradle.api.GradleException
@@ -276,6 +277,11 @@ class UniffiPlugin : Plugin<Project> {
         project.tasks.register(Tasks.INSTALL_BINDGEN, InstallBindgenTask::class.java) { task ->
             task.source.set(uniffiExtension.bindgenSource)
             val bindgenSource = uniffiExtension.bindgenSource
+            task.bindgenSourcePath.set(
+                bindgenSource.map { source ->
+                    (source as? BindgenSource.Path)?.path.orEmpty()
+                }
+            )
             task.bindgenInstallPath.set(
                 project.rootProject.layout.buildDirectory.dir(
                     bindgenSource.map { source -> "$BINDGEN_INSTALL_PATH/${source.cacheKey}" }
