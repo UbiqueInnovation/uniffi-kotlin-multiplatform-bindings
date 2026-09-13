@@ -3,6 +3,7 @@ package ch.ubique.uniffi.plugin.tasks
 import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.model.CrateType
 import ch.ubique.uniffi.plugin.utils.CargoRunner
+import ch.ubique.uniffi.plugin.utils.withCargoTargetLock
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.Directory
@@ -25,7 +26,6 @@ import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault(because = "Cargo caches incrementally, and the rust toolchain is not a declared input")
 abstract class CargoBuildTask : DefaultTask() {
-
     @get:Internal
     abstract val packageDirectory: DirectoryProperty
 
@@ -126,34 +126,36 @@ abstract class CargoBuildTask : DefaultTask() {
 
     @TaskAction
     fun build() {
-        CargoRunner(logger, useCross = useCross.get()) {
-            argument("rustc")
-            argument("--lib")
-            if (rustTarget.isPresent) {
-                argument("--target")
-                argument(rustTarget.get().rustTriple)
-            }
-            argument("--package")
-            argument(packageName.get())
+        withCargoTargetLock(cargoTargetDirectory.asFile.get()) {
+            CargoRunner(logger, useCross = useCross.get()) {
+                argument("rustc")
+                argument("--lib")
+                if (rustTarget.isPresent) {
+                    argument("--target")
+                    argument(rustTarget.get().rustTriple)
+                }
+                argument("--package")
+                argument(packageName.get())
 
-            if (release.get()) {
-                argument("--release")
-            }
+                if (release.get()) {
+                    argument("--release")
+                }
 
-            if (crateTypes.isPresent && crateTypes.get().isNotEmpty()) {
-                argument("--crate-type")
-                argument(crateTypes.get().sortedBy { it.toString() }.joinToString(","))
-            }
+                if (crateTypes.isPresent && crateTypes.get().isNotEmpty()) {
+                    argument("--crate-type")
+                    argument(crateTypes.get().sortedBy { it.toString() }.joinToString(","))
+                }
 
-            workdir(packageDirectory.asFile.get())
+                workdir(packageDirectory.asFile.get())
 
-            env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
-            rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
-            rustcWorkspaceWrapper.orNull?.let { env("RUSTC_WORKSPACE_WRAPPER", it) }
+                env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
+                rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
+                rustcWorkspaceWrapper.orNull?.let { env("RUSTC_WORKSPACE_WRAPPER", it) }
 
-            additionalEnvironment.get().forEach { (key, value) ->
-                env(key, value)
-            }
-        }.run()
+                additionalEnvironment.get().forEach { (key, value) ->
+                    env(key, value)
+                }
+            }.run()
+        }
     }
 }

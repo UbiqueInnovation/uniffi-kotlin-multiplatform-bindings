@@ -89,7 +89,11 @@ class CargoRunner(
             builder.environment().putAll(environment)
             workingDir?.let { builder.directory(it) }
 
-            val lockFile = File(System.getProperty("java.io.tmpdir"), "ch.ubique.rustup.lock")
+            val lockDirectory = File(
+                System.getProperty("java.io.tmpdir"),
+                "ch.ubique.uniffi-${System.getProperty("user.name").replace(Regex("[^A-Za-z0-9._-]"), "_")}",
+            ).also { it.mkdirs() }
+            val lockFile = lockDirectory.resolve("rustup.lock")
 
 			val (output, exitCode) = withGlobalFileLock(lockFile) {
 				val process = builder.start()
@@ -130,10 +134,29 @@ fun <T> withGlobalFileLock(lockFile: File, action: () -> T): T {
             try {
                 lock = channel.tryLock()
             } catch (e: OverlappingFileLockException) {
-                // Already locked in this JVM – wait and retry
-                Thread.sleep(50)
+                // Already locked in this JVM – wait and retry.
+            }
+            if (lock == null) {
+                // tryLock() returns null, rather than throwing, when another process owns the lock.
+                // Avoid busy-spinning while a potentially long-running operation holds it.
+                try {
+                    Thread.sleep(50)
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    throw GradleException("Interrupted while waiting for file lock $lockFile", e)
+                }
             }
         }
         lock.use { return action() }
     }
+}
+
+/**
+ * Cargo serializes access to a target directory internally. Use a plugin-owned lock as well so
+ * several Gradle projects do not all sit inside Cargo waiting for the same lock.
+ */
+fun <T> withCargoTargetLock(targetDirectory: File, action: () -> T): T {
+    val lockFile = targetDirectory.resolve(".uniffi-cargo.lock")
+    lockFile.parentFile.mkdirs()
+    return withGlobalFileLock(lockFile, action)
 }

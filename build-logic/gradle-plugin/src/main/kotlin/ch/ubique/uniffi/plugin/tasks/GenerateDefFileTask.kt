@@ -1,6 +1,7 @@
 package ch.ubique.uniffi.plugin.tasks
 
 import ch.ubique.uniffi.plugin.utils.CargoRunner
+import ch.ubique.uniffi.plugin.utils.withCargoTargetLock
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -108,28 +109,30 @@ abstract class GenerateDefFileTask : DefaultTask() {
     }
 
     private fun getLinkerOpts(): String? {
-        val output = CargoRunner(logger, useCross = useCross.get()) {
-            argument("rustc")
-            argument("--lib")
-            argument("--target")
-            argument(targetString.get())
-            argument("--crate-type")
-            argument("staticlib")
-            argument("--")
-            argument("--print")
-            argument("native-static-libs")
+        val output = withCargoTargetLock(cargoTargetDirectory.asFile.get()) {
+            CargoRunner(logger, useCross = useCross.get()) {
+                argument("rustc")
+                argument("--lib")
+                argument("--target")
+                argument(targetString.get())
+                argument("--crate-type")
+                argument("staticlib")
+                argument("--")
+                argument("--print")
+                argument("native-static-libs")
 
-            workdir(packageDirectory.asFile.get())
+                workdir(packageDirectory.asFile.get())
 
-            env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
-            rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
-            rustcWorkspaceWrapper.orNull?.let { env("RUSTC_WORKSPACE_WRAPPER", it) }
-            additionalEnvironment.get().forEach { (key, value) ->
-                env(key, value)
-            }
+                env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
+                rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
+                rustcWorkspaceWrapper.orNull?.let { env("RUSTC_WORKSPACE_WRAPPER", it) }
+                additionalEnvironment.get().forEach { (key, value) ->
+                    env(key, value)
+                }
 
-            redirectErrorStream(true)
-        }.run()
+                redirectErrorStream(true)
+            }.run()
+        }
 
         val linkerFlag = output.split('\n')
             .map { it.trim().substringAfter("note: native-static-libs: ", "") }
