@@ -103,7 +103,7 @@ abstract class BuildBindingsTask : DefaultTask() {
 
         val metadata = CargoMetadata.fromJsonString(cargoMetadata.get())
 
-        val targetPackage = metadata.targetPackage
+        val targetPackage = metadata.targetPackage(packageDirectory.asFile.get())
 
         buildBindings(targetPackage.targets[0].name)
 

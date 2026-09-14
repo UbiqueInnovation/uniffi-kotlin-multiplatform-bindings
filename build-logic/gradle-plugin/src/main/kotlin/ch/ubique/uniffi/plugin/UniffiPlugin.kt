@@ -92,7 +92,9 @@ class UniffiPlugin : Plugin<Project> {
             spec.parameters.packageDirectory.set(cargoExtension.packageDirectory)
         }
         val metadata = metadataJsonProvider.map { CargoMetadata.fromJsonString(it) }
-        val targetPackage = metadata.map { it.targetPackage }
+        val targetPackage = metadata.zip(cargoExtension.packageDirectory) { cargoMetadata, packageDirectory ->
+            cargoMetadata.targetPackage(packageDirectory.asFile)
+        }
         val cargoInfo = CargoInfo(
             packageName = targetPackage.map { it.name },
             libraryName = targetPackage.map { it.targets.first().name },
