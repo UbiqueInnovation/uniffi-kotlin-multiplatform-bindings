@@ -152,8 +152,9 @@ fun <T> withGlobalFileLock(lockFile: File, action: () -> T): T {
 }
 
 /**
- * Cargo serializes access to a target directory internally. Use a plugin-owned lock as well so
- * several Gradle projects do not all sit inside Cargo waiting for the same lock.
+ * Protect plugin-managed operations that write shared Cargo state, such as bindgen installation.
+ * Normal Cargo builds rely on Cargo's own target-directory coordination; adding this lock around
+ * every build would serialize otherwise independent Gradle module tasks.
  */
 fun <T> withCargoTargetLock(targetDirectory: File, action: () -> T): T {
     val lockFile = targetDirectory.resolve(".uniffi-cargo.lock")
