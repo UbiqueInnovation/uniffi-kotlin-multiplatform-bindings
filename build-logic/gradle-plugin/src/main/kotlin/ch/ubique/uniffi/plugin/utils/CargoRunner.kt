@@ -47,15 +47,16 @@ class CargoRunner(
 
         val builder = ProcessBuilder(listOf(command) + arguments)
         builder.redirectErrorStream(false)
-        // Cargo may invoke Git for a dependency fetch. Never leave the child process with an
-        // open stdin: a missing credential can otherwise turn into an indefinite terminal prompt
-        // while Gradle waits in process.waitFor(). CI additionally sets GIT_TERMINAL_PROMPT=0.
-        builder.redirectInput(ProcessBuilder.Redirect.DISCARD)
+        // Cargo may invoke Git for a dependency fetch. The child's stdin is closed immediately
+        // after start below: a missing credential can then fail instead of turning into an
+        // indefinite terminal prompt while Gradle waits in process.waitFor(). CI additionally
+        // sets GIT_TERMINAL_PROMPT=0.
         builder.environment().putAll(environment)
         workingDir?.let { builder.directory(it) }
 
         val process = runCatching { builder.start() }.getOrNull()
 			?: throw GradleException("Failed to start $commandName. Is rust installed?")
+        process.outputStream.close()
         
         val stdout = StringBuilder()
         val stderr = StringBuilder()
@@ -98,7 +99,6 @@ class CargoRunner(
             val rustup = RustLocator.findRustExecutable("rustup").path
             val builder = ProcessBuilder(listOf(rustup, "target", "add", targetToInstall))
             builder.redirectErrorStream(true)
-            builder.redirectInput(ProcessBuilder.Redirect.DISCARD)
             builder.environment().putAll(environment)
             workingDir?.let { builder.directory(it) }
 
@@ -110,6 +110,7 @@ class CargoRunner(
 
 			val (output, exitCode) = withGlobalFileLock(lockFile) {
 				val process = builder.start()
+				process.outputStream.close()
 				val output = process.inputStream.bufferedReader().readText()
 				val exitCode = try {
 					process.waitFor()
