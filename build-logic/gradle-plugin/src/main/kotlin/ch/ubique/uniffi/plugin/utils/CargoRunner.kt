@@ -49,8 +49,8 @@ class CargoRunner(
         builder.redirectErrorStream(false)
         // Cargo may invoke Git for a dependency fetch. The child's stdin is closed immediately
         // after start below: a missing credential can then fail instead of turning into an
-        // indefinite terminal prompt while Gradle waits in process.waitFor(). CI additionally
-        // sets GIT_TERMINAL_PROMPT=0.
+        // indefinite terminal prompt while Gradle waits in process.waitFor(). CI may also set
+        // GIT_TERMINAL_PROMPT=0 explicitly.
         builder.environment().putIfAbsent("GIT_TERMINAL_PROMPT", "0")
         builder.environment().putAll(environment)
         workingDir?.let { builder.directory(it) }
