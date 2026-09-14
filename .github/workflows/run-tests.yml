@@ -93,6 +93,7 @@ jobs:
       - name: Set up Rust toolchain
         run: |
           RUST_TOOLCHAIN=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)
+          test -n "$RUST_TOOLCHAIN"
           rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal --no-self-update
           rustup target add --toolchain "$RUST_TOOLCHAIN" \
             aarch64-unknown-linux-gnu \
@@ -112,10 +113,10 @@ jobs:
             SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -print -quit)
           fi
           test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null
           # Android 37 is published under the versioned package id on the
           # repository used by this project.
           "$SDKMANAGER" "build-tools;36.0.0" "platforms;android-37.0" "ndk;28.1.13356709"
-          yes | "$SDKMANAGER" --licenses >/dev/null
 
       - name: Build and Test
         run: |

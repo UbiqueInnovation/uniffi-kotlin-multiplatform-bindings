@@ -1,11 +1,13 @@
 package ch.ubique.uniffi.plugin.tasks
 
+import ch.ubique.uniffi.plugin.model.CrateType
 import ch.ubique.uniffi.plugin.utils.CargoRunner
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
@@ -44,6 +46,11 @@ abstract class GenerateDefFileTask : DefaultTask() {
 
     @get:Input
     abstract val targetString: Property<String>
+
+    /** The crate types already requested by the shared Cargo build for this target. */
+    @get:Input
+    @get:Optional
+    abstract val crateTypes: SetProperty<CrateType>
 
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.ABSOLUTE)
@@ -114,7 +121,11 @@ abstract class GenerateDefFileTask : DefaultTask() {
             argument("--target")
             argument(targetString.get())
             argument("--crate-type")
-            argument("staticlib")
+            argument(
+                crateTypes.getOrElse(setOf(CrateType.SystemStaticLibrary))
+                    .sortedBy { it.toString() }
+                    .joinToString(",")
+            )
             argument("--")
             argument("--print")
             argument("native-static-libs")

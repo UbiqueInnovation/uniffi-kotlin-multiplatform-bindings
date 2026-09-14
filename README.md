@@ -181,12 +181,14 @@ application using Gradle dependency substitution, configure one shared directory
 
 ```kotlin
 cargo {
-    targetDirectory = rootProject.layout.buildDirectory.dir("cargo-target")
+    targetDirectory = rootProject.layout.projectDirectory.dir("cargo-target")
 }
 ```
 
-The directory must be shared by the Gradle builds that should reuse the cache. It should not be
-used as a shared Gradle `build` directory: Kotlin and Android task outputs remain project-local.
+The directory must be shared by the Gradle builds that should reuse the cache. This visible,
+project-level directory survives Gradle's `clean` task; remove it explicitly when a completely
+fresh Rust build is needed. It should not be used as a shared Gradle `build` directory: Kotlin and
+Android task outputs remain project-local.
 The `CARGO_TARGET_DIR` environment variable can be used instead when changing the build scripts is
 not practical. This is useful without sccache as well: it lets Cargo reuse its local incremental
 artifacts. In CI, persist this directory through the CI cache if separate jobs or runs should reuse

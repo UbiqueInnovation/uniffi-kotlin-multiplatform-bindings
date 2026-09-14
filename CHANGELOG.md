@@ -6,11 +6,19 @@
 
 - Configure a shared Cargo target directory with `cargo { targetDirectory = ... }`.
 - Configure `RUSTC_WRAPPER` and `RUSTC_WORKSPACE_WRAPPER` through the Cargo DSL, including sccache.
+- Select only the required Android debug ABIs with `cargo { androidDebugAbis.add(...) }` or
+  `-PandroidAbis=...`.
 
 ### Changed
 
 - Cargo build tasks now write directly to Cargo's shared target directory and emit only the crate
   types required by the consuming Kotlin targets.
+- Bindgen installation and host-library builds now reuse the shared Cargo target directory more
+  effectively.
+
+### Fixed
+
+- Preserve the published `uniffi-cinterop` Kotlin/Native KLIB identity.
 
 ## [1.2.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.1) - 2026-08-21
 

@@ -62,7 +62,7 @@ class UniffiPlugin : Plugin<Project> {
          * it would make applications that consume previously published UniFFI/Kapun KLIBs
          * unable to resolve the runtime cinterop dependency.
          */
-        private const val CINTEROP_NAME: String = PREFIX
+        private const val CINTEROP_NAME: String = "$PREFIX-cinterop"
 
         /** C-Interop name for native targets */
         private const val CINTEROP_PACKAGE_NAME: String = "cinterop"
@@ -252,13 +252,15 @@ class UniffiPlugin : Plugin<Project> {
             return BuildTarget.Android.rustTargets(release = true)
         }
 
-        val requestedAbis = if (cargoExtension.androidDebugAbis.isPresent) {
-            cargoExtension.androidDebugAbis.get()
-        } else {
-            providers.gradleProperty("androidAbis")
-                .map { value -> value.split(',') }
-                .getOrElse(emptyList())
-        }.map(String::trim).filter(String::isNotEmpty).distinct()
+        val requestedAbis = cargoExtension.androidDebugAbis.getOrElse(emptyList())
+            .ifEmpty {
+                providers.gradleProperty("androidAbis")
+                    .map { value -> value.split(',') }
+                    .getOrElse(emptyList())
+            }
+            .map(String::trim)
+            .filter(String::isNotEmpty)
+            .distinct()
 
         if (requestedAbis.isEmpty()) {
             return BuildTarget.Android.rustTargets(release = false)
@@ -302,28 +304,29 @@ class UniffiPlugin : Plugin<Project> {
         }
 
     /**
-     * Register a [CargoBuildTask] for the host native target (by not setting the `rustTarget`).
-     * This library will be used to generate the bindings from (in case the bindings are not
-     * generated from a UDL file).
-     *
-     * NOTE: Maybe it would be worth to specify the `rustTarget` to [BuildTarget.RustTarget.forCurrentPlatform]
-     * so that rust can reuse the built library. Alternatively, it would be nice if we could figure
-     * out which libraries are already being built and use one of them for the bindings.
+     * Register a [CargoBuildTask] for the current host target. This library will be used to
+     * generate the bindings from (in case the bindings are not generated from a UDL file).
+     * Using the explicit target makes this build share Cargo's target-specific artifacts with
+     * the current-platform JVM or Android host build.
      */
     private fun Project.registerBuildLibraryForBindingsTask(
         cargoInfo: CargoInfo,
-    ): TaskProvider<CargoBuildTask> =
-        project.tasks.register(Tasks.BUILD_LIB_FOR_BINDINGS, CargoBuildTask::class.java) { task ->
-            task.packageDirectory.set(cargoExtension.packageDirectory)
-            task.release.set(false)
-            task.packageName.set(cargoInfo.packageName)
-            task.libraryName.set(cargoInfo.libraryName)
-            task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
-            task.crateTypes.add(CrateType.SystemDynamicLibrary)
-            task.rustcWrapper.set(cargoExtension.rustcWrapper)
-            task.rustcWorkspaceWrapper.set(cargoExtension.rustcWorkspaceWrapper)
-            task.useCross.set(false)
+    ): TaskProvider<CargoBuildTask> {
+        val cargoBuild = registerCargoBuildTask(
+            rustTarget = BuildTarget.RustTarget.forCurrentPlatform,
+            release = false,
+            cargoInfo = cargoInfo,
+            crateType = CrateType.SystemDynamicLibrary,
+        )
+
+        // Keep the old task name as a convenient compatibility alias while making the actual
+        // Cargo task share its target-specific outputs with JVM/Android host builds.
+        tasks.register(Tasks.BUILD_LIB_FOR_BINDINGS) { task ->
+            task.dependsOn(cargoBuild)
         }
+
+        return cargoBuild
+    }
 
     /**
      * Register the [BuildBindingsTask], the [libraryForBindings] will not be used if bindings are
@@ -486,6 +489,9 @@ class UniffiPlugin : Plugin<Project> {
             task.packageDirectory.set(cargoExtension.packageDirectory)
             task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
             task.targetString.set(rustTarget.rustTriple)
+            // The probe must use the same crate-type set as the shared Cargo build. Otherwise it
+            // can overwrite the static library produced by that build and invalidate it again.
+            task.crateTypes.set(cargoBuild.flatMap { it.crateTypes })
             // Carries the dependency on the bindings.
             task.headersDir.set(headersDir)
             task.useCross.set(config.useCross)

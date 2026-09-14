@@ -148,7 +148,9 @@ abstract class InstallBindgenTask : DefaultTask() {
         val result = runCatching {
             val process = ProcessBuilder("git", "ls-remote", source.repository, reference)
                 .redirectErrorStream(true)
+                .apply { environment()["GIT_TERMINAL_PROMPT"] = "0" }
                 .start()
+            process.outputStream.close()
             val output = process.inputStream.bufferedReader().use { it.readText() }
             if (process.waitFor() != 0) return null
             output.lineSequence()

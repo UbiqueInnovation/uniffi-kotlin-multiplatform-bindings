@@ -51,6 +51,7 @@ class CargoRunner(
         // after start below: a missing credential can then fail instead of turning into an
         // indefinite terminal prompt while Gradle waits in process.waitFor(). CI additionally
         // sets GIT_TERMINAL_PROMPT=0.
+        builder.environment().putIfAbsent("GIT_TERMINAL_PROMPT", "0")
         builder.environment().putAll(environment)
         workingDir?.let { builder.directory(it) }
 

@@ -1,5 +1,6 @@
 target
 build
+cargo-target
 .cxx
 .gradle
 .kotlin
