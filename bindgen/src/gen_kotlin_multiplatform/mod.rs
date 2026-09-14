@@ -169,6 +169,7 @@ impl CustomTypeConfig {
         converter.replace("{}", name)
     }
 
+    #[allow(dead_code)]
     fn lower(&self, name: &str) -> String {
         let converter = if self.lower.is_empty() {
             &self.from_custom
@@ -1078,6 +1079,7 @@ impl<T: AsType> AsCodeType for T {
 
 #[cfg_attr(feature = "runtime", allow(dead_code))]
 mod filters {
+    #[allow(unused_imports)]
     pub use super::backend::*;
     use uniffi_bindgen::to_askama_error;
     use uniffi_meta::LiteralMetadata;
