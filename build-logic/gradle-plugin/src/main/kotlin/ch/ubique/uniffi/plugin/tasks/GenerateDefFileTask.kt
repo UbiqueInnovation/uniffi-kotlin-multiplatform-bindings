@@ -17,11 +17,16 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 import org.gradle.work.DisableCachingByDefault
+import javax.inject.Inject
 import kotlin.String
 
 @DisableCachingByDefault(because = "Generating the def file is cheaper than fetching it from the build cache")
 abstract class GenerateDefFileTask : DefaultTask() {
+    @get:Inject
+    abstract val execOperations: ExecOperations
+
     /**
      * The static library cinterop links against.
      *
@@ -115,7 +120,7 @@ abstract class GenerateDefFileTask : DefaultTask() {
     }
 
     private fun getLinkerOpts(): String? {
-        val output = CargoRunner(logger, useCross = useCross.get()) {
+        val output = CargoRunner(execOperations, logger, useCross = useCross.get()) {
             argument("rustc")
             argument("--lib")
             argument("--target")

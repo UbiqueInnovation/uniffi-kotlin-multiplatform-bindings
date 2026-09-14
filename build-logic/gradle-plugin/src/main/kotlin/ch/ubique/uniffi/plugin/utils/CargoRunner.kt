@@ -2,13 +2,18 @@ package ch.ubique.uniffi.plugin.utils
 
 import org.gradle.api.GradleException
 import org.gradle.api.logging.Logger
+import org.gradle.process.ExecOperations
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.OutputStream
 import java.io.RandomAccessFile
 import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
-import kotlin.concurrent.thread
+import java.nio.charset.StandardCharsets
 
 class CargoRunner(
+    private val execOperations: ExecOperations,
     private val logger: Logger,
     private val useCross: Boolean = false,
     action: CargoRunner.() -> Unit = {},
@@ -42,115 +47,143 @@ class CargoRunner(
     }
 
     fun run(): String {
-        val commandName = if (useCross) { "cross" } else { "cargo" }
+        val commandName = if (useCross) "cross" else "cargo"
         val command = RustLocator.findRustExecutable(commandName).path
+        val result = execute(command, arguments)
 
-        val builder = ProcessBuilder(listOf(command) + arguments)
-        builder.redirectErrorStream(false)
-        // Cargo may invoke Git for a dependency fetch. The child's stdin is closed immediately
-        // after start below: a missing credential can then fail instead of turning into an
-        // indefinite terminal prompt while Gradle waits in process.waitFor(). CI may also set
-        // GIT_TERMINAL_PROMPT=0 explicitly.
-        builder.environment().putIfAbsent("GIT_TERMINAL_PROMPT", "0")
-        builder.environment().putAll(environment)
-        workingDir?.let { builder.directory(it) }
-
-        val process = runCatching { builder.start() }.getOrNull()
-			?: throw GradleException("Failed to start $commandName. Is rust installed?")
-        process.outputStream.close()
-        
-        val stdout = StringBuilder()
-        val stderr = StringBuilder()
-
-        val stdoutThread = thread(name = "$commandName-stdout") {
-            process.inputStream.bufferedReader().forEachLine { line ->
-                logger.lifecycle(line)
-                synchronized(stdout) { stdout.appendLine(line) }
-            }
-        }
-        val stderrThread = thread(name = "$commandName-stderr") {
-            process.errorStream.bufferedReader().forEachLine { line ->
-                logger.lifecycle(line)
-                synchronized(stderr) { stderr.appendLine(line) }
-            }
-        }
-
-        val exitCode = try {
-            process.waitFor()
-        } catch (e: InterruptedException) {
-            process.destroyForcibly()
-            stdoutThread.join()
-            stderrThread.join()
-            Thread.currentThread().interrupt()
-            throw GradleException("Interrupted while waiting for '$command'", e)
-        }
-        stdoutThread.join()   // make sure both streams are fully drained
-        stderrThread.join()
-
-        // Check if maybe just a target is missing and install it using rustup
-        val targetToInstall = stderr.lineSequence()
+        // Check if maybe just a target is missing and install it using rustup.
+        val targetToInstall = result.stderr.lineSequence()
             .mapNotNull {
                 Regex("""consider downloading the target with `rustup target add ([^`]+)`""")
                     .find(it)?.groupValues?.get(1)
             }
             .firstOrNull()
 
-        if (exitCode != 0 && targetToInstall != null) {
-            logger.warn("Failed to run '$command ${arguments.joinToString(" ")}' trying to install rustup toolchain using 'rustup target add $targetToInstall'")
-            val rustup = RustLocator.findRustExecutable("rustup").path
-            val builder = ProcessBuilder(listOf(rustup, "target", "add", targetToInstall))
-            builder.redirectErrorStream(true)
-            builder.environment().putAll(environment)
-            workingDir?.let { builder.directory(it) }
+        if (result.exitValue != 0 && targetToInstall != null) {
+            logger.warn(
+                "Failed to run '$command ${arguments.joinToString(" ")}'. " +
+                    "Trying to install the Rust target with 'rustup target add $targetToInstall'",
+            )
+            installRustTarget(targetToInstall)
 
-            val lockDirectory = File(
-                System.getProperty("java.io.tmpdir"),
-                "ch.ubique.uniffi-${System.getProperty("user.name").replace(Regex("[^A-Za-z0-9._-]"), "_")}",
-            ).also { it.mkdirs() }
-            val lockFile = lockDirectory.resolve("rustup.lock")
-
-			val (output, exitCode) = withGlobalFileLock(lockFile) {
-				val process = builder.start()
-				process.outputStream.close()
-				val output = process.inputStream.bufferedReader().readText()
-				val exitCode = try {
-					process.waitFor()
-				} catch (e: InterruptedException) {
-					process.destroyForcibly()
-					Thread.currentThread().interrupt()
-					throw GradleException("Interrupted while waiting for '$rustup'", e)
-				}
-				output to exitCode
-			}
-			check(exitCode == 0) {
-				println(output)
-				logger.error("Failed to run 'rustup target add $targetToInstall'")
-				"Failed to run command: 'rustup target add $targetToInstall' with exit code $exitCode"
-			}
-
-			// If the rustup command succeeded, retry the failed command.
-			return this.run()
+            // If the rustup command succeeded, retry the failed command.
+            return run()
         }
 
-        if (exitCode != 0) {
+        if (result.exitValue != 0) {
             val commandLine = "$command ${arguments.joinToString(" ")}".trim()
             val details = buildString {
-                if (stdout.isNotBlank()) appendLine("stdout:\n$stdout")
-                if (stderr.isNotBlank()) appendLine("stderr:\n$stderr")
+                if (result.stdout.isNotBlank()) appendLine("stdout:\n${result.stdout}")
+                if (result.stderr.isNotBlank()) appendLine("stderr:\n${result.stderr}")
             }.trim()
             throw GradleException(
                 buildString {
-                    append("Failed to run '$commandLine' with exit code $exitCode")
+                    append("Failed to run '$commandLine' with exit code ${result.exitValue}")
                     if (details.isNotEmpty()) appendLine("\n$details")
                 }
             )
         }
 
         return if (redirectErrorStream) {
-            stdout.toString() + "\n" + stderr.toString()
+            result.stdout + "\n" + result.stderr
         } else {
-            stdout.toString()
+            result.stdout
         }
+    }
+
+    private fun installRustTarget(target: String) {
+        val rustup = RustLocator.findRustExecutable("rustup").path
+        val lockDirectory = File(
+            System.getProperty("java.io.tmpdir"),
+            "ch.ubique.uniffi-${System.getProperty("user.name").replace(Regex("[^A-Za-z0-9._-]"), "_")}",
+        ).also { it.mkdirs() }
+        val lockFile = lockDirectory.resolve("rustup.lock")
+
+        val result = withGlobalFileLock(lockFile) {
+            execute(
+                command = rustup,
+                arguments = listOf("target", "add", target),
+            )
+        }
+
+        if (result.exitValue != 0) {
+            val output = (result.stdout + "\n" + result.stderr).trim()
+            throw GradleException(
+                buildString {
+                    append("Failed to run 'rustup target add $target' with exit code ${result.exitValue}")
+                    if (output.isNotEmpty()) appendLine("\n$output")
+                }
+            )
+        }
+    }
+
+    private fun execute(
+        command: String,
+        arguments: List<String>,
+    ): CommandResult {
+        val stdout = StringBuilder()
+        val stderr = StringBuilder()
+        val processEnvironment = environment.toMutableMap().apply {
+            putIfAbsent("GIT_TERMINAL_PROMPT", "0")
+        }
+
+        val result = execOperations.exec { spec ->
+            spec.commandLine(command, *arguments.toTypedArray())
+            spec.isIgnoreExitValue = true
+            spec.standardInput = ByteArrayInputStream(ByteArray(0))
+            spec.standardOutput = LineLoggingOutputStream(logger, stdout)
+            spec.errorOutput = LineLoggingOutputStream(logger, stderr)
+            spec.environment(processEnvironment)
+            workingDir?.let { spec.workingDir = it }
+        }
+
+        return CommandResult(
+            exitValue = result.exitValue,
+            stdout = stdout.toString(),
+            stderr = stderr.toString(),
+        )
+    }
+
+    private data class CommandResult(
+        val exitValue: Int,
+        val stdout: String,
+        val stderr: String,
+    )
+}
+
+/** Captures process output while retaining the line-by-line logging users expect from Cargo. */
+private class LineLoggingOutputStream(
+    private val logger: Logger,
+    private val output: StringBuilder,
+) : OutputStream() {
+    private val line = ByteArrayOutputStream()
+
+    override fun write(value: Int) {
+        line.write(value)
+        if (value == '\n'.code) flushLine()
+    }
+
+    override fun write(bytes: ByteArray, offset: Int, length: Int) {
+        for (index in offset until offset + length) {
+            write(bytes[index].toInt())
+        }
+    }
+
+    override fun flush() {
+        flushLine()
+    }
+
+    override fun close() {
+        flushLine()
+    }
+
+    private fun flushLine() {
+        if (line.size() == 0) return
+
+        val text = String(line.toByteArray(), StandardCharsets.UTF_8)
+        output.append(text)
+        logger.lifecycle(text.trimEnd('\r', '\n'))
+        line.reset()
     }
 }
 

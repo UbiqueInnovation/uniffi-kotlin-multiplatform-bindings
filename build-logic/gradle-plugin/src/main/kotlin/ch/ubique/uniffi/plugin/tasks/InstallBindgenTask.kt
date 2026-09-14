@@ -12,13 +12,18 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 import org.gradle.work.DisableCachingByDefault
+import javax.inject.Inject
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 @DisableCachingByDefault(because = "The rust toolchain and the resolved bindgen revision are not declared inputs")
 abstract class InstallBindgenTask : DefaultTask() {
+    @get:Inject
+    abstract val execOperations: ExecOperations
+
     @get:Input
     abstract val source: Property<BindgenSource>
 
@@ -62,7 +67,7 @@ abstract class InstallBindgenTask : DefaultTask() {
                 return@withCargoTargetLock
             }
 
-            CargoRunner(logger) {
+            CargoRunner(execOperations, logger) {
                 argument("install")
                 argument("--root")
                 argument(bindgenInstallPath.asFile.get().path)

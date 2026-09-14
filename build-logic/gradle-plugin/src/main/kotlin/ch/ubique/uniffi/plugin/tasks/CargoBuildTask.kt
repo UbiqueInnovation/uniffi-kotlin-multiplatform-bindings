@@ -21,10 +21,15 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 import org.gradle.work.DisableCachingByDefault
+import javax.inject.Inject
 
 @DisableCachingByDefault(because = "Cargo caches incrementally, and the rust toolchain is not a declared input")
 abstract class CargoBuildTask : DefaultTask() {
+    @get:Inject
+    abstract val execOperations: ExecOperations
+
     @get:Internal
     abstract val packageDirectory: DirectoryProperty
 
@@ -125,7 +130,7 @@ abstract class CargoBuildTask : DefaultTask() {
 
     @TaskAction
     fun build() {
-        CargoRunner(logger, useCross = useCross.get()) {
+        CargoRunner(execOperations, logger, useCross = useCross.get()) {
             argument("rustc")
             argument("--lib")
             if (rustTarget.isPresent) {
