@@ -181,7 +181,7 @@ application using Gradle dependency substitution, configure one shared directory
 
 ```kotlin
 cargo {
-    targetDirectory = rootProject.layout.projectDirectory.dir("cargo-target")
+    targetDirectory = rootProject.layout.projectDirectory.dir("cargo-build")
 }
 ```
 
