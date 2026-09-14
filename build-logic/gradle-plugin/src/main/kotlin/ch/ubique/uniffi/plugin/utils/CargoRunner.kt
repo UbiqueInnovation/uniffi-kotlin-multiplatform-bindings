@@ -47,6 +47,10 @@ class CargoRunner(
 
         val builder = ProcessBuilder(listOf(command) + arguments)
         builder.redirectErrorStream(false)
+        // Cargo may invoke Git for a dependency fetch. Never leave the child process with an
+        // open stdin: a missing credential can otherwise turn into an indefinite terminal prompt
+        // while Gradle waits in process.waitFor(). CI additionally sets GIT_TERMINAL_PROMPT=0.
+        builder.redirectInput(ProcessBuilder.Redirect.DISCARD)
         builder.environment().putAll(environment)
         workingDir?.let { builder.directory(it) }
 
@@ -86,6 +90,7 @@ class CargoRunner(
             val rustup = RustLocator.findRustExecutable("rustup").path
             val builder = ProcessBuilder(listOf(rustup, "target", "add", targetToInstall))
             builder.redirectErrorStream(true)
+            builder.redirectInput(ProcessBuilder.Redirect.DISCARD)
             builder.environment().putAll(environment)
             workingDir?.let { builder.directory(it) }
 
@@ -111,11 +116,18 @@ class CargoRunner(
 			return this.run()
         }
 
-        check(exitCode == 0) {
-            println(stdout.toString())
-            println(stderr.toString())
-            logger.error("Failed to run '$command ${arguments.joinToString(" ")}'")
-            "Failed to run '$command ${arguments.joinToString(" ")}' with exit code $exitCode"
+        if (exitCode != 0) {
+            val commandLine = "$command ${arguments.joinToString(" ")}".trim()
+            val details = buildString {
+                if (stdout.isNotBlank()) appendLine("stdout:\n$stdout")
+                if (stderr.isNotBlank()) appendLine("stderr:\n$stderr")
+            }.trim()
+            throw GradleException(
+                buildString {
+                    append("Failed to run '$commandLine' with exit code $exitCode")
+                    if (details.isNotEmpty()) appendLine("\n$details")
+                }
+            )
         }
 
         return if (redirectErrorStream) {
