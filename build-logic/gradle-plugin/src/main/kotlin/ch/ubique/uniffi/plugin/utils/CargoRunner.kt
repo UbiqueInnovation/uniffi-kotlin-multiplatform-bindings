@@ -73,7 +73,15 @@ class CargoRunner(
             }
         }
 
-        val exitCode = process.waitFor()
+        val exitCode = try {
+            process.waitFor()
+        } catch (e: InterruptedException) {
+            process.destroyForcibly()
+            stdoutThread.join()
+            stderrThread.join()
+            Thread.currentThread().interrupt()
+            throw GradleException("Interrupted while waiting for '$command'", e)
+        }
         stdoutThread.join()   // make sure both streams are fully drained
         stderrThread.join()
 
@@ -103,7 +111,13 @@ class CargoRunner(
 			val (output, exitCode) = withGlobalFileLock(lockFile) {
 				val process = builder.start()
 				val output = process.inputStream.bufferedReader().readText()
-				val exitCode = process.waitFor()
+				val exitCode = try {
+					process.waitFor()
+				} catch (e: InterruptedException) {
+					process.destroyForcibly()
+					Thread.currentThread().interrupt()
+					throw GradleException("Interrupted while waiting for '$rustup'", e)
+				}
 				output to exitCode
 			}
 			check(exitCode == 0) {
