@@ -1,12 +1,13 @@
 package ch.ubique.uniffi.plugin.tasks
 
+import ch.ubique.uniffi.plugin.model.CrateType
 import ch.ubique.uniffi.plugin.utils.CargoRunner
-import ch.ubique.uniffi.plugin.utils.withCargoTargetLock
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
@@ -16,11 +17,16 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 import org.gradle.work.DisableCachingByDefault
+import javax.inject.Inject
 import kotlin.String
 
 @DisableCachingByDefault(because = "Generating the def file is cheaper than fetching it from the build cache")
 abstract class GenerateDefFileTask : DefaultTask() {
+    @get:Inject
+    abstract val execOperations: ExecOperations
+
     /**
      * The static library cinterop links against.
      *
@@ -45,6 +51,11 @@ abstract class GenerateDefFileTask : DefaultTask() {
 
     @get:Input
     abstract val targetString: Property<String>
+
+    /** The crate types already requested by the shared Cargo build for this target. */
+    @get:Input
+    @get:Optional
+    abstract val crateTypes: SetProperty<CrateType>
 
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.ABSOLUTE)
@@ -109,30 +120,32 @@ abstract class GenerateDefFileTask : DefaultTask() {
     }
 
     private fun getLinkerOpts(): String? {
-        val output = withCargoTargetLock(cargoTargetDirectory.asFile.get()) {
-            CargoRunner(logger, useCross = useCross.get()) {
-                argument("rustc")
-                argument("--lib")
-                argument("--target")
-                argument(targetString.get())
-                argument("--crate-type")
-                argument("staticlib")
-                argument("--")
-                argument("--print")
-                argument("native-static-libs")
+        val output = CargoRunner(execOperations, logger, useCross = useCross.get()) {
+            argument("rustc")
+            argument("--lib")
+            argument("--target")
+            argument(targetString.get())
+            argument("--crate-type")
+            argument(
+                crateTypes.getOrElse(setOf(CrateType.SystemStaticLibrary))
+                    .sortedBy { it.toString() }
+                    .joinToString(",")
+            )
+            argument("--")
+            argument("--print")
+            argument("native-static-libs")
 
-                workdir(packageDirectory.asFile.get())
+            workdir(packageDirectory.asFile.get())
 
-                env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
-                rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
-                rustcWorkspaceWrapper.orNull?.let { env("RUSTC_WORKSPACE_WRAPPER", it) }
-                additionalEnvironment.get().forEach { (key, value) ->
-                    env(key, value)
-                }
+            env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
+            rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
+            rustcWorkspaceWrapper.orNull?.let { env("RUSTC_WORKSPACE_WRAPPER", it) }
+            additionalEnvironment.get().forEach { (key, value) ->
+                env(key, value)
+            }
 
-                redirectErrorStream(true)
-            }.run()
-        }
+            redirectErrorStream(true)
+        }.run()
 
         val linkerFlag = output.split('\n')
             .map { it.trim().substringAfter("note: native-static-libs: ", "") }

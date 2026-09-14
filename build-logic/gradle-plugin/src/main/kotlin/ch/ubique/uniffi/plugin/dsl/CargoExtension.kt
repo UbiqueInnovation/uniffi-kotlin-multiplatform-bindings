@@ -23,7 +23,7 @@ abstract class CargoExtension(project: Project) {
      *
      * ```kotlin
      * cargo {
-     *     targetDirectory = rootProject.layout.buildDirectory.dir("cargo-target")
+     *     targetDirectory = rootProject.layout.projectDirectory.dir("cargo-build")
      * }
      * ```
      */
