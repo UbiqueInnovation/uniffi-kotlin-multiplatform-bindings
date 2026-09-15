@@ -21,6 +21,20 @@ sealed class BindgenSource(
             .take(12)
             .joinToString("") { byte -> "%02x".format(byte) }
 
+    /**
+     * Identity for Cargo's target directory.
+     *
+     * Cargo can share dependency artifacts between feature variants in one target directory,
+     * while the installed executable still needs a separate cache key because its feature set
+     * changes the generated code. Keeping those identities separate avoids duplicating the full
+     * dependency graph for the runtime and non-runtime bindgen variants.
+     */
+    val buildCacheKey: String
+        get() = when (this) {
+            is Path -> Path(path, bindgenName, packageName).cacheKey
+            else -> cacheKey
+        }
+
     data class Registry(
         override val packageName: String,
         val version: String,

@@ -299,7 +299,7 @@ class UniffiPlugin : Plugin<Project> {
             )
             task.bindgenBuildPath.set(
                 project.rootProject.layout.buildDirectory.dir(
-                    bindgenSource.map { source -> "$BINDGEN_BUILD_PATH/${source.cacheKey}" }
+                    bindgenSource.map { source -> "$BINDGEN_BUILD_PATH/${source.buildCacheKey}" }
                 )
             )
             task.defaultBindgenBinName.set(Constants.BINDGEN_BIN_NAME)
