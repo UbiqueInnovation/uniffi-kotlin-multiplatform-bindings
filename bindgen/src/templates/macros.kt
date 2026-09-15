@@ -45,7 +45,7 @@
         {%- when None %}
         {%- endmatch %}
         {% call arg_list_lowered(func) %}{% endcall -%}
-        _status)!!
+        _status)
 }
     {%- call byref_bytes_close(func) %}{% endcall %}
 {%- endmacro -%}
@@ -163,15 +163,15 @@
             UniffiLib.INSTANCE.{{ callable.ffi_func().name() }}(
                 thisHandle,
                 {% call arg_list_lowered(callable) %}{% endcall %}
-            )!!
+            )
         },
 {%- when Some(self_type) %}
         UniffiLib.INSTANCE.{{ callable.ffi_func().name() }}(
             {{ self_type|lower_fn }}(uniffiSelf),
             {% call arg_list_lowered(callable) %}{% endcall %}
-        )!!,
+        ),
 {%- when None %}
-        UniffiLib.INSTANCE.{{ callable.ffi_func().name() }}({% call arg_list_lowered(callable) %}{% endcall %})!!,
+        UniffiLib.INSTANCE.{{ callable.ffi_func().name() }}({% call arg_list_lowered(callable) %}{% endcall %}),
 {%- endmatch %}
         {{ callable|async_poll(ci) }},
         {{ callable|async_complete(ci) }},
@@ -180,9 +180,9 @@
         // lift function
         {%- match callable.return_type() %}
         {%- when Some(return_type) %}
-        { {{ return_type|lift_fn }}(it!!) },
+        { {{ return_type|lift_fn }}(it) },
         {%- when None %}
-        { Unit },
+        { _ -> },
         {% endmatch %}
         // Error FFI converter
         {%- match callable.throws_type() %}
@@ -246,9 +246,9 @@
         {%- if arg.type_().borrow()|is_callback -%}
         {{ arg.name()|var_name }} as cinterop.{{ arg.type_().borrow()|ffi_type_name_for_ffi_callback }}
         {%- else if arg.type_().borrow()|is_rustbuffer -%}
-        {{- arg.name()|var_name }} as CValue<cinterop.RustBuffer>
+        {{- arg.name()|var_name }}
         {%- else if arg.type_().borrow()|is_foreignbytes -%}
-        {{- arg.name()|var_name }} as CValue<cinterop.ForeignBytes>
+        {{- arg.name()|var_name }}
         {%- else -%}
         {{- arg.name()|var_name }}
         {%- endif -%}

@@ -15,6 +15,6 @@ internal object RustBufferHelper {
     }
 
     fun free(buf: RustBufferByValue) = uniffiRustCall() { status ->
-        UniffiLib.INSTANCE.{{ ci.ffi_rustbuffer_free().name() }}(buf, status)!!
+        UniffiLib.INSTANCE.{{ ci.ffi_rustbuffer_free().name() }}(buf, status)
     }
 }

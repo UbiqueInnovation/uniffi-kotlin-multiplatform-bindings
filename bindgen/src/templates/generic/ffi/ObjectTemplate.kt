@@ -106,7 +106,7 @@ actual open class {{ impl_class_name }}: Disposable, {{ interface_name }}{% if c
         override fun run() {
             handle?.let { h ->
                 uniffiRustCall { status ->
-                    UniffiLib.INSTANCE.{{ obj.ffi_object_free().name() }}(h, status)!!
+                    UniffiLib.INSTANCE.{{ obj.ffi_object_free().name() }}(h, status)
                 }
             }
         }
@@ -114,7 +114,7 @@ actual open class {{ impl_class_name }}: Disposable, {{ interface_name }}{% if c
 
     actual fun uniffiCloneHandle(): Long {
         return uniffiRustCall() { status ->
-            UniffiLib.INSTANCE.{{ obj.ffi_object_clone().name() }}(handle!!, status)!!
+            UniffiLib.INSTANCE.{{ obj.ffi_object_clone().name() }}(handle!!, status)
         }
     }
 
@@ -197,8 +197,7 @@ public object {{ ffi_converter_name }}: FfiConverter<{%- call converter_type(obj
             return handleMap.insert(value)
         }
         {%- else %}
-        val obj = value as {{ impl_class_name }}
-        return obj.uniffiCloneHandle()
+        return value.uniffiCloneHandle()
         {%- endif %}
         }
 

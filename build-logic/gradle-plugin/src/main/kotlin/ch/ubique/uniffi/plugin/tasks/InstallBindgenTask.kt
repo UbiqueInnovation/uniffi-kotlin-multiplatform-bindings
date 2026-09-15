@@ -69,6 +69,10 @@ abstract class InstallBindgenTask : DefaultTask() {
 
             CargoRunner(execOperations, logger) {
                 argument("install")
+                // Bindgen sources used by the plugin are expected to carry a lockfile. Using it
+                // avoids Cargo re-resolving and updating the complete bindgen dependency graph
+                // for every Gradle module that requests the same generator.
+                argument("--locked")
                 argument("--root")
                 argument(bindgenInstallPath.asFile.get().path)
                 argument("--force")
