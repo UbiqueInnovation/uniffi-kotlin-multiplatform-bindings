@@ -27,7 +27,7 @@ class ByteBuffer(
 
     fun hasRemaining() = capacity != position
 
-    private inline fun checkRemaining(bytes: Int) {
+    private fun checkRemaining(bytes: Int) {
         val remaining = capacity - position
         require(bytes <= remaining) { "buffer is exhausted: required: $bytes, remaining: $remaining" }
     }
