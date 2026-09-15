@@ -27,8 +27,10 @@ internal var {{ ffi_struct.name()|ffi_struct_name }}.{{ field.name()|var_name }}
         {%- when _ %}
         {%- if field.type_().borrow()|is_pointer_type -%}
         pointed.{{ field.name()|var_name }} = value?.inner
-        {%- else -%}
+        {%- else if field.type_().borrow()|is_callback -%}
         pointed.{{ field.name()|var_name }} = value as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci) }}
+        {%- else -%}
+        pointed.{{ field.name()|var_name }} = value
         {%- endif -%}
         {%- endmatch %}
     }
@@ -61,8 +63,10 @@ fun {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue(
         {%- when _ %}
         {%- if field.type_().borrow()|is_pointer_type -%}
         this.{{ field.name()|var_name }} = {{ field.name()|var_name }}?.inner
-        {%- else -%}
+        {%- else if field.type_().borrow()|is_callback -%}
         this.{{ field.name()|var_name }} = {{ field.name()|var_name }} as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci) }}
+        {%- else -%}
+        this.{{ field.name()|var_name }} = {{ field.name()|var_name }}
         {%- endif -%}
         {%- endmatch %}
         {% endfor %}
@@ -124,11 +128,6 @@ internal class UniffiLibInstance: UniffiLib {
           {%- if return_type.borrow()|is_pointer_type -%}
             ?.let { Pointer(it) }
           {%- endif -%}
-          {%- when None -%}
-          {%- endmatch -%}
-          {%- match func.return_type() -%}
-          {%- when Some with (return_type) -%}
-          as {{ return_type.borrow()|ffi_type_name_for_ffi_function(ci) }}
           {%- when None -%}
           {%- endmatch %}
     

@@ -27,7 +27,7 @@ internal open class {{ ffi_struct.name()|ffi_struct_name }}Struct(
     {%- endfor %}
 ) : com.sun.jna.Structure() {
     {% for field in ffi_struct.fields() %}
-    @JvmField internal var {{ field.name()|var_name }}: {{ (field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci)) }} = {{ field.name()|var_name }} as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci) }}
+    @JvmField internal var {{ field.name()|var_name }}: {{ (field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci)) }} = {% if field.type_().borrow()|is_callback %}{{ field.name()|var_name }} as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci) }}{% else %}{{ field.name()|var_name }}{% endif %}
     {% endfor %}
 
     constructor(): this(
@@ -47,7 +47,7 @@ internal typealias {{ ffi_struct.name()|ffi_struct_name }} = {{ ffi_struct.name(
 {% for field in ffi_struct.fields() %}
 internal var {{ ffi_struct.name()|ffi_struct_name }}.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) }}
     get() = this.{{ field.name()|var_name }}
-    set(value) { this.{{ field.name()|var_name }} = value as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci) }} }
+    set(value) { this.{{ field.name()|var_name }} = {% if field.type_().borrow()|is_callback %}value as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci) }}{% else %}value{% endif %} }
 {% endfor %}
 
 internal fun {{ ffi_struct.name()|ffi_struct_name }}.uniffiSetValue(other: {{ ffi_struct.name()|ffi_struct_name }}) {

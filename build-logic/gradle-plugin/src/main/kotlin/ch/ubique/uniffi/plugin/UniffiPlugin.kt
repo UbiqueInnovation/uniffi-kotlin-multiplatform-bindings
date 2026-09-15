@@ -92,7 +92,9 @@ class UniffiPlugin : Plugin<Project> {
             spec.parameters.packageDirectory.set(cargoExtension.packageDirectory)
         }
         val metadata = metadataJsonProvider.map { CargoMetadata.fromJsonString(it) }
-        val targetPackage = metadata.map { it.targetPackage }
+        val targetPackage = metadata.zip(cargoExtension.packageDirectory) { cargoMetadata, packageDirectory ->
+            cargoMetadata.targetPackage(packageDirectory.asFile)
+        }
         val cargoInfo = CargoInfo(
             packageName = targetPackage.map { it.name },
             libraryName = targetPackage.map { it.targets.first().name },
@@ -297,7 +299,7 @@ class UniffiPlugin : Plugin<Project> {
             )
             task.bindgenBuildPath.set(
                 project.rootProject.layout.buildDirectory.dir(
-                    bindgenSource.map { source -> "$BINDGEN_BUILD_PATH/${source.cacheKey}" }
+                    bindgenSource.map { source -> "$BINDGEN_BUILD_PATH/${source.buildCacheKey}" }
                 )
             )
             task.defaultBindgenBinName.set(Constants.BINDGEN_BIN_NAME)

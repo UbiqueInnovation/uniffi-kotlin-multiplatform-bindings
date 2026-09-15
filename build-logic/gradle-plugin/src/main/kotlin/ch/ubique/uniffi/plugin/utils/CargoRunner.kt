@@ -127,6 +127,14 @@ class CargoRunner(
             putIfAbsent("GIT_TERMINAL_PROMPT", "0")
         }
 
+        logger.lifecycle(
+            buildString {
+                append("Running ")
+                append(formatCommand(command, arguments))
+                workingDir?.let { append(" (working directory: ${it.path})") }
+            },
+        )
+
         val result = execOperations.exec { spec ->
             spec.commandLine(command, *arguments.toTypedArray())
             spec.isIgnoreExitValue = true
@@ -143,6 +151,11 @@ class CargoRunner(
             stderr = stderr.toString(),
         )
     }
+
+    private fun formatCommand(command: String, arguments: List<String>): String =
+        (listOf(command) + arguments).joinToString(" ") { argument ->
+            if (argument.any { it.isWhitespace() }) "'${argument.replace("'", "'\\''")}'" else argument
+        }
 
     private data class CommandResult(
         val exitValue: Int,

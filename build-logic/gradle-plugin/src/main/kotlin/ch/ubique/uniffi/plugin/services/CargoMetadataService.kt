@@ -25,10 +25,20 @@ abstract class CargoMetadataService : ValueSource<String, CargoMetadataParams> {
         val stdout = ByteArrayOutputStream()
         val cargoCommand = RustLocator.findRustExecutable("cargo")
         execOperations.exec { spec ->
-            spec.commandLine(cargoCommand.path, "metadata", "--format-version", "1")
+            // The plugin only needs package/target information. Resolving the complete
+            // dependency graph here makes every applied module update all registry and Git
+            // dependencies, even though dependency resolution belongs to the actual Cargo
+            // build tasks.
+            spec.commandLine(
+                cargoCommand.path,
+                "metadata",
+                "--no-deps",
+                "--format-version",
+                "1",
+            )
             spec.workingDir = parameters.packageDirectory.asFile.get()
-            // Cargo may invoke Git while resolving workspace dependencies. Do not allow a
-            // missing credential to turn configuration into an indefinite interactive prompt.
+            // Do not allow a missing credential to turn configuration into an indefinite
+            // interactive prompt if Cargo still needs to inspect a Git-based workspace member.
             spec.standardInput = ByteArrayInputStream(ByteArray(0))
             spec.environment("GIT_TERMINAL_PROMPT", "0")
             spec.standardOutput = stdout
