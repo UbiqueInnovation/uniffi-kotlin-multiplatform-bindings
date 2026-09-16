@@ -19,7 +19,6 @@ macro_rules! lookup_error {
 }
 
 /// Get a Record definition by name
-#[allow(dead_code)]
 #[askama::filter_fn]
 pub fn get_record_definition<'a>(
     ci: &'a ComponentInterface,
@@ -31,7 +30,6 @@ pub fn get_record_definition<'a>(
 }
 
 /// Get an Object definition by name
-#[allow(dead_code)]
 #[askama::filter_fn]
 pub fn get_object_definition<'a>(
     ci: &'a ComponentInterface,
@@ -43,7 +41,6 @@ pub fn get_object_definition<'a>(
 }
 
 /// Get a Callback Interface definition by name
-#[allow(dead_code)]
 #[askama::filter_fn]
 pub fn get_callback_interface_definition<'a>(
     ci: &'a ComponentInterface,
@@ -55,7 +52,6 @@ pub fn get_callback_interface_definition<'a>(
 }
 
 /// Get the FfiType for a Type
-#[allow(dead_code)]
 #[askama::filter_fn]
 pub fn ffi_type(type_: &impl AsType, _: &dyn askama::Values) -> Result<FfiType> {
     Ok(type_.as_type().into())
