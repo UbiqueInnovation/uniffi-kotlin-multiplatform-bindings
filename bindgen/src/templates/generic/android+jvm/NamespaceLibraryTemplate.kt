@@ -44,11 +44,6 @@ internal open class {{ ffi_struct.name()|ffi_struct_name }}Struct(
 }
 
 internal typealias {{ ffi_struct.name()|ffi_struct_name }} = {{ ffi_struct.name()|ffi_struct_name }}Struct
-{% for field in ffi_struct.fields() %}
-internal var {{ ffi_struct.name()|ffi_struct_name }}.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) }}
-    get() = this.{{ field.name()|var_name }}
-    set(value) { this.{{ field.name()|var_name }} = {% if field.type_().borrow()|is_callback %}value as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci) }}{% else %}value{% endif %} }
-{% endfor %}
 
 internal fun {{ ffi_struct.name()|ffi_struct_name }}.uniffiSetValue(other: {{ ffi_struct.name()|ffi_struct_name }}) {
     {%- for field in ffi_struct.fields() %}
@@ -62,10 +57,6 @@ internal fun {{ ffi_struct.name()|ffi_struct_name }}.uniffiSetValue(other: {{ ff
 }
 
 internal typealias {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue = {{ ffi_struct.name()|ffi_struct_name }}Struct.UniffiByValue
-{% for field in ffi_struct.fields() %}
-internal val {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue.{{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) }}
-    get() = this.{{ field.name()|var_name }}
-{% endfor %}
 
 {%- when FfiDefinition::Function(_) %}
 {# functions are handled below #}

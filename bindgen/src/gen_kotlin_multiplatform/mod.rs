@@ -15,6 +15,11 @@ use heck::{ToLowerCamelCase, ToShoutySnakeCase, ToUpperCamelCase};
 use serde::{Deserialize, Serialize};
 use uniffi_bindgen::interface::*;
 
+// Askama's `filter_fn` macro generates adapter methods that are called from
+// templates. Rust's dead-code lint cannot see those template calls, so it
+// reports the generated adapters as unused even though they are required at
+// render time.
+#[allow(dead_code)]
 mod backend;
 mod callback_interface;
 mod compounds;

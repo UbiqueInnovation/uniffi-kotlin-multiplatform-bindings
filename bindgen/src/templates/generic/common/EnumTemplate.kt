@@ -56,17 +56,14 @@ enum class {{ type_name }}(val value: {{ variant_discr_type|type_name(ci) }}) {
 {%  for variant in e.variants() %}
 {% if variant.has_fields() && variant.fields().len() == 1 && variant.fields()[0].name()|var_name|unquote == "" %}
 {%- let field = variant.fields()[0] %}
-object {{ type_name }}{{ variant|variant_type_name(ci) }}Serializer : kotlinx.serialization.KSerializer<{{ type_name }}> {
+object {{ type_name }}{{ variant|variant_type_name(ci) }}Serializer : kotlinx.serialization.KSerializer<{{ type_name }}.{{ variant|variant_type_name(ci) }}> {
     override val descriptor: kotlinx.serialization.descriptors.SerialDescriptor
     get() =  kotlinx.serialization.descriptors.buildClassSerialDescriptor("{{ type_name }}{{ variant|variant_type_name(ci) }}") {
         element("v1",  kotlinx.serialization.serializer<{{ field|type_name(ci) }}>().descriptor)
     }
 
-    override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: {{ type_name }}) {
-        when(value) {
-            is {{type_name}}.{{ variant|variant_type_name(ci) }} ->encoder.encodeSerializableValue(kotlinx.serialization.serializer(),value.v1)
-            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
-        }
+    override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: {{ type_name }}.{{ variant|variant_type_name(ci) }}) {
+        encoder.encodeSerializableValue(kotlinx.serialization.serializer(), value.v1)
     }
     override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): {{type_name}}.{{ variant|variant_type_name(ci) }} {
         val inner : {{ field|type_name(ci) }} = decoder.decodeSerializableValue(kotlinx.serialization.serializer())
