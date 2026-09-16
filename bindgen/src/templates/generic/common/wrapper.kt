@@ -13,7 +13,9 @@
 @file:OptIn(
     ExperimentalStdlibApi::class,
     kotlin.time.ExperimentalTime::class,
+    {%- if config.generate_serializable_records() %}
     kotlinx.serialization.ExperimentalSerializationApi::class
+    {%- endif %}
 )
 
 package {{ config.package_name() }}
