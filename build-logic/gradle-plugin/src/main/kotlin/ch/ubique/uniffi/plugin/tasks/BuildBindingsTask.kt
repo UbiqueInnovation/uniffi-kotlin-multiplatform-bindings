@@ -159,17 +159,44 @@ abstract class BuildBindingsTask : DefaultTask() {
 			command.add("--crate")
 			command.add(crateName)
 		}
-        val process = ProcessBuilder(command)
-            .directory(packageDirectory.asFile.get())
-            .redirectErrorStream(true)
-            .start()
+		logger.lifecycle(
+			buildString {
+				append("Running ")
+				append(command.joinToString(" ") { argument ->
+					if (argument.any { it.isWhitespace() }) {
+						"'${argument.replace("'", "'\\''")}'"
+					} else {
+						argument
+					}
+				})
+				append(" (working directory: ${packageDirectory.asFile.get().path})")
+			},
+		)
+	        val process = ProcessBuilder(command)
+	            .directory(packageDirectory.asFile.get())
+	            .redirectErrorStream(true)
+	            .start()
 
-        val output = process.inputStream.bufferedReader().readText()
-        val exitCode = process.waitFor()
+		val output = buildString {
+			process.inputStream.bufferedReader().useLines { lines ->
+				lines.forEach { line ->
+					appendLine(line)
+					logger.lifecycle(line)
+				}
+			}
+		}
+		val exitCode = try {
+			process.waitFor()
+		} catch (e: InterruptedException) {
+			process.destroyForcibly()
+			Thread.currentThread().interrupt()
+			throw GradleException("Interrupted while generating bindings", e)
+		}
 
-        check(exitCode == 0) {
-            println(output)
-            "Failed to generate bindings with exit code $exitCode"
-        }
+		check(exitCode == 0) {
+			"Failed to generate bindings with exit code $exitCode${
+				if (output.isNotBlank()) ":\n$output" else ""
+			}"
+		}
     }
 }
