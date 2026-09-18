@@ -109,6 +109,7 @@ class UniffiPlugin : Plugin<Project> {
         val buildLibraryForBindingsTask = project.registerBuildLibraryForBindingsTask(cargoInfo)
         val buildBindingsTask = project.registerBuildBindingsTask(
             bindgenBin = installBindgenTask.flatMap { it.bindgenBinPath },
+            bindgenReadyFile = installBindgenTask.flatMap { it.bindgenReadyFile },
             libraryForBindings = buildLibraryForBindingsTask.flatMap { it.dynamicLibraryFile },
             metadataJson = metadataJsonProvider,
         )
@@ -283,6 +284,11 @@ class UniffiPlugin : Plugin<Project> {
                     bindgenSource.map { source -> "$BINDGEN_INSTALL_PATH/${source.cacheKey}" }
                 )
             )
+            task.bindgenReadyFile.set(
+                project.layout.buildDirectory.file(
+                    bindgenSource.map { source -> "$BINDGEN_INSTALL_PATH/${source.cacheKey}.ready" }
+                )
+            )
             task.bindgenBuildPath.set(
                 project.rootProject.layout.buildDirectory.dir(
                     bindgenSource.map { source -> "$BINDGEN_BUILD_PATH/${source.buildCacheKey}" }
@@ -322,6 +328,7 @@ class UniffiPlugin : Plugin<Project> {
      */
     private fun Project.registerBuildBindingsTask(
         bindgenBin: Provider<RegularFile>,
+        bindgenReadyFile: Provider<RegularFile>,
         libraryForBindings: Provider<RegularFile>,
         metadataJson: Provider<String>,
     ): TaskProvider<BuildBindingsTask> =
@@ -333,6 +340,7 @@ class UniffiPlugin : Plugin<Project> {
             )
             task.bindingsDirectory.set(project.layout.buildDirectory.dir(BINDINGS_PATH))
             task.bindgen.set(bindgenBin)
+            task.bindgenReadyFile.set(bindgenReadyFile)
             task.formatCode.set(uniffiExtension.formatCode)
 
             task.libraryFile.set(uniffiExtension.bindingsGeneration.filter { it is BindingsGenerationFromLibrary }

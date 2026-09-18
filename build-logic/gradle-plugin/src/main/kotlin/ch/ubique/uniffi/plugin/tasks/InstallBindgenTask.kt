@@ -33,8 +33,13 @@ abstract class InstallBindgenTask : DefaultTask() {
     @get:Internal
     abstract val bindgenInstallPath: DirectoryProperty
 
-    @get:OutputFile
+    /** The shared executable is deliberately not an output: sibling projects use the same path. */
+    @get:Internal
     abstract val bindgenBinPath: RegularFileProperty
+
+    /** A project-local output that represents a successful installation of the shared executable. */
+    @get:OutputFile
+    abstract val bindgenReadyFile: RegularFileProperty
 
     init {
         bindgenBinPath.set(
@@ -69,6 +74,7 @@ abstract class InstallBindgenTask : DefaultTask() {
                 sourceFingerprintFile.readText() == sourceFingerprint
             ) {
                 logger.info("Reusing bindgen at $bindgenBinary")
+                writeReadyFile(sourceFingerprint)
                 return@withCargoTargetLock
             }
 
@@ -139,6 +145,14 @@ abstract class InstallBindgenTask : DefaultTask() {
                 bindgenInstallDirectory.mkdirs()
                 sourceFingerprintFile.writeText(it)
             }
+            writeReadyFile(sourceFingerprint ?: bindgenBinary.lastModified().toString())
+        }
+    }
+
+    private fun writeReadyFile(value: String) {
+        bindgenReadyFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(value)
         }
     }
 
