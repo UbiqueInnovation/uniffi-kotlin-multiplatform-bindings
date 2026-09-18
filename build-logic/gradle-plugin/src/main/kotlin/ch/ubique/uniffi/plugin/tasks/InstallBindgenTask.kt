@@ -6,11 +6,11 @@ import ch.ubique.uniffi.plugin.utils.RustLocator
 import ch.ubique.uniffi.plugin.utils.withCargoTargetLock
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFile
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.gradle.work.DisableCachingByDefault
@@ -33,13 +33,18 @@ abstract class InstallBindgenTask : DefaultTask() {
     @get:Internal
     abstract val bindgenInstallPath: DirectoryProperty
 
-    @get:Internal
-    val bindgenBinPath: Provider<RegularFile> =
-        bindgenInstallPath.file(
-            source.map { it.bindgenName }
-                .orElse(defaultBindgenBinName)
-                .map { "bin/$it" }
+    @get:OutputFile
+    abstract val bindgenBinPath: RegularFileProperty
+
+    init {
+        bindgenBinPath.set(
+            bindgenInstallPath.file(
+                source.map { it.bindgenName }
+                    .orElse(defaultBindgenBinName)
+                    .map { "bin/$it" }
+            )
         )
+    }
 
     @get:Internal
     abstract val bindgenBuildPath: DirectoryProperty

@@ -9,6 +9,7 @@ import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileTree
 import org.gradle.api.file.RegularFile
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -109,14 +110,17 @@ abstract class CargoBuildTask : DefaultTask() {
     /** The dynamic library emitted directly into Cargo's shared output directory. */
     @get:OutputFile
     @get:Optional
-    val dynamicLibraryFile: Provider<RegularFile> =
-        libraryFile(BuildTarget.RustTarget::dynamicLibraryName)
+    abstract val dynamicLibraryFile: RegularFileProperty
 
     /** The static library emitted directly into Cargo's shared output directory. */
     @get:OutputFile
     @get:Optional
-    val staticLibraryFile: Provider<RegularFile> =
-        libraryFile(BuildTarget.RustTarget::staticLibraryName)
+    abstract val staticLibraryFile: RegularFileProperty
+
+    init {
+        dynamicLibraryFile.set(libraryFile(BuildTarget.RustTarget::dynamicLibraryName))
+        staticLibraryFile.set(libraryFile(BuildTarget.RustTarget::staticLibraryName))
+    }
 
     private fun libraryFile(
         fileName: (BuildTarget.RustTarget, String) -> String?,
