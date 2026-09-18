@@ -6,7 +6,6 @@ import org.gradle.process.ExecOperations
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.OutputStream
 import java.io.RandomAccessFile
 import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
@@ -121,8 +120,8 @@ class CargoRunner(
         command: String,
         arguments: List<String>,
     ): CommandResult {
-        val stdout = StringBuilder()
-        val stderr = StringBuilder()
+        val stdout = ByteArrayOutputStream()
+        val stderr = ByteArrayOutputStream()
         val processEnvironment = environment.toMutableMap().apply {
             putIfAbsent("GIT_TERMINAL_PROMPT", "0")
         }
@@ -139,16 +138,16 @@ class CargoRunner(
             spec.commandLine(command, *arguments.toTypedArray())
             spec.isIgnoreExitValue = true
             spec.standardInput = ByteArrayInputStream(ByteArray(0))
-            spec.standardOutput = LineLoggingOutputStream(logger, stdout)
-            spec.errorOutput = LineLoggingOutputStream(logger, stderr)
+            spec.standardOutput = stdout
+            spec.errorOutput = stderr
             spec.environment(processEnvironment)
             workingDir?.let { spec.workingDir = it }
         }
 
         return CommandResult(
             exitValue = result.exitValue,
-            stdout = stdout.toString(),
-            stderr = stderr.toString(),
+            stdout = stdout.toString(StandardCharsets.UTF_8),
+            stderr = stderr.toString(StandardCharsets.UTF_8),
         )
     }
 
@@ -162,42 +161,6 @@ class CargoRunner(
         val stdout: String,
         val stderr: String,
     )
-}
-
-/** Captures process output while retaining the line-by-line logging users expect from Cargo. */
-private class LineLoggingOutputStream(
-    private val logger: Logger,
-    private val output: StringBuilder,
-) : OutputStream() {
-    private val line = ByteArrayOutputStream()
-
-    override fun write(value: Int) {
-        line.write(value)
-        if (value == '\n'.code) flushLine()
-    }
-
-    override fun write(bytes: ByteArray, offset: Int, length: Int) {
-        for (index in offset until offset + length) {
-            write(bytes[index].toInt())
-        }
-    }
-
-    override fun flush() {
-        flushLine()
-    }
-
-    override fun close() {
-        flushLine()
-    }
-
-    private fun flushLine() {
-        if (line.size() == 0) return
-
-        val text = String(line.toByteArray(), StandardCharsets.UTF_8)
-        output.append(text)
-        logger.lifecycle(text.trimEnd('\r', '\n'))
-        line.reset()
-    }
 }
 
 fun <T> withGlobalFileLock(lockFile: File, action: () -> T): T {

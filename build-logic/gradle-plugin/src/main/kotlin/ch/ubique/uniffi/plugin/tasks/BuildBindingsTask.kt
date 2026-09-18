@@ -38,9 +38,17 @@ abstract class BuildBindingsTask : DefaultTask() {
             pattern.include("uniffi.toml")
         }
 
+    /**
+     * The executable itself is shared by sibling projects and therefore is not declared as a
+     * Gradle output. The ready marker is the project-local input that carries its dependency and
+     * installation fingerprint.
+    */
+    @get:Internal
+    abstract val bindgen: RegularFileProperty
+
     @get:InputFile
     @get:PathSensitive(PathSensitivity.ABSOLUTE)
-    abstract val bindgen: RegularFileProperty
+    abstract val bindgenReadyFile: RegularFileProperty
 
     @get:InputFile
 	@get:Optional

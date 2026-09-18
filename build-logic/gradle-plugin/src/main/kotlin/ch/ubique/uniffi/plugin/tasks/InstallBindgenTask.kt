@@ -6,11 +6,11 @@ import ch.ubique.uniffi.plugin.utils.RustLocator
 import ch.ubique.uniffi.plugin.utils.withCargoTargetLock
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFile
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.gradle.work.DisableCachingByDefault
@@ -33,13 +33,23 @@ abstract class InstallBindgenTask : DefaultTask() {
     @get:Internal
     abstract val bindgenInstallPath: DirectoryProperty
 
+    /** The shared executable is deliberately not an output: sibling projects use the same path. */
     @get:Internal
-    val bindgenBinPath: Provider<RegularFile> =
-        bindgenInstallPath.file(
-            source.map { it.bindgenName }
-                .orElse(defaultBindgenBinName)
-                .map { "bin/$it" }
+    abstract val bindgenBinPath: RegularFileProperty
+
+    /** A project-local output that represents a successful installation of the shared executable. */
+    @get:OutputFile
+    abstract val bindgenReadyFile: RegularFileProperty
+
+    init {
+        bindgenBinPath.set(
+            bindgenInstallPath.file(
+                source.map { it.bindgenName }
+                    .orElse(defaultBindgenBinName)
+                    .map { "bin/$it" }
+            )
         )
+    }
 
     @get:Internal
     abstract val bindgenBuildPath: DirectoryProperty
@@ -64,6 +74,7 @@ abstract class InstallBindgenTask : DefaultTask() {
                 sourceFingerprintFile.readText() == sourceFingerprint
             ) {
                 logger.info("Reusing bindgen at $bindgenBinary")
+                writeReadyFile(sourceFingerprint)
                 return@withCargoTargetLock
             }
 
@@ -134,6 +145,14 @@ abstract class InstallBindgenTask : DefaultTask() {
                 bindgenInstallDirectory.mkdirs()
                 sourceFingerprintFile.writeText(it)
             }
+            writeReadyFile(sourceFingerprint ?: bindgenBinary.lastModified().toString())
+        }
+    }
+
+    private fun writeReadyFile(value: String) {
+        bindgenReadyFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(value)
         }
     }
 

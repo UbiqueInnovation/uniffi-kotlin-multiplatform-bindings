@@ -11,6 +11,7 @@ import ch.ubique.uniffi.plugin.model.CargoMetadata
 import ch.ubique.uniffi.plugin.model.CrateType
 import ch.ubique.uniffi.plugin.services.CargoMetadataService
 import ch.ubique.uniffi.plugin.tasks.BuildBindingsTask
+import ch.ubique.uniffi.plugin.tasks.CargoBuildAliasTask
 import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
 import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
 import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
@@ -107,8 +108,8 @@ class UniffiPlugin : Plugin<Project> {
         val installBindgenTask = project.registerInstallBindgenTask()
         val buildLibraryForBindingsTask = project.registerBuildLibraryForBindingsTask(cargoInfo)
         val buildBindingsTask = project.registerBuildBindingsTask(
-            installBindgenTask = installBindgenTask,
             bindgenBin = installBindgenTask.flatMap { it.bindgenBinPath },
+            bindgenReadyFile = installBindgenTask.flatMap { it.bindgenReadyFile },
             libraryForBindings = buildLibraryForBindingsTask.flatMap { it.dynamicLibraryFile },
             metadataJson = metadataJsonProvider,
         )
@@ -221,18 +222,10 @@ class UniffiPlugin : Plugin<Project> {
                 )
             }
 
+            // Build the bindings on IDE sync
             if ("prepareKotlinIdeaImport" in evaluated.tasks.names) {
                 evaluated.tasks.named("prepareKotlinIdeaImport") { task ->
                     task.dependsOn(buildBindingsTask)
-                }
-            }
-
-            // The filtered libraryFile provider does not reliably preserve the task dependency
-            // through Gradle's input validation. Add it explicitly once the DSL has selected
-            // library-based generation; UDL-based generation must not build a host library.
-            if (uniffiExtension.bindingsGeneration.get() is BindingsGenerationFromLibrary) {
-                buildBindingsTask.configure { task ->
-                    task.dependsOn(buildLibraryForBindingsTask)
                 }
             }
         }
@@ -297,6 +290,11 @@ class UniffiPlugin : Plugin<Project> {
                     bindgenSource.map { source -> "$BINDGEN_INSTALL_PATH/${source.cacheKey}" }
                 )
             )
+            task.bindgenReadyFile.set(
+                project.layout.buildDirectory.file(
+                    bindgenSource.map { source -> "$BINDGEN_INSTALL_PATH/${source.cacheKey}.ready" }
+                )
+            )
             task.bindgenBuildPath.set(
                 project.rootProject.layout.buildDirectory.dir(
                     bindgenSource.map { source -> "$BINDGEN_BUILD_PATH/${source.buildCacheKey}" }
@@ -323,8 +321,8 @@ class UniffiPlugin : Plugin<Project> {
 
         // Keep the old task name as a convenient compatibility alias while making the actual
         // Cargo task share its target-specific outputs with JVM/Android host builds.
-        tasks.register(Tasks.BUILD_LIB_FOR_BINDINGS) { task ->
-            task.dependsOn(cargoBuild)
+        tasks.register(Tasks.BUILD_LIB_FOR_BINDINGS, CargoBuildAliasTask::class.java) { task ->
+            task.library.set(cargoBuild.flatMap { it.dynamicLibraryFile })
         }
 
         return cargoBuild
@@ -335,16 +333,12 @@ class UniffiPlugin : Plugin<Project> {
      * generated from a UDL file.
      */
     private fun Project.registerBuildBindingsTask(
-        installBindgenTask: TaskProvider<InstallBindgenTask>,
         bindgenBin: Provider<RegularFile>,
+        bindgenReadyFile: Provider<RegularFile>,
         libraryForBindings: Provider<RegularFile>,
         metadataJson: Provider<String>,
     ): TaskProvider<BuildBindingsTask> =
         tasks.register(Tasks.BUILD_BINDINGS, BuildBindingsTask::class.java) { task ->
-            // bindgen is installed into a shared, source-keyed directory. Its install task is
-            // deliberately not a Gradle output (the executable is reused across module tasks),
-            // so retain the dependency explicitly rather than relying on output inference.
-            task.dependsOn(installBindgenTask)
             task.packageDirectory.set(cargoExtension.packageDirectory)
             task.cargoMetadata.set(metadataJson)
             task.generateBindingsForExternalCrates.set(
@@ -352,6 +346,7 @@ class UniffiPlugin : Plugin<Project> {
             )
             task.bindingsDirectory.set(project.layout.buildDirectory.dir(BINDINGS_PATH))
             task.bindgen.set(bindgenBin)
+            task.bindgenReadyFile.set(bindgenReadyFile)
             task.formatCode.set(uniffiExtension.formatCode)
 
             task.libraryFile.set(uniffiExtension.bindingsGeneration.filter { it is BindingsGenerationFromLibrary }
@@ -432,7 +427,6 @@ class UniffiPlugin : Plugin<Project> {
             )
 
             cargoBuilds.forEach { (rustTarget, cargoBuild) ->
-                task.dependsOn(cargoBuild)
                 task.library(
                     directoryName = leafName(rustTarget),
                     files = cargoBuild.flatMap {
@@ -483,7 +477,6 @@ class UniffiPlugin : Plugin<Project> {
             Tasks.generateDefFile(buildTarget),
             GenerateDefFileTask::class.java,
         ) { task ->
-            task.dependsOn(cargoBuild)
             task.staticLibrary.set(cargoBuild.flatMap { it.staticLibraryFile })
             task.outputFile.set(
                 project.layout.buildDirectory.file("$CINTEROP_DEF_PATH/uniffi-${buildTarget.name}.def")

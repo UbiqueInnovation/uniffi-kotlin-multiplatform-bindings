@@ -54,6 +54,9 @@ dependencies {
     // NoSuchMethodError ...ConfigurationOuterClass$Configuration$Builder.setSdkVersionMinor.
     compileOnly(libs.kotlin.gradle.plugin)
     compileOnly(libs.android.tools.gradle)
+
+    testImplementation(kotlin("test"))
+    testImplementation(gradleApi())
 }
 
 gradlePlugin {
