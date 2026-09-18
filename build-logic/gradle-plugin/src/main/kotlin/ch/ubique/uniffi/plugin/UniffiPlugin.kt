@@ -222,6 +222,12 @@ class UniffiPlugin : Plugin<Project> {
                 )
             }
 
+            // Build the bindings on IDE sync
+            if ("prepareKotlinIdeaImport" in evaluated.tasks.names) {
+                evaluated.tasks.named("prepareKotlinIdeaImport") { task ->
+                    task.dependsOn(buildBindingsTask)
+                }
+            }
         }
     }
 
