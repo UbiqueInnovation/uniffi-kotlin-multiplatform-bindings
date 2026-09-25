@@ -57,6 +57,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation(gradleApi())
+    testImplementation(gradleTestKit())
 }
 
 gradlePlugin {

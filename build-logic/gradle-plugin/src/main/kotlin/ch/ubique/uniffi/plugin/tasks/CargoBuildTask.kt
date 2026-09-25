@@ -118,6 +118,8 @@ abstract class CargoBuildTask : DefaultTask() {
     abstract val staticLibraryFile: RegularFileProperty
 
     init {
+        // Cargo checks its complete dependency graph and toolchain state on every invocation.
+        outputs.upToDateWhen { false }
         dynamicLibraryFile.set(libraryFile(BuildTarget.RustTarget::dynamicLibraryName))
         staticLibraryFile.set(libraryFile(BuildTarget.RustTarget::staticLibraryName))
     }
