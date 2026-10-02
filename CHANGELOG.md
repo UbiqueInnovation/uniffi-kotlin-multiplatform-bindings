@@ -26,6 +26,12 @@
   with `@Serializable`. A variant whose first field was a custom or external type was
   left out, so the generated poly serializer referenced a missing `serializer()` and the bindings
   did not compile.
+- Linking an Apple framework or native binary with Kotlin 2.4.20 no longer fails with
+  `IrClassSymbolImpl is already bound` for `cinterop/RustBuffer`
+  ([#29](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/29)).
+  The runtime now ships the shared FFI types (`RustBuffer`, `UniffiRustCallStatus`, future
+  callbacks, ...) in the same `common.h` as the generated bindings, so cinterop reuses the
+  runtime's declarations instead of declaring them a second time in every crate's klib.
 - A bindgen configured with `bindgenFromPath` is reinstalled when its sources change. Previously
   `installBindgen` stayed up-to-date and the bindings were generated with the stale binary.
 - The default bindgen is now installed from the Git tag of the plugin release instead of the
