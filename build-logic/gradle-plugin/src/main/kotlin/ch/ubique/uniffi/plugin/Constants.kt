@@ -6,6 +6,8 @@ import ch.ubique.uniffi.plugin.utils.BindgenSource
 internal object Constants {
     val BINDGEN_SOURCE: BindgenSource = BindgenSource.Git(
         repository = "https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings.git",
+        // Pinned to the plugin's release tag, so the bindgen matches the plugin and the runtime.
+        commit = BindgenSource.Git.Commit.Tag(PluginVersions.BINDGEN_GIT_TAG),
         bindgenName = BINDGEN_BIN_NAME,
         packageName = BINDGEN_PACKAGE_NAME,
     )
