@@ -95,6 +95,11 @@ fingerprint file decides whether reinstalling is needed:
 | git tag / revision, registry | the source definition itself |
 | git branch / default branch | the commit from `git ls-remote`, so new commits trigger a reinstall |
 
+For a path source, Gradle can't tell from the task inputs that the sources changed, so
+`installBindgen` is never up to date (`outputs.upToDateWhen`) and always reaches the fingerprint
+check. When nothing changed, it rewrites the same `.ready` marker, and `buildBindings` stays up
+to date.
+
 ### Generating bindings
 
 `BuildBindingsTask` deletes the output directory, then runs
