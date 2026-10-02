@@ -33,7 +33,6 @@ Unlike other UniFFI generators, the settings are at the top level of the file, n
 | `external_packages` | inferred | Crate name → Kotlin package for types from other crates. See [External types](../features/external-types.md#package-names-of-external-crates). |
 | `omit_checksums` | `false` | Skip the API checksum check at load time. See below. |
 | `kotlin_target_version` | — | If `1.9.0` or newer, enums use `entries` instead of `values()`. |
-| `import_pointer_from` | — | List of packages to `import <package>.*` from in every generated file. Used by the multi-module fixture. |
 
 ## API checksums
 
