@@ -70,6 +70,16 @@ If you want your bindings to be generated with a specific package name, you can 
 package_name = "com.example.quickstart"
 ```
 
+or set it from Gradle, which takes precedence over `uniffi.toml`:
+
+```kotlin
+uniffi {
+    generateFromLibrary {
+        packageName = "com.example.quickstart"
+    }
+}
+```
+
 If you build for any Kotlin/Native target, c-interop commonization has to be enabled in your `gradle.properties`. The generated bindings live in the shared `nativeMain` source set and reference the c-interop declarations, which are only visible from a shared source set once the commonizer has run:
 
 ```properties

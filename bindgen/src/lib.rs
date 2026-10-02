@@ -6,7 +6,7 @@
 
 use std::{collections::HashMap, fs::File, io::Write, process::Command};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use fs_err as fs;
 use uniffi_bindgen::{BindingGenerator, Component, ComponentInterface, GenerationSettings};
@@ -16,7 +16,19 @@ use gen_kotlin_multiplatform::{generate_bindings, Config};
 
 use crate::gen_kotlin_multiplatform::NativeHeaderBindings;
 
-pub struct KotlinBindingGenerator;
+#[derive(Default)]
+pub struct KotlinBindingGenerator {
+    /// Overrides the `package_name` from `uniffi.toml` for a single crate.
+    pub package_name_override: Option<PackageNameOverride>,
+}
+
+pub struct PackageNameOverride {
+    /// The crate whose package name is overridden. `None` applies it to every component, which
+    /// is only meant for UDL mode where there is exactly one.
+    pub crate_name: Option<String>,
+    pub package_name: String,
+}
+
 impl BindingGenerator for KotlinBindingGenerator {
     type Config = Config;
 
@@ -29,6 +41,28 @@ impl BindingGenerator for KotlinBindingGenerator {
         settings: &GenerationSettings,
         components: &mut Vec<Component<Self::Config>>,
     ) -> Result<()> {
+        // Applied before the external package mappings below are derived, so that other
+        // components referencing this crate pick up the overridden package.
+        if let Some(PackageNameOverride {
+            crate_name,
+            package_name,
+        }) = &self.package_name_override
+        {
+            let mut matched = false;
+            for c in components
+                .iter_mut()
+                .filter(|c| crate_name.as_deref().is_none_or(|n| n == c.ci.crate_name()))
+            {
+                c.config.package_name = Some(package_name.clone());
+                matched = true;
+            }
+            if !matched {
+                bail!(
+                    "Cannot override the package name: crate {} not found",
+                    crate_name.as_deref().unwrap_or_default()
+                );
+            }
+        }
         for c in &mut *components {
             c.config
                 .package_name

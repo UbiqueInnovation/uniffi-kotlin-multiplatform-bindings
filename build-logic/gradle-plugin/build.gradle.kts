@@ -57,6 +57,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation(gradleApi())
+    testImplementation(gradleTestKit())
 }
 
 gradlePlugin {
@@ -96,10 +97,15 @@ private fun getProjectVersion(): String {
     return versionFromWorkflow ?: versionFromGradleProperties
 }
 
+/** The Git tag the default bindgen is installed from: the tag this plugin is released from. */
+private fun getBindgenGitTag(): String =
+    runCatching { property("githubRefName").toString() }.getOrNull() ?: "v${version}"
+
 buildConfig {
     packageName = "ch.ubique.uniffi.plugin"
 
     forClass("PluginVersions") {
         buildConfigField("String", "RUNTIME_VERSION", "\"${version}\"")
+        buildConfigField("String", "BINDGEN_GIT_TAG", "\"${getBindgenGitTag()}\"")
     }
 }

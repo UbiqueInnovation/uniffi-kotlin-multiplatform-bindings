@@ -6,7 +6,7 @@ uniffi {
     bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen"))
 
     generateFromLibrary {
-        namespace = "module_a"
+        packageName = "module_a"
     }
 }
 

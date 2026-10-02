@@ -6,7 +6,7 @@ uniffi {
     bindgenFromPath(rootProject.layout.projectDirectory.dir("bindgen"))
 
     generateFromLibrary {
-        namespace = "rust_common"
+        packageName = "rust_common"
     }
 }
 

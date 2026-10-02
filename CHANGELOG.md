@@ -8,16 +8,31 @@
 - Configure `RUSTC_WRAPPER` and `RUSTC_WORKSPACE_WRAPPER` through the Cargo DSL, including sccache.
 - Select only the required Android debug ABIs with `cargo { androidDebugAbis.add(...) }` or
   `-PandroidAbis=...`.
+- Bindgen `--package-name` option, overriding `package_name` from `uniffi.toml` for the target
+  crate only.
 
 ### Changed
 
+- Native bindings use the runtime's primitive, `String`, `ByteArray`, `Instant` and `Duration`
+  FFI converters instead of declaring their own copies, matching JVM and Android.
+- Native bindings use the runtime's object cleaner instead of declaring their own copy.
 - Cargo build tasks now write directly to Cargo's shared target directory and emit only the crate
   types required by the consuming Kotlin targets.
 - Bindgen installation and host-library builds now reuse the shared Cargo target directory more
   effectively.
 
+### Removed
+
+- The `disable_java_cleaner` option in `uniffi.toml`. It had no effect since the cleaner moved
+  into the runtime, which picks the cleaner itself.
+
 ### Fixed
 
+- The default bindgen is now installed from the Git tag of the plugin release instead of the
+  default branch, so it matches the plugin and runtime version.
+- `generateFromLibrary { }` / `generateFromUdl { }` no longer silently ignore the package setting:
+  the unused `namespace` property was renamed to `packageName` and now overrides `package_name`
+  from `uniffi.toml`. **Breaking:** replace `namespace = ...` with `packageName = ...`.
 - Preserve the published `uniffi-cinterop` Kotlin/Native KLIB identity.
 
 ## [1.2.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.1) - 2026-08-21
