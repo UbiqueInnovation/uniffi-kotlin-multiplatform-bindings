@@ -142,7 +142,6 @@ pub struct Config {
     omit_checksums: bool,
     generate_serializable_records: Option<bool>,
     skip_serializer_for: Option<Vec<String>>,
-    import_pointer_from: Option<Vec<String>>,
     #[serde(default)]
     custom_types: HashMap<String, CustomTypeConfig>,
     #[serde(default)]
@@ -244,16 +243,6 @@ impl Config {
     }
     pub fn skip_serializer_for(&self) -> Vec<String> {
         self.skip_serializer_for
-            .as_ref()
-            .cloned()
-            .unwrap_or_default()
-    }
-    /// Whether to use kotlinx Serializable annotation on the data class
-    pub fn has_import_helpers(&self) -> bool {
-        self.import_pointer_from.is_some()
-    }
-    pub fn import_helper_namespace(&self) -> Vec<String> {
-        self.import_pointer_from
             .as_ref()
             .cloned()
             .unwrap_or_default()
