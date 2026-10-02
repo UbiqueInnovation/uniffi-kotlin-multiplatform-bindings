@@ -35,4 +35,12 @@ class SerializationTest {
     fun testDeserializeImplicitNull() {
         Json.decodeFromString<ValuesOptional>("{\"a\":13}") shouldBe ValuesOptional(13, null)
     }
+
+    @Test
+    fun testRoundTripVariantWithCustomTypeField() {
+        val distance: Measurement = Measurement.Distance(1.5)
+        val json = Json.encodeToString(distance)
+        json shouldBe "{\"meters\":1.5}"
+        Json.decodeFromString<Measurement>(json) shouldBe distance
+    }
 }
