@@ -14,6 +14,9 @@
 
 Kotlin Multiplatform binding generator for Rust libraries using Mozilla's [UniFFI](https://github.com/mozilla/uniffi-rs).
 
+The full documentation, a user guide and a description of the internals, lives in [`docs/`](docs/index.md). See
+[Writing docs](docs/contributing/docs.md) for how to build it locally.
+
 ## Quickstart
 
 Start of by creating a new rust library and adding the `uniffi` dependency:

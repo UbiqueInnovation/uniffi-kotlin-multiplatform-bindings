@@ -1,0 +1,75 @@
+site_name: UniFFI Kotlin Multiplatform Bindings
+site_description: Kotlin Multiplatform bindings for Rust libraries using Mozilla's UniFFI.
+site_url: https://ubiqueinnovation.github.io/uniffi-kotlin-multiplatform-bindings/
+repo_url: https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings
+edit_uri: blob/main/docs/
+docs_dir: docs
+exclude_docs: |
+  requirements.txt
+
+theme:
+  name: readthedocs
+  hljs_languages:
+    - properties
+  navigation_depth: 3
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+
+extra_css:
+  - css/extra.css
+
+extra_javascript:
+  - path: js/mermaid-init.js
+    type: module
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+nav:
+  - Home: index.md
+  - User guide:
+      - Requirements: guide/requirements.md
+      - Getting started: guide/getting-started.md
+      - Targets: guide/targets.md
+      - Proc-macros and UDL: guide/proc-macros-vs-udl.md
+      - Features:
+          - Functions and objects: guide/features/functions-and-objects.md
+          - Records and enums: guide/features/records-and-enums.md
+          - Errors: guide/features/errors.md
+          - Callbacks and trait interfaces: guide/features/callbacks.md
+          - Async: guide/features/async.md
+          - Builtin types: guide/features/builtin-types.md
+          - Custom types: guide/features/custom-types.md
+          - UniFFI traits: guide/features/uniffi-traits.md
+          - Docstrings: guide/features/docstrings.md
+          - Serialization: guide/features/serialization.md
+          - Multi-module projects: guide/features/multi-module.md
+          - External types: guide/features/external-types.md
+          - Swift interop: guide/features/swift-interop.md
+      - Configuration:
+          - Gradle DSL: guide/configuration/gradle-dsl.md
+          - uniffi.toml: guide/configuration/uniffi-toml.md
+          - Dependencies: guide/configuration/dependencies.md
+          - Build performance: guide/configuration/build-performance.md
+      - Troubleshooting: guide/troubleshooting.md
+  - Internals:
+      - Overview: internals/index.md
+      - Architecture: internals/architecture.md
+      - UniFFI primer: internals/uniffi-primer.md
+      - Gradle plugin: internals/gradle-plugin.md
+      - Bindgen: internals/bindgen.md
+      - Runtime: internals/runtime.md
+      - Objects and handles: internals/objects-and-handles.md
+      - Callbacks: internals/callbacks.md
+      - Async: internals/async.md
+      - External and remote types: internals/external-and-remote-types.md
+      - Testing: internals/testing.md
+      - Upgrading UniFFI: internals/upgrading-uniffi.md
+  - Contributing:
+      - Writing docs: contributing/docs.md
