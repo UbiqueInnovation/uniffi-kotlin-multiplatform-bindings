@@ -71,5 +71,3 @@ nav:
       - External and remote types: internals/external-and-remote-types.md
       - Testing: internals/testing.md
       - Upgrading UniFFI: internals/upgrading-uniffi.md
-  - Contributing:
-      - Writing docs: contributing/docs.md
