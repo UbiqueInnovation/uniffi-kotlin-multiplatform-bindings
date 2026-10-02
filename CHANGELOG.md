@@ -15,6 +15,8 @@
 
 ### Removed
 
+- The `import_pointer_from` option in `uniffi.toml`. Types from other crates are imported
+  explicitly, so the extra `import <package>.*` is no longer needed. The option is ignored if set.
 - The `disable_java_cleaner` option in `uniffi.toml`. It had no effect since the cleaner moved
   into the runtime, which picks the cleaner itself.
 
