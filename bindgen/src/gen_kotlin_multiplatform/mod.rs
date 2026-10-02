@@ -639,14 +639,7 @@ kotlin_wrapper!(
 );
 
 #[derive(Template)]
-#[cfg_attr(
-    not(feature = "runtime"),
-    template(syntax = "c", escape = "none", path = "generic/headers/wrapper.h")
-)]
-#[cfg_attr(
-    feature = "runtime",
-    template(syntax = "c", escape = "none", path = "runtime/headers/wrapper.h")
-)]
+#[template(syntax = "c", escape = "none", path = "generic/headers/wrapper.h")]
 #[allow(dead_code)]
 pub struct HeaderKotlinWrapper<'ci> {
     #[allow(dead_code)]
@@ -659,7 +652,6 @@ impl<'ci> HeaderKotlinWrapper<'ci> {
         Self { config, ci }
     }
 
-    #[cfg_attr(feature = "runtime", allow(dead_code))]
     pub fn ffi_definitions_no_builtins(&self) -> impl Iterator<Item = FfiDefinition> + '_ {
         self.ci
             .ffi_definitions()
@@ -668,14 +660,7 @@ impl<'ci> HeaderKotlinWrapper<'ci> {
 }
 
 #[derive(Template)]
-#[cfg_attr(
-    not(feature = "runtime"),
-    template(syntax = "c", escape = "none", path = "generic/headers/common.h")
-)]
-#[cfg_attr(
-    feature = "runtime",
-    template(syntax = "c", escape = "none", path = "runtime/headers/common.h")
-)]
+#[template(syntax = "c", escape = "none", path = "generic/headers/common.h")]
 #[allow(dead_code)]
 pub struct CommonHeaderKotlinWrapper<'ci> {
     #[allow(dead_code)]
@@ -688,7 +673,6 @@ impl<'ci> CommonHeaderKotlinWrapper<'ci> {
         Self { config, ci }
     }
 
-    #[cfg_attr(feature = "runtime", allow(dead_code))]
     pub fn ffi_definitions_builtins(&self) -> impl Iterator<Item = FfiDefinition> + '_ {
         self.ci
             .ffi_definitions()
