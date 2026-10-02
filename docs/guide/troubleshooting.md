@@ -56,7 +56,7 @@ one of your crates, or a dependency, sets a `#[global_allocator]`. That isn't su
 
 **The process aborts (exit code 134) when Rust calls a Kotlin callback**: most likely a Kotlin
 implementation of a trait from another module's crate was passed across modules. See
-[Multi-module projects](features/multi-module.md#limitations).
+[Multi-module projects](features/multi-module.md#limitations) and [#35](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/35).
 
 ## Swift interop with spmForKmp
 

@@ -116,6 +116,10 @@ the declaring crate's own library, so a Kotlin implementation passed to a functi
 module's library hits an empty vtable. The `testCallback` case in
 `tests/uniffi/multi-module/mod-a/.../ModATest.kt` is commented out for this reason.
 
+[#35](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/35) tracks this. It has the details: a fix for JVM and Android exists on the
+`fix/multi-module-callbacks` branch, and on Kotlin/Native the problem comes from Rust symbol names,
+so a runtime fix can't solve it there.
+
 ## Async methods
 
 Async callback methods return a foreign future instead of a value. See
