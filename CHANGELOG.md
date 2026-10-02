@@ -28,6 +28,8 @@
 
 ### Fixed
 
+- A bindgen configured with `bindgenFromPath` is reinstalled when its sources change. Previously
+  `installBindgen` stayed up-to-date and the bindings were generated with the stale binary.
 - The default bindgen is now installed from the Git tag of the plugin release instead of the
   default branch, so it matches the plugin and runtime version.
 - `generateFromLibrary { }` / `generateFromUdl { }` no longer silently ignore the package setting:
