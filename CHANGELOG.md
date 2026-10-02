@@ -20,6 +20,8 @@
 
 ### Fixed
 
+- The default bindgen is now installed from the Git tag of the plugin release instead of the
+  default branch, so it matches the plugin and runtime version.
 - `generateFromLibrary { }` / `generateFromUdl { }` no longer silently ignore the package setting:
   the unused `namespace` property was renamed to `packageName` and now overrides `package_name`
   from `uniffi.toml`. **Breaking:** replace `namespace = ...` with `packageName = ...`.
