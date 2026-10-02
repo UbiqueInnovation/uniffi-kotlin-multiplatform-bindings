@@ -48,5 +48,5 @@ private class OnceRunnable(val task: Runnable): Runnable {
     }
 }
 
-private fun UniffiCleaner.Companion.create(): UniffiCleaner =
+fun UniffiCleaner.Companion.create(): UniffiCleaner =
     NativeCleaner()
