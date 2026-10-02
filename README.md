@@ -14,7 +14,9 @@
 
 Kotlin Multiplatform binding generator for Rust libraries using Mozilla's [UniFFI](https://github.com/mozilla/uniffi-rs).
 
-The full documentation, a user guide and a description of the internals, lives in [`docs/`](docs/index.md).
+**Documentation: https://ubiqueinnovation.github.io/uniffi-kotlin-multiplatform-bindings/**, with a
+[user guide](https://ubiqueinnovation.github.io/uniffi-kotlin-multiplatform-bindings/guide/getting-started/)
+and a description of the [internals](https://ubiqueinnovation.github.io/uniffi-kotlin-multiplatform-bindings/internals/).
 
 ## Quickstart
 
