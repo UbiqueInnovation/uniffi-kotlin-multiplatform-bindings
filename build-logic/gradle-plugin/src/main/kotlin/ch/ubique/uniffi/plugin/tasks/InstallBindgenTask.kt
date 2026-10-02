@@ -49,6 +49,12 @@ abstract class InstallBindgenTask : DefaultTask() {
                     .map { "bin/$it" }
             )
         )
+
+        // A path source changes without `source` changing, so Gradle would consider the task
+        // up-to-date and never reach the fingerprint check below. Always run the action instead;
+        // it rewrites the same ready file when the fingerprint is unchanged, which keeps the
+        // bindings tasks downstream up-to-date.
+        outputs.upToDateWhen { source.get() !is BindgenSource.Path }
     }
 
     @get:Internal
