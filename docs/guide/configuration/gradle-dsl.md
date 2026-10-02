@@ -7,17 +7,14 @@ build.
 
 ```kotlin
 uniffi {
-    generateFromLibrary()                    // or generateFromUdl { udlFile = ... }
+    generateFromLibrary {                    // or generateFromUdl { udlFile = ... }
+        packageName = "com.example.mylib"
+    }
 
     formatCode = false
     addRuntime = true
     addDependencies = true
     generateBindingsForExternalCrates = false
-
-    bindgenFromGitTag(
-        "https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings.git",
-        "v1.2.1",
-    )
 }
 ```
 
@@ -25,6 +22,7 @@ uniffi {
 | ----------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `generateFromLibrary()`             | —       | Generate bindings from the compiled library. One of the two `generateFrom*` calls is required. See [Proc-macros and UDL](../proc-macros-vs-udl.md). |
 | `generateFromUdl { udlFile = ... }` | —       | Generate bindings from a UDL file. `udlFile` is required.                                                                                           |
+| `packageName` (in either block)     | —       | Kotlin package of the bindings. Overrides `package_name` from `uniffi.toml`, for this module's crate only. Next release after `1.2.3`.                                         |
 | `formatCode`                        | `false` | Run `ktlint --format` over the generated bindings. `ktlint` must be on `PATH`. Problems it can't fix are reported as a warning.                     |
 | `addRuntime`                        | `true`  | Add `ch.ubique.uniffi:runtime` to `commonMain`. See [Dependencies](dependencies.md).                                                                |
 | `addDependencies`                   | `true`  | Add the libraries the generated code needs. See [Dependencies](dependencies.md).                                                                    |
@@ -44,10 +42,11 @@ The plugin installs the binding generator (`uniffi-bindgen-kotlin-multiplatform`
 | `bindgenFromRegistry(packageName, version)`    | the Cargo registry                                           |
 | `bindgenFromPath(directory)`                   | a local checkout, for developing the generator               |
 
-**By default the generator is installed from the default branch of this repository**, not from
-the tag matching your plugin version. For reproducible builds, pin it to the tag of the plugin
-version you use, as in the example above. The generator must match the runtime version, which is
-always the plugin version.
+By default the generator is installed from this repository, from the Git tag of the plugin
+version you use. (Up to `1.2.3`, the default was the repository's default branch. Pin it with
+`bindgenFromGitTag` if you are on one of those versions.) That keeps the generator, the plugin and the runtime on the same version. Only
+change the source if you need an unreleased or patched generator. The generator must match the
+runtime version, which is always the plugin version.
 
 The installed generator is shared by all modules of a build and kept in the root project's
 `build/uniffi/bindgen/` directory.

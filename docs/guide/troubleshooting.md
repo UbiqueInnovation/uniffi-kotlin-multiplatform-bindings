@@ -36,8 +36,9 @@ commonization is off, or the IDE hasn't run a sync since it was turned on.
 
 **`UniFFI contract version mismatch`** or **`UniFFI API checksum mismatch`** (JVM and Android):
 the bindings were generated for a different library than the one that was loaded. Usually stale
-build outputs, or a generator that doesn't match the runtime. Run a clean build. If you use the
-default generator source, [pin it to your plugin version](configuration/gradle-dsl.md#where-the-generator-comes-from).
+build outputs, or a generator that doesn't match the runtime. Run a clean build. If you changed
+the [generator source](configuration/gradle-dsl.md#where-the-generator-comes-from), make sure it
+matches your plugin version.
 
 **`IllegalStateException: ... object has already been destroyed`**: a method was called after
 `destroy()`, `close()`, or after the end of a `use { }` block.

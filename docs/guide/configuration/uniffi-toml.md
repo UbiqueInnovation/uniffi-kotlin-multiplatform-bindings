@@ -23,7 +23,7 @@ Unlike other UniFFI generators, the settings are at the top level of the file, n
 
 | Key | Default | Description |
 | --- | --- | --- |
-| `package_name` | `uniffi.<namespace>` | Kotlin package of the generated code. |
+| `package_name` | `uniffi.<namespace>` | Kotlin package of the generated code. `packageName` in the [Gradle DSL](gradle-dsl.md) takes precedence. |
 | `cdylib_name` | the crate's library name | Name of the dynamic library JNA loads on JVM and Android. You only need it if you rename the library. |
 | `generate_immutable_records` | `false` | Generate record fields as `val` instead of `var`. See [Records](../features/records-and-enums.md#immutable-records). |
 | `mutable_records` | `[]` | Records that keep `var` fields when `generate_immutable_records` is on. |

@@ -83,7 +83,18 @@ namespace my_crate {
 };
 ```
 
-!!! note
-    The `namespace` property inside both blocks (`generateFromLibrary { namespace = "..." }`) is
-    currently not used. The namespace always comes from the Rust side: the crate's library name, the
-    argument to `setup_scaffolding!("...")`, or the UDL `namespace`.
+From the next release after `1.2.3`, both blocks accept `packageName`, which sets the Kotlin package of the bindings and takes
+precedence over `package_name` in `uniffi.toml`:
+
+```kotlin
+uniffi {
+    generateFromLibrary {
+        packageName = "com.example.mylib"
+    }
+}
+```
+
+!!! note "Migrating"
+    This property used to be called `namespace` and had no effect. Replace `namespace = ...` with
+    `packageName = ...`. The UniFFI namespace itself always comes from the Rust side: the crate's
+    library name, the argument to `setup_scaffolding!("...")`, or the UDL `namespace`.

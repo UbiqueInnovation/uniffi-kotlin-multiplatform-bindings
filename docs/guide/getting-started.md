@@ -67,7 +67,7 @@ Apply the Kotlin Multiplatform plugin and this plugin, then tell it how to gener
 // build.gradle.kts
 plugins {
     kotlin("multiplatform") version "2.4.0"
-    id("ch.ubique.uniffi.plugin") version "1.2.1"
+    id("ch.ubique.uniffi.plugin") version "1.2.3"
 }
 
 uniffi {
@@ -123,7 +123,18 @@ crate's library name. To choose your own, add a `uniffi.toml` next to `Cargo.tom
 package_name = "com.example.quickstart"
 ```
 
-All options are listed in [uniffi.toml](configuration/uniffi-toml.md).
+or, from the next release after `1.2.3`, set it in Gradle, which takes precedence over
+`uniffi.toml`:
+
+```kotlin
+uniffi {
+    generateFromLibrary {
+        packageName = "com.example.quickstart"
+    }
+}
+```
+
+All `uniffi.toml` options are listed in [uniffi.toml](configuration/uniffi-toml.md).
 
 ## 5. Call it from Kotlin
 

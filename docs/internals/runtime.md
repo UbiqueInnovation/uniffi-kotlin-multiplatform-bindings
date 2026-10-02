@@ -44,17 +44,14 @@ system allocator. A crate that installs its own `#[global_allocator]` would brea
 
 ## Relation to the templates
 
-Much of the runtime started out as the templates in `bindgen/src/templates/generic/ffi/`. Some of
-those templates are still used for generated code, others are dead:
+Much of the runtime started out as templates in `bindgen/src/templates/generic/ffi/`. Those
+templates have been removed: everything that doesn't depend on the crate (primitive, `String`,
+`ByteArray`, `Instant` and `Duration` converters, `RustBuffer` handling, the async helpers and the
+object cleaner) comes from the runtime on every platform. What is left in `generic/ffi/` is code
+that is specific to a crate's types.
 
-- `Async.kt`, `FfiConverterTemplate.kt` and `RustBufferTemplate.kt` in `generic/ffi/` are not
-  included by any template. The runtime versions are the live ones.
-- The primitive converters (`Int8Helper.kt` … `StringHelper.kt`, `ByteArrayHelper.kt`,
-  `TimestampHelper.kt`, `DurationHelper.kt`) are included by `generic/native/Types.kt`. Native
-  bindings therefore contain their own copies of these converters, while JVM and Android bindings
-  use the runtime's.
-
-When you change behaviour that exists in both places, change both, or better, remove the duplicate.
+If generated code needs a new crate-independent helper, add it to the runtime, in all three
+platform source sets, rather than to the templates.
 
 ## Tests
 

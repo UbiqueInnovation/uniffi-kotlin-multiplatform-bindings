@@ -18,7 +18,10 @@ Source: `bindgen/`. The crate `uniffi_bindgen_kotlin_multiplatform` builds the b
 `generate_external_bindings` for UDL) with our generator. UniFFI then calls:
 
 1. `new_config`: deserialise each crate's `uniffi.toml` into `Config`.
-2. `update_component_configs`: default `package_name` to `uniffi.<namespace>` and `cdylib_name`
+2. `update_component_configs`: apply the `--package-name` override, if given, to the selected
+   crate (`--crate`, or the crate derived from the library file name). It must happen here, before
+   the package map below is built, so that other crates importing this one see the new package.
+   Then default `package_name` to `uniffi.<namespace>` and `cdylib_name`
    to the library's name, then build a crate → package map over all components and add it to every
    component's `external_packages`. You will see `Adding external package mapping for crate …` in
    the build log. That is this step.
@@ -81,7 +84,8 @@ bindgen/src/templates/
 │   ├── common/            commonMain: public API, expect declarations
 │   ├── android+jvm/       JVM/Android: actuals, JNA library and structures
 │   ├── native/            Native: actuals, cinterop typealiases
-│   ├── ffi/               shared by android+jvm and native: FfiConverters, object bodies, helpers
+│   ├── ffi/               shared by android+jvm and native: converters for records, enums,
+│   │                      collections, custom types, object bodies
 │   └── headers/           C headers for cinterop
 └── runtime/               builds with the `runtime` feature, used only by the runtime module
 ```
@@ -89,7 +93,9 @@ bindgen/src/templates/
 `generic/ffi/` is included from both `android+jvm/Types.kt` and `native/Types.kt`, so most
 conversion code is written once and compiled for both platforms. These templates can only use
 API that exists on both, and rely on the [runtime](runtime.md) for anything that differs
-(`ByteBuffer`, `RustBuffer`, `Pointer`, the cleaner).
+(`ByteBuffer`, `RustBuffer`, `Pointer`, the cleaner). Converters that don't depend on the crate,
+like the ones for primitives, `String` and `Duration`, are not generated at all; they come from the
+runtime.
 
 `macros.kt` produces the bodies of all calls. The important macros:
 

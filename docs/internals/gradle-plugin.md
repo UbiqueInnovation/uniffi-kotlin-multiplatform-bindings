@@ -69,13 +69,19 @@ with `CARGO_TARGET_DIR` set. Some details:
   `CC_<triple>` / `CARGO_TARGET_<TRIPLE>_LINKER` environment variables, computed in
   `AndroidSupport.ndkEnvironment` / `NdkUtil`. With `useCross` they get nothing, because `cross`
   brings its own toolchain.
+- **Always executed.** The task is never up to date (`outputs.upToDateWhen { false }`). Gradle
+  can't see Cargo's full input set (dependencies outside the package, the toolchain, features), so
+  the plugin always runs Cargo and lets Cargo decide what to rebuild. When nothing changed, Cargo
+  leaves the library untouched, so tasks that consume it, like `buildBindings`, stay up to date.
 - **Missing Rust targets.** `CargoRunner` recognises Cargo's "consider downloading the target with
   `rustup target add`" message, runs that command and retries.
 
 ### Installing the bindgen
 
 `InstallBindgenTask` runs `cargo install --locked --force --root <dir>` from the configured
-`BindgenSource` (path, git or registry). The installation is shared by all projects in the
+`BindgenSource` (path, git or registry). The default source is this repository at the Git tag the
+plugin was released from (`PluginVersions.BINDGEN_GIT_TAG`, generated at build time from the
+`githubRefName` property, falling back to `v<version>`). The installation is shared by all projects in the
 build and lives in the root project's `build/uniffi/bindgen/<cacheKey>/`.
 
 Because the executable is shared, it is not declared as a task output. Two projects can't own the
@@ -94,11 +100,12 @@ fingerprint file decides whether reinstalling is needed:
 `BuildBindingsTask` deletes the output directory, then runs
 
 ```
-uniffi-bindgen-kotlin-multiplatform --library <host cdylib> --out-dir build/uniffi/bindings [--crate <lib name>]
+uniffi-bindgen-kotlin-multiplatform --library <host cdylib> --out-dir build/uniffi/bindings [--crate <lib name>] [--package-name <package>]
 ```
 
 or passes the UDL file instead of `--library`. `--crate` limits generation to the module's own crate,
-and is left out when `generateBindingsForExternalCrates` is on. Its inputs are all `*.rs` files,
+and is left out when `generateBindingsForExternalCrates` is on. `--package-name` is passed when
+`packageName` is set in the DSL. Its inputs are all `*.rs` files,
 `Cargo.toml`, `Cargo.lock` and `uniffi.toml` in the package directory, the host library and the
 bindgen marker. The five output directories are separate `@OutputDirectory` properties so that
 each source set can depend on exactly one of them.

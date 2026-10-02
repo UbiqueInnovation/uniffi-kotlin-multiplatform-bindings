@@ -4,7 +4,7 @@ Rust builds are usually the slowest part of a build with this plugin. These opti
 
 !!! note
     `targetDirectory`, `rustcWrapper`, `rustcWorkspaceWrapper` and `androidDebugAbis` are
-    unreleased. They will be part of the next release after `1.2.1`.
+    available since `1.2.2`.
 
 ## Build only what you need
 
