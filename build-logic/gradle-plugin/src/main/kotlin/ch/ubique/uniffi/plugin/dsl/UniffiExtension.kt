@@ -150,9 +150,10 @@ abstract class UniffiExtension @Inject internal constructor(private val objects:
 // reference into task state via the `bindingsGeneration` providers.
 sealed class BindingsGeneration {
     /**
-     * The UDL namespace. Defaults to `"$libraryName"`.
+     * The Kotlin package of the generated bindings. Overrides `package_name` from the crate's
+     * `uniffi.toml`, which itself defaults to `"uniffi.$namespace"`.
      */
-    abstract val namespace: Property<String>
+    abstract val packageName: Property<String>
 }
 
 abstract class BindingsGenerationFromUdl @Inject internal constructor() : BindingsGeneration() {

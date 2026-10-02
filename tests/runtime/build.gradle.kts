@@ -4,6 +4,6 @@ plugins {
 
 uniffi {
     generateFromLibrary {
-        namespace = "runtime_test"
+        packageName = "runtime_test"
     }
 }

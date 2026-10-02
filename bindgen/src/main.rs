@@ -8,7 +8,7 @@ use std::{env, path::PathBuf};
 use anyhow::Context;
 use camino::Utf8PathBuf;
 use clap::Parser;
-use uniffi_bindgen_kotlin_multiplatform::KotlinBindingGenerator;
+use uniffi_bindgen_kotlin_multiplatform::{KotlinBindingGenerator, PackageNameOverride};
 
 #[derive(Parser)]
 #[clap(name = "uniffi-bindgen")]
@@ -37,6 +37,12 @@ struct Cli {
     /// locate and parse Cargo.toml.
     #[clap(long = "crate")]
     crate_name: Option<String>,
+
+    /// Override the `package_name` from `uniffi.toml` for the crate selected by `--crate`.
+    /// When `--library` is passed without `--crate`, the crate is derived from the library
+    /// file name.
+    #[clap(long)]
+    package_name: Option<String>,
 
     #[clap(long = "format", default_value_t = false)]
     try_format_code: bool,
@@ -94,9 +100,32 @@ fn main() -> anyhow::Result<()> {
         source,
         try_format_code,
         metadata_no_deps,
+        package_name,
     } = Cli::parse();
 
-    let binding_generator = KotlinBindingGenerator;
+    let package_name_override = package_name
+        .map(|package_name| -> anyhow::Result<_> {
+            let crate_name = match &crate_name {
+                Some(crate_name) => Some(crate_name.clone()),
+                None if library_mode => Some(
+                    uniffi_bindgen::library_mode::calc_cdylib_name(&source)
+                        .with_context(|| {
+                            format!("cannot derive the crate name from {source}, pass --crate")
+                        })?
+                        .to_owned(),
+                ),
+                None => None,
+            };
+            Ok(PackageNameOverride {
+                crate_name,
+                package_name,
+            })
+        })
+        .transpose()?;
+
+    let binding_generator = KotlinBindingGenerator {
+        package_name_override,
+    };
 
     if library_mode {
         if lib_file.is_some() {

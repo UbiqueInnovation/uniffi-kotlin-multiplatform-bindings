@@ -8,6 +8,8 @@
 - Configure `RUSTC_WRAPPER` and `RUSTC_WORKSPACE_WRAPPER` through the Cargo DSL, including sccache.
 - Select only the required Android debug ABIs with `cargo { androidDebugAbis.add(...) }` or
   `-PandroidAbis=...`.
+- Bindgen `--package-name` option, overriding `package_name` from `uniffi.toml` for the target
+  crate only.
 
 ### Changed
 
@@ -18,6 +20,9 @@
 
 ### Fixed
 
+- `generateFromLibrary { }` / `generateFromUdl { }` no longer silently ignore the package setting:
+  the unused `namespace` property was renamed to `packageName` and now overrides `package_name`
+  from `uniffi.toml`. **Breaking:** replace `namespace = ...` with `packageName = ...`.
 - Preserve the published `uniffi-cinterop` Kotlin/Native KLIB identity.
 
 ## [1.2.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.1) - 2026-08-21

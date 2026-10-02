@@ -348,6 +348,7 @@ class UniffiPlugin : Plugin<Project> {
             task.bindgen.set(bindgenBin)
             task.bindgenReadyFile.set(bindgenReadyFile)
             task.formatCode.set(uniffiExtension.formatCode)
+            task.packageName.set(uniffiExtension.bindingsGeneration.flatMap { it.packageName })
 
             task.libraryFile.set(uniffiExtension.bindingsGeneration.filter { it is BindingsGenerationFromLibrary }
                 .flatMap { libraryForBindings })
