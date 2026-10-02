@@ -32,4 +32,15 @@ pub enum Calculation {
     Sub(Values),
 }
 
+pub struct Meters(pub f64);
+uniffi::custom_newtype!(Meters, f64);
+
+// A custom type in the first field must not stop the variant from being serializable: the
+// enum's poly serializer references the serializer of every variant.
+#[derive(uniffi::Enum)]
+pub enum Measurement {
+    Distance { meters: Meters },
+    Count { value: i64, meters: Meters },
+}
+
 uniffi::setup_scaffolding!("serialization");

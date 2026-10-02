@@ -142,20 +142,20 @@ sealed class {{ type_name }}
     {% for variant in e.variants() -%}
     {%- call kt::docstring(variant, 4) %}{% endcall %}
     {% if !variant.has_fields() -%}
-    {%- if !contains_object_references && config.generate_serializable_records() && self.is_variant_serializable(variant) %}
+    {%- if !contains_object_references && config.generate_serializable_records() && self.is_enum_serializable(e) %}
     @kotlinx.serialization.Serializable
     {% endif %}
     object {{ variant|variant_type_name(ci) }} : {{ type_name }}() {% if contains_object_references %} {
         override fun destroy() = Unit
     } {% endif %}
     {% else -%}
-    {%- if !contains_object_references && config.generate_serializable_records() && self.is_variant_serializable(variant) %}
+    {%- if !contains_object_references && config.generate_serializable_records() && self.is_enum_serializable(e) %}
     @kotlinx.serialization.Serializable{% if variant.has_fields() && variant.fields().len() == 1 && variant.fields()[0].name()|var_name|unquote == "" %}({{ type_name }}{{ variant|variant_type_name(ci) }}Serializer::class) {% endif %}
     {% endif %}
     data class {{ variant|variant_type_name(ci) }}(
         {%- for field in variant.fields() -%}
         {%- call kt::docstring(field, 8) %}{% endcall %}
-        {%- if config.generate_serializable_records() && self.is_variant_serializable(variant) %}
+        {%- if !contains_object_references && config.generate_serializable_records() && self.is_enum_serializable(e) %}
         @kotlinx.serialization.json.JsonNames("{% call kt::field_name_unquoted_unescaped(field, loop.index) %}{% endcall %}")
         {%-if !field.name().is_empty() %}
         @kotlinx.serialization.SerialName("{{ field.name() }}")

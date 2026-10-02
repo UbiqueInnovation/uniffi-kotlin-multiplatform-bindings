@@ -504,53 +504,8 @@ macro_rules! kotlin_type_renderer {
                     .contains(&name.to_string())
             }
 
-            // Helper to check if a record can be serialized
-            // We only allow records that store primitive types or other records and enums
-            fn is_serializable(&self, rec: &Record) -> bool {
-                if !self.is_name_serializable(rec.name()) {
-                    return false;
-                }
-                for f in rec.fields() {
-                    for inner_ty in f.iter_types() {
-                        if self.ci.is_external(inner_ty) {
-                            return false;
-                        }
-                        match inner_ty {
-                            Type::Object { .. }
-                            | Type::CallbackInterface { .. }
-                            | Type::Custom { .. } => return false,
-                            _ => return true,
-                        }
-                    }
-                }
-                true
-            }
-            // Helper to check if a enum variant can be serialized
-            // We only allow records that store primitive types or other records and enums
-            fn is_enum_serializable(&self, rec: &Enum) -> bool {
-                self.is_name_serializable(rec.name())
-            }
-
-            // Helper to check if a enum variant can be serialized
-            // We only allow records that store primitive types or other records and enums
-            fn is_variant_serializable(&self, rec: &Variant) -> bool {
-                if !self.is_name_serializable(rec.name()) {
-                    return false;
-                }
-                for f in rec.fields() {
-                    for inner_ty in f.iter_types() {
-                        if self.ci.is_external(inner_ty) {
-                            return false;
-                        }
-                        match inner_ty {
-                            Type::Object { .. }
-                            | Type::CallbackInterface { .. }
-                            | Type::Custom { .. } => return false,
-                            _ => return true,
-                        }
-                    }
-                }
-                true
+            fn is_enum_serializable(&self, e: &Enum) -> bool {
+                self.is_name_serializable(e.name())
             }
 
             // Like add_import, but arranges for `import name as as_name`
