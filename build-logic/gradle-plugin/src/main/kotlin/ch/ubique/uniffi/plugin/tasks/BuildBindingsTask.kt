@@ -66,6 +66,11 @@ abstract class BuildBindingsTask : DefaultTask() {
 	@get:Input
 	abstract val generateBindingsForExternalCrates: Property<Boolean>
 
+	/** Overrides `package_name` from `uniffi.toml` for the target crate. */
+	@get:Input
+	@get:Optional
+	abstract val packageName: Property<String>
+
     /** Run `ktlint --format` over the generated bindings. Needs `ktlint` in PATH. */
     @get:Input
     abstract val formatCode: Property<Boolean>
@@ -166,6 +171,10 @@ abstract class BuildBindingsTask : DefaultTask() {
 		if (!generateBindingsForExternalCrates.get()) {
 			command.add("--crate")
 			command.add(crateName)
+		}
+		if (packageName.isPresent) {
+			command.add("--package-name")
+			command.add(packageName.get())
 		}
 		logger.lifecycle(
 			buildString {
