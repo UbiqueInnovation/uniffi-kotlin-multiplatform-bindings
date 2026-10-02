@@ -1,0 +1,12 @@
+/* The readthedocs theme keeps table cells on one line, which cuts off longer descriptions. */
+.wy-table-responsive table td,
+.wy-table-responsive table th {
+  white-space: normal;
+}
+
+/* Center rendered Mermaid diagrams. */
+pre.mermaid {
+  background: none;
+  border: none;
+  text-align: center;
+}

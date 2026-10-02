@@ -14,6 +14,8 @@
 
 Kotlin Multiplatform binding generator for Rust libraries using Mozilla's [UniFFI](https://github.com/mozilla/uniffi-rs).
 
+The full documentation, a user guide and a description of the internals, lives in [`docs/`](docs/index.md).
+
 ## Quickstart
 
 Start of by creating a new rust library and adding the `uniffi` dependency:
@@ -49,7 +51,7 @@ Next, add the gradle plugin to your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("ch.ubique.uniffi.plugin") version "1.0.0"
+    id("ch.ubique.uniffi.plugin") version "1.3.0"
 }
 ```
 
@@ -105,7 +107,7 @@ Android support is built on the Android Kotlin Multiplatform library plugin, so 
 plugins {
     kotlin("multiplatform")
     id("com.android.kotlin.multiplatform.library") version "9.3.1"
-    id("ch.ubique.uniffi.plugin") version "1.0.0"
+    id("ch.ubique.uniffi.plugin") version "1.3.0"
 }
 
 kotlin {
@@ -142,7 +144,7 @@ cargo {
 
 ## Status
 
-This project provides a Gradle plugin and a binding generator for Rust libraries using UniFFI. This project is production-ready, but might be still a bit rough around the edges. If you encounter any issues, please report them in the [issue tracker](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues). Currently `uniffi-rs` version `0.28.3` is supported, but support for newer versions is on the roadmap. See the [HEIDI SDK](https://github.com/heidiverse/heidi-sdk) for an example of this project in production.
+This project provides a Gradle plugin and a binding generator for Rust libraries using UniFFI. This project is production-ready, but might be still a bit rough around the edges. If you encounter any issues, please report them in the [issue tracker](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues). Currently `uniffi-rs` version `0.32.0` is supported. See the [HEIDI SDK](https://github.com/heidiverse/heidi-sdk) for an example of this project in production.
 
 If you're coming from [Uniffi Kotlin Multiplatform Bindings by Trixnity](https://gitlab.com/trixnity/uniffi-kotlin-multiplatform-bindings), then by now a lot has changed. The `ch.ubique.uniffi.plugin` replaces the Cargo plugin (`io.gitlab.trixnity.cargo.kotlin.multiplatform`), UniFFI plugin (`io.gitlab.trixnity.uniffi.kotlin.multiplatform`), and Rust plugin (`io.gitlab.trixnity.rust.kotlin.multiplatform`). The new plugin provides a unified DSL for all configuration much faster configuration and build logic execution. If you're looking for and upgrade to the trixnity plugin, check out the `v0.7.0` release, which was the last release before the rewrite.
 

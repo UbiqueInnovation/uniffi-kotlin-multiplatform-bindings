@@ -8,3 +8,5 @@ cargo-build
 .DS_Store
 local.properties
 xcuserdata
+site
+.venv
