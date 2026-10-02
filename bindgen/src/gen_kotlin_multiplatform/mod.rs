@@ -149,8 +149,6 @@ pub struct Config {
     pub(super) external_packages: HashMap<String, String>,
     #[serde(default)]
     kotlin_target_version: Option<String>,
-    #[serde(default)]
-    disable_java_cleaner: bool,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]

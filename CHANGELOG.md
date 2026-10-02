@@ -13,10 +13,18 @@
 
 ### Changed
 
+- Native bindings use the runtime's primitive, `String`, `ByteArray`, `Instant` and `Duration`
+  FFI converters instead of declaring their own copies, matching JVM and Android.
+- Native bindings use the runtime's object cleaner instead of declaring their own copy.
 - Cargo build tasks now write directly to Cargo's shared target directory and emit only the crate
   types required by the consuming Kotlin targets.
 - Bindgen installation and host-library builds now reuse the shared Cargo target directory more
   effectively.
+
+### Removed
+
+- The `disable_java_cleaner` option in `uniffi.toml`. It had no effect since the cleaner moved
+  into the runtime, which picks the cleaner itself.
 
 ### Fixed
 
