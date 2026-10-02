@@ -20,6 +20,10 @@
 
 ### Fixed
 
+- With `generate_serializable_records`, every variant of a serializable enum is now annotated
+  with `@Serializable`. A variant whose first field was a custom or external type was
+  left out, so the generated poly serializer referenced a missing `serializer()` and the bindings
+  did not compile.
 - A bindgen configured with `bindgenFromPath` is reinstalled when its sources change. Previously
   `installBindgen` stayed up-to-date and the bindings were generated with the stale binary.
 - The default bindgen is now installed from the Git tag of the plugin release instead of the
