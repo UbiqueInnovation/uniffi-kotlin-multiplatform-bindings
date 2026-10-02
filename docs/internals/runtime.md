@@ -7,22 +7,25 @@ Generated files start with `import uniffi.runtime.*`.
 
 ## Why a separate library
 
-Upstream UniFFI generators copy all helper code into every generated file. That works for one
-crate per app, but not for several modules that share types. With a shared runtime:
+Upstream UniFFI generators copy all helper code into every generated file, and each copy allocates
+`RustBuffer`s through its own crate's `rustbuffer_alloc`. That works for one crate per app, but not
+for several modules that share types: the converter for a shared type can't know which crate a
+buffer will be passed to. With a shared runtime:
 
+- every `RustBuffer` that Kotlin lowers is allocated by
+  [the runtime's own Rust library](#the-runtimes-own-rust-library), so any crate can receive it,
 - every module uses the **same** `RustBuffer`, `FfiConverter`, `UniffiHandleMap` and
-  `InternalException` classes, so values can pass between modules,
-- the helper code exists once per app, not once per module.
+  `InternalException` classes, so values can pass between modules.
 
-This is the basis of [multi-module support](external-and-remote-types.md#multi-module-builds).
+This is the basis of [multi-module support](external-and-remote-types.md#multi-module-builds). In addition, the helper code exists once per app, not once per module.
 
 ## Contents
 
-| Source set | Contents |
-| --- | --- |
-| `commonMain` | `UniffiHandleMap`, `InternalException`, `expect` declarations for `Pointer` |
+| Source set                             | Contents                                                                                                                                                                                                                                                                         |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `commonMain`                           | `UniffiHandleMap`, `InternalException`, `expect` declarations for `Pointer`                                                                                                                                                                                                      |
 | `jvmMain`, `androidMain`, `nativeMain` | `FfiConverter`, `ByteBuffer`, `RustBuffer` and `RustBufferHelper`, `ForeignBytes` / `withForeignBytes`, `uniffiRustCall`, converters for every primitive type, `String`, `ByteArray`, `Instant`, `Duration`, the async helpers, `FfiConverterCallbackInterface`, `UniffiCleaner` |
-| `src/commonMain/rust/lib.rs` | a Rust crate `uniffi_runtime` that exports nothing but `setup_scaffolding!()` |
+| `src/commonMain/rust/lib.rs`           | a Rust crate `uniffi_runtime` that exports nothing but `setup_scaffolding!()`                                                                                                                                                                                                    |
 
 The three platform source sets are **separate hand-written copies**. JVM and Android are nearly
 identical. Native differs where JNA and cinterop differ: structures, pointers, callbacks

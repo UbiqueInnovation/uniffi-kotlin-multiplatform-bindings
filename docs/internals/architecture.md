@@ -12,11 +12,11 @@ graph LR
     plugin -->|"adds as commonMain dependency"| runtime
 ```
 
-| Component | Responsibility |
-| --- | --- |
-| Gradle plugin | Installs the bindgen, builds the Rust crate per target, runs the bindgen, and wires generated sources, headers and libraries into the Kotlin source sets. |
-| Bindgen | A `uniffi_bindgen::BindingGenerator` plus askama templates. Writes Kotlin for four source sets and C headers. |
-| Runtime | Kotlin that is the same for every crate: `FfiConverter`, `RustBuffer`, `UniffiHandleMap`, the cleaner, the async helpers, converters for primitive types. Published as `ch.ubique.uniffi:runtime`. |
+| Component     | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gradle plugin | Installs the bindgen, builds the Rust crate per target, runs the bindgen, and wires generated sources, headers and libraries into the Kotlin source sets.                                                                                                                                                                                                                                                                 |
+| Bindgen       | A `uniffi_bindgen::BindingGenerator` plus askama templates. Writes Kotlin for four source sets and C headers.                                                                                                                                                                                                                                                                                                             |
+| Runtime       | Kotlin shared by every crate, plus a small Rust library of its own. That library allocates every `RustBuffer` Kotlin passes to Rust, so a buffer can go to any crate. This is what makes multi-module builds work. In addition, the common code lives here too: `FfiConverter`, `RustBuffer`, `UniffiHandleMap`, the cleaner, the async helpers, converters for primitive types. Published as `ch.ubique.uniffi:runtime`. |
 
 The plugin and the runtime are released together with the same version. The bindgen is installed
 from source by `cargo install`, see [Gradle plugin](gradle-plugin.md#installing-the-bindgen).
@@ -49,7 +49,7 @@ flowchart TD
    Cargo's target directory.
 2. **Generate.** `installBindgen` installs the generator. A debug build of the crate for the host
    produces a dynamic library, and `buildBindings` runs the generator on it in UniFFI's
-   *library mode*: the interface description is read from metadata embedded in the binary. With
+   _library mode_: the interface description is read from metadata embedded in the binary. With
    `generateFromUdl`, the UDL file is passed instead and the host build is skipped.
 3. **Compile Rust per target.** One `cargoBuild<Target><Profile>` task per Rust target, building a
    dynamic library for JVM/Android and a static library for Kotlin/Native.
@@ -79,14 +79,14 @@ The split follows one constraint: **only the platform source sets can call Rust*
 object (`UniffiLib`) is a JNA `Library` on JVM/Android and a set of cinterop functions on Native,
 so it can't exist in `commonMain`.
 
-| Declaration | `commonMain` | Platform source sets |
-| --- | --- | --- |
-| Top-level functions | `expect fun` | `actual fun` with the FFI call |
-| Objects | `interface FooInterface` + `expect open class Foo` | `actual open class Foo`, `FfiConverterTypeFoo` |
-| Records, enums, errors | the full `data class` / `enum class` / `sealed class` | `FfiConverterType…` |
-| Methods on records and enums | member function calling an `internal expect fun` shim | `actual` shim with the FFI call |
-| Callback interfaces | `interface Foo` | vtable, `FfiConverterTypeFoo` |
-| `Disposable`, `use`, `NoHandle`, `UniffiWithHandle` | declared in the generated file | — |
+| Declaration                                         | `commonMain`                                          | Platform source sets                           |
+| --------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------- |
+| Top-level functions                                 | `expect fun`                                          | `actual fun` with the FFI call                 |
+| Objects                                             | `interface FooInterface` + `expect open class Foo`    | `actual open class Foo`, `FfiConverterTypeFoo` |
+| Records, enums, errors                              | the full `data class` / `enum class` / `sealed class` | `FfiConverterType…`                            |
+| Methods on records and enums                        | member function calling an `internal expect fun` shim | `actual` shim with the FFI call                |
+| Callback interfaces                                 | `interface Foo`                                       | vtable, `FfiConverterTypeFoo`                  |
+| `Disposable`, `use`, `NoHandle`, `UniffiWithHandle` | declared in the generated file                        | —                                              |
 
 Records are not `expect` classes, because a `data class` needs to be declared in full to keep `copy`
 and `componentN` available in common code. That is why their methods go through a shim.
