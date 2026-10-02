@@ -50,6 +50,10 @@ matches your plugin version.
 is not on the classpath. Debug JVM builds only include the host platform. Build with
 `-PreleaseBuild=true` to include all of them.
 
+**Crashes or memory corruption when passing strings, records or lists to Rust**: check whether
+one of your crates, or a dependency, sets a `#[global_allocator]`. That isn't supported, see
+[Requirements](requirements.md#dont-use-a-custom-global-allocator).
+
 **The process aborts (exit code 134) when Rust calls a Kotlin callback**: most likely a Kotlin
 implementation of a trait from another module's crate was passed across modules. See
 [Multi-module projects](features/multi-module.md#limitations).

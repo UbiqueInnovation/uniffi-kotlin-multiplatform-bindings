@@ -40,7 +40,10 @@ is packaged like any other: JVM resources, Android `jniLibs`, cinterop.
 `RustBufferHelper.allocValue` calls `ffi_uniffi_runtime_rustbuffer_alloc`. **Every `RustBuffer`
 that Kotlin lowers is allocated by the runtime's library**, and freed by whichever crate receives
 it. This only works because all of them use the same allocator, which is true for Rust's default
-system allocator. A crate that installs its own `#[global_allocator]` would break it.
+system allocator. A crate that installs its own `#[global_allocator]` breaks it. There is no
+simple fix, because the allocation has to happen before Kotlin knows which crate will receive the
+buffer. The user guide warns about this in
+[Requirements](../guide/requirements.md#dont-use-a-custom-global-allocator).
 
 ## Relation to the templates
 
