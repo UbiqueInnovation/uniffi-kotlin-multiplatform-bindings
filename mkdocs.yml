@@ -33,7 +33,6 @@ validation:
 
 nav:
   - Home: index.md
-  - Comparison with Gobley: comparison.md
   - User guide:
       - Requirements: guide/requirements.md
       - Getting started: guide/getting-started.md
@@ -58,6 +57,7 @@ nav:
           - Dependencies: guide/configuration/dependencies.md
           - Build performance: guide/configuration/build-performance.md
       - Troubleshooting: guide/troubleshooting.md
+      - Comparison with other projects: guide/comparison.md
   - Internals:
       - Overview: internals/index.md
       - Architecture: internals/architecture.md

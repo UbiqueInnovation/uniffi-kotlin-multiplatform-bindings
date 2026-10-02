@@ -48,7 +48,7 @@ This project started as a fork of
 and has been largely rewritten since.
 
 [Gobley](https://github.com/gobley/gobley) is another project with the same goal. See
-[Comparison with Gobley](comparison.md) for how the two differ.
+[Comparison with other projects](guide/comparison.md#gobley) for how the two differ.
 
 This project is used in production, for example in the [Kapun SDK](https://github.com/KapunSDK/kapun-sdk).
 Please report problems in the
