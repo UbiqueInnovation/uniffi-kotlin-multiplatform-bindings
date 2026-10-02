@@ -1,13 +1,9 @@
 # Changelog
 
-## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.2.1...HEAD)
+## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.2.3...HEAD)
 
 ### Added
 
-- Configure a shared Cargo target directory with `cargo { targetDirectory = ... }`.
-- Configure `RUSTC_WRAPPER` and `RUSTC_WORKSPACE_WRAPPER` through the Cargo DSL, including sccache.
-- Select only the required Android debug ABIs with `cargo { androidDebugAbis.add(...) }` or
-  `-PandroidAbis=...`.
 - Bindgen `--package-name` option, overriding `package_name` from `uniffi.toml` for the target
   crate only.
 
@@ -16,10 +12,6 @@
 - Native bindings use the runtime's primitive, `String`, `ByteArray`, `Instant` and `Duration`
   FFI converters instead of declaring their own copies, matching JVM and Android.
 - Native bindings use the runtime's object cleaner instead of declaring their own copy.
-- Cargo build tasks now write directly to Cargo's shared target directory and emit only the crate
-  types required by the consuming Kotlin targets.
-- Bindgen installation and host-library builds now reuse the shared Cargo target directory more
-  effectively.
 
 ### Removed
 
@@ -33,7 +25,43 @@
 - `generateFromLibrary { }` / `generateFromUdl { }` no longer silently ignore the package setting:
   the unused `namespace` property was renamed to `packageName` and now overrides `package_name`
   from `uniffi.toml`. **Breaking:** replace `namespace = ...` with `packageName = ...`.
+
+## [1.2.3](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.3) - 2026-09-25
+
+### Fixed
+
+- Cargo is invoked on every build instead of relying on Gradle's up-to-date check, which could not
+  see all of Cargo's inputs (for example local path dependencies outside the package) and skipped
+  needed Rust rebuilds. Tasks consuming the library stay up to date when Cargo changes nothing.
+
+## [1.2.2](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.2) - 2026-09-18
+
+### Added
+
+- Configure a shared Cargo target directory with `cargo { targetDirectory = ... }`.
+- Configure `RUSTC_WRAPPER` and `RUSTC_WORKSPACE_WRAPPER` through the Cargo DSL, including sccache.
+- Select only the required Android debug ABIs with `cargo { androidDebugAbis.add(...) }` or
+  `-PandroidAbis=...`.
+- The bindgen and Cargo commands are logged before they run, together with the bindgen output.
+
+### Changed
+
+- Cargo build tasks now write directly to Cargo's shared target directory and emit only the crate
+  types required by the consuming Kotlin targets.
+- Bindgen installation and host-library builds now reuse the shared Cargo target directory more
+  effectively. Modules using the same bindgen share one installation.
+- `cargo metadata` runs with `--no-deps` during configuration, so configuring a project no longer
+  resolves the whole dependency graph.
+- The bindings are generated during an IDE sync, so the IDE resolves the generated code right away.
+- Cancelling a Gradle build terminates running Cargo processes.
+- Cargo fails fast instead of waiting for credentials when a Git dependency can't be fetched
+  non-interactively.
+
+### Fixed
+
 - Preserve the published `uniffi-cinterop` Kotlin/Native KLIB identity.
+- Removed compiler warnings from the generated Kotlin. The `kotlinx.serialization` opt-in is only
+  emitted when `generate_serializable_records` is enabled.
 
 ## [1.2.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.1) - 2026-08-21
 
