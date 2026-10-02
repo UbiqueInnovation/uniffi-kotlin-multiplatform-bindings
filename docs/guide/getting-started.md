@@ -4,8 +4,10 @@ This page builds a minimal Kotlin Multiplatform library with one Rust function. 
 [`examples/quickstart`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/examples/quickstart),
 which you can also use as a starting point.
 
-The Rust crate and the Kotlin module live in the **same directory**. By convention the Rust sources
-go into `src/commonMain/rust`, next to the Kotlin sources:
+This guide follows the convention used throughout this repository: the crate's `Cargo.toml` sits
+next to `build.gradle.kts`, and the Rust sources go into `src/commonMain/rust`, next to the Kotlin
+sources. Neither is required. Cargo's default `src/lib.rs` works just as well, and the crate can
+live in a different directory (see [`packageDirectory`](configuration/gradle-dsl.md#cargo)).
 
 ```
 quickstart/

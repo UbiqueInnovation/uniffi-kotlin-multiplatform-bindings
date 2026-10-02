@@ -1,7 +1,7 @@
 # UniFFI primer
 
 This page covers the parts of UniFFI the rest of the code depends on. UniFFI's own
-[internals documentation](https://mozilla.github.io/uniffi-rs/latest/internals/design_principles.html)
+[internals documentation](https://mozilla.github.io/uniffi-rs/0.32/internals/design_principles.html)
 goes deeper.
 
 UniFFI has two halves:

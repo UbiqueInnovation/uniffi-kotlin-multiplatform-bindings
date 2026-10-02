@@ -53,6 +53,75 @@ is not on the classpath. Debug JVM builds only include the host platform. Build 
 implementation of a trait from another module's crate was passed across modules. See
 [Multi-module projects](features/multi-module.md#limitations).
 
+## Swift interop with spmForKmp
+
+On Apple targets this plugin works together with
+[spmForKmp](https://github.com/frankois944/spm4Kmp), which lets Kotlin call Swift code through
+cinterop. Use spmForKmp `1.9.5` or newer. Older versions configured their cinterop in a way that
+conflicted with this plugin's cinterop.
+
+```kotlin
+plugins {
+    kotlin("multiplatform")
+    id("io.github.frankois944.spmForKmp") version "1.9.5"
+    id("ch.ubique.uniffi.plugin")
+}
+
+kotlin {
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
+        target.swiftPackageConfig(cinteropName = "swiftGreeter") {
+            minIos = "16.4"
+        }
+    }
+}
+```
+
+If you're stuck on spmForKmp older than `1.9.5`, add this workaround to the build script
+([spm4Kmp#326](https://github.com/frankois944/spm4Kmp/issues/326)). It points this plugin's
+cinterop back at its own def file after spmForKmp has reconfigured it:
+
+```kotlin
+import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
+import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+
+afterEvaluate {
+    kotlin.targets.withType<KotlinNativeTarget>().configureEach {
+        val defFile = uniffiDefFileFor(targetName)
+
+        compilations.getByName("main").cinterops.named("uniffi-cinterop") {
+            definitionFile.set(defFile)
+
+            tasks.named(interopProcessingTaskName) {
+                dependsOn(defFile)
+            }
+        }
+    }
+}
+
+/**
+ * The def file the plugin feeds to its cinterop for [targetName]. During an IDE sync the plugin
+ * registers a single GenerateDummyDefFileTask shared by every target, otherwise one
+ * GenerateDefFileTask per target.
+ */
+fun uniffiDefFileFor(targetName: String): Provider<RegularFile> {
+    // idea.sync.active is set by IntelliJ-based IDEs during a sync
+    val isSync = providers.systemProperty("idea.sync.active").map(String::toBoolean).getOrElse(false)
+
+    return if (isSync) {
+        tasks.named<GenerateDummyDefFileTask>("generateDummyDefFile")
+            .flatMap { it.outputFile }
+    } else {
+        tasks.named<GenerateDefFileTask>(
+            "generateDefFileFor${targetName.replaceFirstChar(Char::uppercaseChar)}"
+        ).flatMap { it.outputFile }
+    }
+}
+```
+
+See [`examples/swift-interop`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/examples/swift-interop)
+for a module that calls both Rust and Swift.
+
 ## Migrating
 
 **From 1.0.x**: Android moved to the Android Kotlin Multiplatform library plugin and AGP 9, see

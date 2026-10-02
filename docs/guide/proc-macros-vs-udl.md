@@ -8,8 +8,8 @@ UniFFI gives you two ways to describe the interface you export:
   `build.rs`.
 
 Both can be mixed in one crate. See UniFFI's own docs for the details of either:
-[proc-macros](https://mozilla.github.io/uniffi-rs/latest/proc_macro/index.html) and
-[UDL](https://mozilla.github.io/uniffi-rs/latest/udl/index.html).
+[proc-macros](https://mozilla.github.io/uniffi-rs/0.32/proc_macro/index.html) and
+[UDL](https://mozilla.github.io/uniffi-rs/0.32/udl/index.html).
 
 On the Gradle side there are two matching modes. Call exactly one of them, otherwise configuration
 fails with `Please call either 'generateFromLibrary' or 'generateFromUdl'.`

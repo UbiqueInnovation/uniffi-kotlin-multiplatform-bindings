@@ -3,16 +3,16 @@
 The plugin looks at the Kotlin targets you declare in `kotlin { }` and builds the Rust crate for
 each of them. You don't have to configure targets separately for the plugin.
 
-| Kotlin target | Rust target(s) | Library | Delivered as |
-| --- | --- | --- | --- |
-| `jvm()` | host (debug), all desktop targets (release) | dynamic | JVM resources, loaded by JNA |
-| `android { }` | see [Android](#android) | dynamic | `jniLibs`, loaded by JNA |
-| `iosArm64()` | `aarch64-apple-ios` | static | cinterop |
-| `iosSimulatorArm64()` | `aarch64-apple-ios-sim` | static | cinterop |
-| `iosX64()` | `x86_64-apple-ios` | static | cinterop |
-| `macosArm64()` | `aarch64-apple-darwin` | static | cinterop |
-| `linuxX64()` / `linuxArm64()` | `x86_64-unknown-linux-gnu` / `aarch64-unknown-linux-gnu` | static | cinterop |
-| `mingwX64()` | `x86_64-pc-windows-gnu` | static | cinterop |
+| Kotlin target                 | Rust target(s)                                           | Library | Delivered as                 |
+| ----------------------------- | -------------------------------------------------------- | ------- | ---------------------------- |
+| `jvm()`                       | host (debug), all desktop targets (release)              | dynamic | JVM resources, loaded by JNA |
+| `android { }`                 | see [Android](#android)                                  | dynamic | `jniLibs`, loaded by JNA     |
+| `iosArm64()`                  | `aarch64-apple-ios`                                      | static  | cinterop                     |
+| `iosSimulatorArm64()`         | `aarch64-apple-ios-sim`                                  | static  | cinterop                     |
+| `iosX64()`                    | `x86_64-apple-ios`                                       | static  | cinterop                     |
+| `macosArm64()`                | `aarch64-apple-darwin`                                   | static  | cinterop                     |
+| `linuxX64()` / `linuxArm64()` | `x86_64-unknown-linux-gnu` / `aarch64-unknown-linux-gnu` | static  | cinterop                     |
+| `mingwX64()`                  | `x86_64-pc-windows-gnu`                                  | static  | cinterop                     |
 
 A Kotlin target that is not in this table fails the configuration with `Unhandled target`.
 
@@ -27,10 +27,10 @@ Gradle property `releaseBuild`:
 
 The property also changes **which** Rust targets are built for JVM and Android:
 
-| | Debug | Release |
-| --- | --- | --- |
-| JVM | the host only | `aarch64`/`x86_64` for macOS and Linux, `x86_64` for Windows |
-| Android | the host architecture's ABI(s) | `arm64-v8a`, `armeabi-v7a`, `x86_64` |
+|         | Debug                          | Release                                                      |
+| ------- | ------------------------------ | ------------------------------------------------------------ |
+| JVM     | the host only                  | `aarch64`/`x86_64` for macOS and Linux, `x86_64` for Windows |
+| Android | the host architecture's ABI(s) | `arm64-v8a`, `armeabi-v7a`, `x86_64`                         |
 
 So a debug JVM artifact only works on the machine that built it, and a release build needs
 toolchains for every desktop platform.
@@ -97,9 +97,9 @@ The libraries are handed to AGP as generated `jniLibs`. If you enable Android ho
 test resources, so unit tests can call Rust without a device.
 
 !!! note "Migrating from 1.0.x"
-    Older versions used `com.android.library` with `androidTarget { }` and a top-level
-    `android { }` block. Both are replaced by the setup above. `minSdk` and `compileSdk` are now set
-    directly in `kotlin { android { } }` instead of in a `defaultConfig { }` block.
+Older versions used `com.android.library` with `androidTarget { }` and a top-level
+`android { }` block. Both are replaced by the setup above. `minSdk` and `compileSdk` are now set
+directly in `kotlin { android { } }` instead of in a `defaultConfig { }` block.
 
 ### NDK
 
@@ -130,7 +130,6 @@ cargo {
 ```
 
 Both accept `arm64-v8a`, `armeabi-v7a` and `x86_64`. Release builds always include all three.
-This option is unreleased and will ship in the next release after `1.2.1`.
 
 ## Kotlin/Native
 

@@ -10,21 +10,37 @@ converted to `lowerCamelCase`.
 pub fn greet(name: String) -> String {
     format!("Hello, {name}!")
 }
+```
 
-#[uniffi::export(default(count = 3))]
-pub fn repeat(text: String, count: u32) -> String {
-    text.repeat(count as usize)
+```kotlin
+greet("Kotlin")   // "Hello, Kotlin!"
+```
+
+### Default arguments
+
+Arguments can have defaults, which become Kotlin default arguments. List them in `default(...)`.
+Either give a value (`sep = ","`), or just the name (`max_splits`) to use the type's own default,
+which is `None` for an `Option`:
+
+```rust
+#[uniffi::export(default(sep = ",", max_splits))]
+pub fn split(text: String, sep: String, max_splits: Option<u32>) -> Vec<String> {
+    match max_splits {
+        Some(n) => text.splitn(n as usize + 1, sep.as_str()).map(String::from).collect(),
+        None => text.split(sep.as_str()).map(String::from).collect(),
+    }
 }
 ```
 
 ```kotlin
-greet("Kotlin")        // "Hello, Kotlin!"
-repeat("ab")           // "ababab", count defaults to 3
+fun split(text: String, sep: String = ",", maxSplits: UInt? = null): List<String>
+
+split("a,b,c")                       // ["a", "b", "c"]
+split("a;b;c", ";", maxSplits = 1u)  // ["a", "b;c"]
 ```
 
-Default values declared on the Rust side become Kotlin default arguments. `default(max_splits)`
-without a value uses the type's own default (`None` for an `Option`). The same works on
-`#[uniffi::constructor(default(...))]` and `#[uniffi::method(default(...))]`.
+Constructors and methods take the same attribute: `#[uniffi::constructor(default(...))]` and
+`#[uniffi::method(default(...))]`.
 
 ## Objects
 

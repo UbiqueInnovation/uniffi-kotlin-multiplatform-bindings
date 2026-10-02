@@ -33,6 +33,7 @@ validation:
 
 nav:
   - Home: index.md
+  - Comparison with Gobley: comparison.md
   - User guide:
       - Requirements: guide/requirements.md
       - Getting started: guide/getting-started.md
@@ -51,7 +52,6 @@ nav:
           - Serialization: guide/features/serialization.md
           - Multi-module projects: guide/features/multi-module.md
           - External types: guide/features/external-types.md
-          - Swift interop: guide/features/swift-interop.md
       - Configuration:
           - Gradle DSL: guide/configuration/gradle-dsl.md
           - uniffi.toml: guide/configuration/uniffi-toml.md

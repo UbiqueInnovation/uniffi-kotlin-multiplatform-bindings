@@ -131,13 +131,11 @@ the Linux and Windows linkers to allow this. Apple's linker accepts it by defaul
   `with_foreign` trait (or callback interface) declared in `rust-common` can be passed to
   functions of `rust-common` itself, but not to functions of `mod-a`. Each library holds its own
   copy of the trait's callback table, and only `rust-common`'s copy is initialised from Kotlin. The
-  call aborts the process. Rust implementations of such traits are not affected.
+  call aborts the process. Rust implementations of such traits are not affected. This will be fixed
+  in future versions.
 - **Build all modules against the same version of the shared crate.** Each module embeds its own
   compiled copy of `rust-common`. If `mod-a` and `mod-b` are built against different versions of
   it, they disagree about the layout of shared types, and nothing checks for that at runtime.
-- **Use the runtime.** Multi-module support relies on the shared `ch.ubique.uniffi:runtime`
-  library, which the plugin adds by default. Don't disable `addRuntime` unless you add the runtime
-  yourself.
 
 ## External crates you don't control
 
