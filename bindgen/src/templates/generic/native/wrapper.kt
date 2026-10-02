@@ -67,12 +67,6 @@ import platform.posix.memcpy
 {{ req.render() }}
 {%- endfor %}
 
-{% if config.has_import_helpers() %}
-{%- for ns in config.import_helper_namespace() -%}
-import {{ ns }}.*
-{% endfor -%}
-{% endif %}
-
 // Contains loading, initialization code,
 // and the FFI Function declarations.
 {% include "NamespaceLibraryTemplate.kt" %}

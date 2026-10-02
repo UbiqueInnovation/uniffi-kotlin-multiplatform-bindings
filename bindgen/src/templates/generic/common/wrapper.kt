@@ -40,17 +40,7 @@ import kotlin.jvm.JvmField
 {{ req.render() }}
 {%- endfor %}
 
-{% if  !config.has_import_helpers() %}
-
 {% include "Helpers.kt" %}
-
-{% else %}
-
-{%- for ns in config.import_helper_namespace() -%}
-import {{ ns }}.*
-{% endfor -%}
-
-{% endif %}
 
 // Public interface members begin here.
 {{ type_helper_code }}
