@@ -27,7 +27,7 @@ uniffi {
 }
 
 kotlin.sourceSets.commonMain.dependencies {
-    implementation("ch.ubique.uniffi:runtime:1.2.3")
+    implementation("ch.ubique.uniffi:runtime:1.3.0")
 }
 ```
 

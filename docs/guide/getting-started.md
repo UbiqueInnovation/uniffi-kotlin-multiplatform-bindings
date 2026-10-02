@@ -67,7 +67,7 @@ Apply the Kotlin Multiplatform plugin and this plugin, then tell it how to gener
 // build.gradle.kts
 plugins {
     kotlin("multiplatform") version "2.4.0"
-    id("ch.ubique.uniffi.plugin") version "1.2.3"
+    id("ch.ubique.uniffi.plugin") version "1.3.0"
 }
 
 uniffi {
@@ -123,7 +123,7 @@ crate's library name. To choose your own, add a `uniffi.toml` next to `Cargo.tom
 package_name = "com.example.quickstart"
 ```
 
-or, from the next release after `1.2.3`, set it in Gradle, which takes precedence over
+or, since `1.3.0`, set it in Gradle, which takes precedence over
 `uniffi.toml`:
 
 ```kotlin

@@ -83,7 +83,7 @@ namespace my_crate {
 };
 ```
 
-From the next release after `1.2.3`, both blocks accept `packageName`, which sets the Kotlin package of the bindings and takes
+Since `1.3.0`, both blocks accept `packageName`, which sets the Kotlin package of the bindings and takes
 precedence over `package_name` in `uniffi.toml`:
 
 ```kotlin

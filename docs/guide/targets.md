@@ -80,7 +80,7 @@ to the Kotlin Multiplatform plugin and configure Android inside `kotlin { }`:
 plugins {
     kotlin("multiplatform")
     id("com.android.kotlin.multiplatform.library") version "9.3.1"
-    id("ch.ubique.uniffi.plugin") version "1.2.3"
+    id("ch.ubique.uniffi.plugin") version "1.3.0"
 }
 
 kotlin {

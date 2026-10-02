@@ -38,7 +38,9 @@ the standard FFI functions, in particular `ffi_uniffi_runtime_rustbuffer_alloc` 
 module applies this repository's plugin with `bindgenFromPath(..., features = listOf("runtime"))`,
 and `addRuntime = false`. The `runtime` feature makes the bindgen emit only the `UniffiLib`
 declarations for this crate (see [Bindgen](bindgen.md#the-runtime-feature)). The Rust library
-is packaged like any other: JVM resources, Android `jniLibs`, cinterop.
+is packaged like any other: JVM resources, Android `jniLibs`, cinterop. Its cinterop klib
+also carries the shared `common.h`, which every generated crate reuses (see
+[Bindgen](bindgen.md#headers)).
 
 `RustBufferHelper.allocValue` calls `ffi_uniffi_runtime_rustbuffer_alloc`. **Every `RustBuffer`
 that Kotlin lowers is allocated by the runtime's library**, and freed by whichever crate receives

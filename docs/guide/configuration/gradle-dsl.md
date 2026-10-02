@@ -22,7 +22,7 @@ uniffi {
 | ----------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `generateFromLibrary()`             | —       | Generate bindings from the compiled library. One of the two `generateFrom*` calls is required. See [Proc-macros and UDL](../proc-macros-vs-udl.md). |
 | `generateFromUdl { udlFile = ... }` | —       | Generate bindings from a UDL file. `udlFile` is required.                                                                                           |
-| `packageName` (in either block)     | —       | Kotlin package of the bindings. Overrides `package_name` from `uniffi.toml`, for this module's crate only. Next release after `1.2.3`.                                         |
+| `packageName` (in either block)     | —       | Kotlin package of the bindings. Overrides `package_name` from `uniffi.toml`, for this module's crate only. Since `1.3.0`.                                         |
 | `formatCode`                        | `false` | Run `ktlint --format` over the generated bindings. `ktlint` must be on `PATH`. Problems it can't fix are reported as a warning.                     |
 | `addRuntime`                        | `true`  | Add `ch.ubique.uniffi:runtime` to `commonMain`. See [Dependencies](dependencies.md).                                                                |
 | `addDependencies`                   | `true`  | Add the libraries the generated code needs. See [Dependencies](dependencies.md).                                                                    |

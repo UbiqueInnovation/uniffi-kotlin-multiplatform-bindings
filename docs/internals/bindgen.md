@@ -109,9 +109,10 @@ runtime.
 
 ### The `runtime` feature
 
-With `--features runtime`, every `#[template]` points into `templates/runtime/` instead (see the
+With `--features runtime`, the Kotlin templates point into `templates/runtime/` instead (see the
 `#[cfg(feature = "runtime")]` blocks in `mod.rs`). Those templates only emit the package
-declaration and the `UniffiLib` glue for the runtime crate itself. `runtime/build.gradle.kts`
+declaration and the `UniffiLib` glue for the runtime crate itself. The headers come from the same
+templates as for any other crate. `runtime/build.gradle.kts`
 installs the bindgen with that feature to generate the FFI declarations it needs, while the
 runtime's converters and helpers are written by hand. See [Runtime](runtime.md).
 
@@ -131,6 +132,14 @@ They go into `common.h` once, rather than into each namespace header. When one m
 several namespaces (`generateBindingsForExternalCrates`), all headers end up in the same cinterop,
 and a definition that appears in two namespace headers breaks it. If UniFFI renames or adds such a
 definition, update the list.
+
+`common.h` is the same for every crate, and the runtime's cinterop klib ships it too. cinterop
+matches headers by content, so a crate's klib reuses the runtime's `RustBuffer`,
+`UniffiRustCallStatus` and builtins instead of declaring its own. Otherwise every klib declares
+`cinterop.RustBuffer` again, and linking with Kotlin 2.4.20 fails with
+`IrClassSymbolImpl is already bound`
+([#29](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/29)).
+**Keep `common.h` independent of the crate.**
 
 JVM and Android don't use the headers. They declare the same structures as JNA classes in
 `generic/android+jvm/NamespaceLibraryTemplate.kt`. A struct that changes therefore needs to change
