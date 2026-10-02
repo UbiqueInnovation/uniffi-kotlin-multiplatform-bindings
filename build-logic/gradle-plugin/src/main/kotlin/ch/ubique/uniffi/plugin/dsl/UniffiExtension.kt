@@ -158,7 +158,7 @@ sealed class BindingsGeneration {
 
 abstract class BindingsGenerationFromUdl @Inject internal constructor() : BindingsGeneration() {
     /**
-     * The UDL file. Defaults to `"${crateDirectory}/src/${crateName}.udl"`.
+     * The UDL file. Required, there is no default.
      */
     abstract val udlFile: RegularFileProperty
 }
