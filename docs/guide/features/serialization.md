@@ -43,10 +43,10 @@ default settings can be read as is.
 
 ## What gets annotated
 
-| | Annotated |
-| --- | --- |
-| Records | always, unless listed in `skip_serializer_for` |
-| Enums and their variants | unless they contain objects, or are listed in `skip_serializer_for` |
+|         | Annotated                                                          |
+| ------- | ------------------------------------------------------------------ |
+| Records | always, unless listed in `skip_serializer_for`                     |
+| Enums   | unless they contain objects or are listed in `skip_serializer_for` |
 
 A record whose fields can't be serialised, for example because it contains an object or a custom
 type mapped to a non-serialisable Kotlin class, fails to compile. Exclude it by name:
