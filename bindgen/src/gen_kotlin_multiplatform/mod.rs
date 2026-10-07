@@ -48,6 +48,21 @@ const CPP_KEYWORDS: &[&str] = &[
     "xor", "xor_eq"
 ];
 
+/// The suffix of the `RustBuffer` type for a buffer that carries another crate's type, or `None`
+/// for this crate's own buffers.
+///
+/// The typealias `RustBuffer<suffix>` is declared by `ExternalTypeTemplate.kt` and
+/// `headers/Types.h` with the raw type name, not `class_name`: `UniffiOneUDLTrait` must not become
+/// `...UdlTrait`.
+fn external_rust_buffer_suffix<'a>(
+    external: Option<&'a ffi::ExternalFfiMetadata>,
+    ci: &ComponentInterface,
+) -> Option<&'a str> {
+    external
+        .filter(|meta| meta.crate_name() != ci.crate_name())
+        .map(|meta| meta.name.as_str())
+}
+
 /// Append a `_` if the name is a c/c++ keyword.
 ///
 /// Plain helper so `KotlinCodeOracle` can call this directly; the askama filter of
@@ -733,16 +748,8 @@ impl KotlinCodeOracle {
         format!("Uniffi{}", nm.to_upper_camel_case())
     }
 
-    fn ffi_callback_name_header(&self, nm: &str) -> String {
-        format!("Uniffi{}", nm.to_upper_camel_case())
-    }
-
     /// Get the idiomatic Kotlin rendering of an FFI struct name
     fn ffi_struct_name(&self, nm: &str) -> String {
-        format!("Uniffi{}", nm.to_upper_camel_case())
-    }
-
-    fn ffi_struct_name_header(&self, nm: &str) -> String {
         format!("Uniffi{}", nm.to_upper_camel_case())
     }
 
@@ -750,20 +757,6 @@ impl KotlinCodeOracle {
         match ffi_type {
             FfiType::RustBuffer(_) => format!("{}ByValue", self.ffi_type_label(ffi_type, ci)),
             FfiType::Struct(name) => format!("{}UniffiByValue", self.ffi_struct_name(name)),
-            FfiType::Callback(name) => self.ffi_callback_name(name).to_string(),
-            _ => self.ffi_type_label(ffi_type, ci),
-        }
-    }
-
-    fn ffi_type_label_for_ffi_function(
-        &self,
-        ffi_type: &FfiType,
-        ci: &ComponentInterface,
-    ) -> String {
-        match ffi_type {
-            FfiType::RustBuffer(_) => format!("{}ByValue", self.ffi_type_label(ffi_type, ci)),
-            FfiType::Struct(name) => format!("{}UniffiByValue", self.ffi_struct_name(name)),
-            // FfiType::Callback(name) => self.ffi_callback_name(name).to_string(),
             _ => self.ffi_type_label(ffi_type, ci),
         }
     }
@@ -837,11 +830,9 @@ impl KotlinCodeOracle {
             | FfiType::UInt64
             | FfiType::Float32
             | FfiType::Float64
-            | FfiType::Handle => format!("{} *", self.ffi_type_label_header(ffi_type, ci)),
-            // JNA structs default to ByReference
-            FfiType::RustBuffer(_) | FfiType::Struct(_) => {
-                format!("{} *", self.ffi_type_label_header(ffi_type, ci))
-            }
+            | FfiType::Handle
+            | FfiType::RustBuffer(_)
+            | FfiType::Struct(_) => format!("{} *", self.ffi_type_label_header(ffi_type, ci)),
             _ => panic!("{ffi_type:?} by reference is not implemented"),
         }
     }
@@ -858,12 +849,10 @@ impl KotlinCodeOracle {
             FfiType::Float32 => "Float".to_string(),
             FfiType::Float64 => "Double".to_string(),
             FfiType::Handle => "Long".to_string(),
-            FfiType::RustBuffer(maybe_external) => match maybe_external {
-                Some(external_meta) if external_meta.crate_name() != ci.crate_name() => {
-                    format!("RustBuffer{}", external_meta.name)
-                }
-                _ => "RustBuffer".to_string(),
-            },
+            FfiType::RustBuffer(external) => format!(
+                "RustBuffer{}",
+                external_rust_buffer_suffix(external.as_ref(), ci).unwrap_or_default()
+            ),
             FfiType::RustCallStatus => "UniffiRustCallStatusByValue".to_string(),
             FfiType::ForeignBytes => "ForeignBytesByValue".to_string(),
             FfiType::Callback(name) => self.ffi_callback_name(name),
@@ -887,16 +876,14 @@ impl KotlinCodeOracle {
             FfiType::Float32 => "float".to_string(),
             FfiType::Float64 => "double".to_string(),
             FfiType::Handle => "int64_t".to_string(),
-            FfiType::RustBuffer(maybe_external) => match maybe_external {
-                Some(external_meta) if external_meta.crate_name() != ci.crate_name() => {
-                    format!("RustBuffer{}", external_meta.name)
-                }
-                _ => "RustBuffer".to_string(),
-            },
+            FfiType::RustBuffer(external) => format!(
+                "RustBuffer{}",
+                external_rust_buffer_suffix(external.as_ref(), ci).unwrap_or_default()
+            ),
             FfiType::RustCallStatus => "UniffiRustCallStatus".to_string(),
             FfiType::ForeignBytes => "ForeignBytes".to_string(),
-            FfiType::Callback(name) => self.ffi_callback_name_header(name),
-            FfiType::Struct(name) => self.ffi_struct_name_header(name),
+            FfiType::Callback(name) => self.ffi_callback_name(name),
+            FfiType::Struct(name) => self.ffi_struct_name(name),
             FfiType::Reference(inner) | FfiType::MutReference(inner) => {
                 self.ffi_type_label_by_reference_header(inner, ci)
             }
@@ -1218,15 +1205,6 @@ mod filters {
     }
 
     #[askama::filter_fn]
-    pub fn ffi_type_name_for_ffi_function(
-        type_: &FfiType,
-        _: &dyn askama::Values,
-        ci: &ComponentInterface,
-    ) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_function(type_, ci))
-    }
-
-    #[askama::filter_fn]
     pub fn ffi_type_name(
         type_: &FfiType,
         _: &dyn askama::Values,
@@ -1303,7 +1281,7 @@ mod filters {
         Ok(KotlinCodeOracle.fn_name(nm.as_ref()))
     }
 
-    /// Get the idiomatic Kotlin rendering of a variable name.
+    /// Get the idiomatic Kotlin rendering of a variable name, in backticks.
     #[askama::filter_fn]
     pub fn var_name<S: AsRef<str>>(nm: S, _: &dyn askama::Values) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.var_name(nm.as_ref()))
@@ -1318,7 +1296,7 @@ mod filters {
         Ok(as_ct.as_codetype().is_optional())
     }
 
-    /// Get the idiomatic Kotlin rendering of a variable name.
+    /// `var_name` without backticks and without escaping C/C++ keywords.
     #[askama::filter_fn]
     pub fn var_name_raw_noescape<S: AsRef<str>>(
         nm: S,
@@ -1327,7 +1305,8 @@ mod filters {
         Ok(KotlinCodeOracle.var_name_raw_noescape(nm.as_ref()))
     }
 
-    /// Get the idiomatic Kotlin rendering of a variable name.
+    /// `var_name` without backticks. C/C++ keywords get a `_` suffix, so the name matches the
+    /// field in the generated C header.
     #[askama::filter_fn]
     pub fn var_name_raw<S: AsRef<str>>(
         nm: S,
@@ -1400,21 +1379,17 @@ mod filters {
         let call = format!("UniffiLib.INSTANCE.{ffi_func}(future, continuation)");
         // May need to convert the RustBuffer from our package to the RustBuffer of the
         // external package.
-        let call = match callable.return_type() {
-            Some(return_type) => match FfiType::from(return_type) {
-                FfiType::RustBuffer(Some(external_meta))
-                    if external_meta.crate_name() != ci.crate_name() =>
-                {
-                    // Not `class_name`: the typealias this refers to is declared by
-                    // `ExternalTypeTemplate.kt` / `headers/Types.h` as `RustBuffer{name}`,
-                    // using the raw name. `UniffiOneUDLTrait` must not become `...UdlTrait`.
-                    let suffix = &external_meta.name;
-                    format!(
-                        "{call}.let {{ RustBuffer{suffix}ByValue(it.capacity, it.len, it.data) }}"
-                    )
-                }
-                _ => call,
-            },
+        let return_type = callable.return_type().map(FfiType::from);
+        let suffix = match &return_type {
+            Some(FfiType::RustBuffer(external)) => {
+                external_rust_buffer_suffix(external.as_ref(), ci)
+            }
+            _ => None,
+        };
+        let call = match suffix {
+            Some(suffix) => {
+                format!("{call}.let {{ RustBuffer{suffix}ByValue(it.capacity, it.len, it.data) }}")
+            }
             None => call,
         };
         Ok(format!("{{ future, continuation -> {call} }}"))
