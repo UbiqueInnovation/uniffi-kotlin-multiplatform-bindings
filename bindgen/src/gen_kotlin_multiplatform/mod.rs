@@ -800,16 +800,6 @@ impl KotlinCodeOracle {
         }
     }
 
-    fn callback_label_name(&self, ffi_type: &FfiType) -> String {
-        match ffi_type {
-            // Make callbacks function pointers nullable. This matches the semantics of a C
-            // function pointer better and allows for `null` as a default value.
-            // NOTE: Type any used here, as native and jvm types differ.
-            FfiType::Callback(name) => format!("{}?", self.ffi_callback_name(name)),
-            _ => "".into(),
-        }
-    }
-
     /// Default values for FFI
     ///
     /// This is used to:
@@ -1315,14 +1305,6 @@ mod filters {
     #[askama::filter_fn]
     pub fn is_pointer_type(type_: &FfiType, _: &dyn askama::Values) -> Result<bool, askama::Error> {
         Ok(matches!(type_, FfiType::VoidPointer))
-    }
-
-    #[askama::filter_fn]
-    pub fn ffi_type_name_for_ffi_callback(
-        type_: &FfiType,
-        _: &dyn askama::Values,
-    ) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.callback_label_name(type_))
     }
 
     #[askama::filter_fn]

@@ -126,7 +126,7 @@ internal object {{ trait_impl }} {
                 uniffiCallStatus,
                 {%- endif -%}
             )
-        } as cinterop.{{ ffi_callback.name()|ffi_callback_name }}
+        }.reinterpret()
         {%- endfor %}
         this.uniffiFree = staticCFunction { handle: Long ->
             {{ trait_impl }}.uniffiFree(handle)

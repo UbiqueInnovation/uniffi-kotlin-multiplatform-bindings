@@ -3,7 +3,6 @@
 @file:Suppress(
     "NAME_SHADOWING",
     "INCOMPATIBLE_MATCHING",
-    "UNCHECKED_CAST",
     "RemoveRedundantBackticks",
     "KotlinRedundantDiagnosticSuppress",
     "UnusedImport",
