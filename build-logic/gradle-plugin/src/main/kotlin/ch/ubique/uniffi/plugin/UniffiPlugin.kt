@@ -37,6 +37,7 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import java.io.File
+import java.util.concurrent.Callable
 
 @Suppress("UnstableApiUsage")
 class UniffiPlugin : Plugin<Project> {
@@ -70,6 +71,14 @@ class UniffiPlugin : Plugin<Project> {
 
         /** Where the generated def files are written, relative to the project */
         private const val CINTEROP_DEF_PATH: String = "$PREFIX/cinterop"
+
+        /** KGP task that extracts the cinterop metadata of published dependencies of `nativeMain` */
+        private const val TRANSFORM_NATIVE_MAIN_CINTEROP_METADATA: String =
+            "transformNativeMainCInteropDependenciesMetadata"
+
+        /** The runtime's cinterop klib among the outputs of that task */
+        private const val RUNTIME_CINTEROP_METADATA_PATTERN: String =
+            "**/ch.ubique.uniffi_runtime-cinterop-$CINTEROP_NAME-*.klib"
     }
 
     private lateinit var uniffiExtension: UniffiExtension
@@ -129,6 +138,7 @@ class UniffiPlugin : Plugin<Project> {
 
             val commonMain = kmpExtension.sourceSets.getByName("commonMain")
             project.configureCommonMain(commonMain, buildBindingsTask.flatMap { it.commonMainDir })
+            project.configureRuntimeCInteropCommonization(kmpExtension)
 
             kmpExtension.targets.configureEach { target ->
                 val buildTarget = BuildTarget.fromTargetName(target.name) ?: return@configureEach
@@ -526,6 +536,37 @@ class UniffiPlugin : Plugin<Project> {
                 dependencies.create("org.jetbrains.kotlinx:atomicfu:${Constants.ATOMICFU_VERSION}"),
                 dependencies.create("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Constants.COROUTINES_VERSION}"),
             )
+        }
+    }
+
+    /**
+     * Hand the published runtime's cinterop to the commonizer of every shared native source set.
+     *
+     * The crate's cinterop reuses the FFI types (`RustBuffer`, `UniffiRustCallStatus`, ...)
+     * declared by the runtime's cinterop. KGP passes the runtime's cinterop to the commonizer for
+     * leaf targets, but for shared targets it only resolves the commonized cinterops of projects
+     * in the same build. Without it, the commonizer silently drops every function using these
+     * types and the shared `nativeMain` fails to compile with unresolved references. KGP already
+     * extracts the runtime's cinterop metadata to compile `nativeMain`, so it is reused here.
+     */
+    private fun Project.configureRuntimeCInteropCommonization(
+        kmpExtension: KotlinMultiplatformExtension,
+    ) {
+        val runtimeCInteropMetadata = files(Callable {
+            if (TRANSFORM_NATIVE_MAIN_CINTEROP_METADATA in tasks.names) {
+                tasks.named(TRANSFORM_NATIVE_MAIN_CINTEROP_METADATA)
+            } else {
+                emptyList<File>()
+            }
+        }).asFileTree.matching { it.include(RUNTIME_CINTEROP_METADATA_PATTERN) }
+
+        // KGP creates a `<sourceSet>CInterop` configuration for each shared native source set,
+        // and feeds the commonizer from any one of them, so all of them need the runtime.
+        configurations.configureEach { configuration ->
+            val sourceSetName = configuration.name.removeSuffix("CInterop")
+            if (sourceSetName != configuration.name && kmpExtension.sourceSets.findByName(sourceSetName) != null) {
+                configuration.dependencies.add(dependencies.create(runtimeCInteropMetadata))
+            }
         }
     }
 

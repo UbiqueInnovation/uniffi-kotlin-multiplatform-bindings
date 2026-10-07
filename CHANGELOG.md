@@ -2,6 +2,14 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.3.0...HEAD)
 
+### Fixed
+
+- `compileNativeMainKotlinMetadata` no longer fails with unresolved references to the crate's FFI
+  functions when the runtime comes from a repository
+  ([#29](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/29)).
+  The plugin now passes the runtime's cinterop to the commonizer of shared native source sets,
+  which KGP only does for projects in the same build.
+
 ## [1.3.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.0) - 2026-10-02
 
 ### Added
