@@ -6,6 +6,9 @@
 
 - Callback interfaces use the runtime's `FfiConverterCallbackInterface` instead of declaring their
   own copy.
+- FFI callback parameters and struct fields use their callback types instead of `Any`, which
+  removes the unchecked casts in generated code and the runtime. This includes the `pollFunc` of
+  `uniffiRustCallAsync`.
 
 ### Removed
 

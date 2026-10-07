@@ -27,7 +27,7 @@ val UniffiRustFutureContinuationCallbackCallback = staticCFunction { handle: Lon
 // FFI type for Rust future continuations
 suspend fun<T, F, E: Exception> uniffiRustCallAsync(
     rustFuture: Long,
-    pollFunc: (Long, Any, Long) -> Unit,
+    pollFunc: (Long, UniffiRustFutureContinuationCallback, Long) -> Unit,
     completeFunc: (Long, UniffiRustCallStatus) -> F,
     freeFunc: (Long) -> Unit,
     cancelFunc: (Long) -> Unit,

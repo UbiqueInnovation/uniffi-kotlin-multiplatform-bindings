@@ -1,4 +1,4 @@
-@file:Suppress("UNCHECKED_CAST", "unused")
+@file:Suppress("unused")
 @file:OptIn(ExperimentalForeignApi::class)
 
 package uniffi.runtime
@@ -20,10 +20,10 @@ var UniffiForeignFutureDroppedCallbackStruct.handle: Long
         pointed.handle = value
     }
 
-var UniffiForeignFutureDroppedCallbackStruct.free: Any?
+var UniffiForeignFutureDroppedCallbackStruct.free: UniffiForeignFutureDroppedCallback?
     get() = pointed.free
     set(value) {
-        pointed.free = value as UniffiForeignFutureDroppedCallback?
+        pointed.free = value
     }
 
 fun UniffiForeignFutureDroppedCallbackStruct.uniffiSetValue(other: UniffiForeignFutureDroppedCallbackStruct) {
@@ -40,18 +40,18 @@ typealias UniffiForeignFutureDroppedCallbackStructUniffiByValue = CValue<cintero
 
 fun UniffiForeignFutureDroppedCallbackStructUniffiByValue(
     handle: Long,
-    free: Any?,
+    free: UniffiForeignFutureDroppedCallback?,
 ): UniffiForeignFutureDroppedCallbackStructUniffiByValue =
     cValue<cinterop.UniffiForeignFutureDroppedCallbackStruct> {
         this.handle = handle
 
-        this.free = free as UniffiForeignFutureDroppedCallback?
+        this.free = free
     }
 
 val UniffiForeignFutureDroppedCallbackStructUniffiByValue.handle: Long
     get() = useContents { handle }
 
-val UniffiForeignFutureDroppedCallbackStructUniffiByValue.free: Any?
+val UniffiForeignFutureDroppedCallbackStructUniffiByValue.free: UniffiForeignFutureDroppedCallback?
     get() = useContents { free }
 
 typealias UniffiForeignFutureResultU8 = CPointer<cinterop.UniffiForeignFutureResultU8>

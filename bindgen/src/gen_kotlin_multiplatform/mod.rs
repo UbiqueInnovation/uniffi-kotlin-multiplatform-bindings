@@ -776,25 +776,6 @@ impl KotlinCodeOracle {
         match ffi_type {
             // Make callbacks function pointers nullable. This matches the semantics of a C
             // function pointer better and allows for `null` as a default value.
-            // NOTE: Type any used here, as native and jvm types differ.
-            FfiType::Callback(_name) => "Any?".into(), // format!("{}?", self.ffi_callback_name(name)),
-            _ => self.ffi_type_label_by_value(ffi_type, ci),
-        }
-    }
-
-    /// FFI type name to use inside structs
-    ///
-    /// The main requirement here is that all types must have default values or else the struct
-    /// won't work in some JNA contexts.
-    fn ffi_type_label_for_ffi_struct_inner(
-        &self,
-        ffi_type: &FfiType,
-        ci: &ComponentInterface,
-    ) -> String {
-        match ffi_type {
-            // Make callbacks function pointers nullable. This matches the semantics of a C
-            // function pointer better and allows for `null` as a default value.
-            // NOTE: Type any used here, as native and jvm types differ.
             FfiType::Callback(name) => format!("{}?", self.ffi_callback_name(name)),
             _ => self.ffi_type_label_by_value(ffi_type, ci),
         }
@@ -885,7 +866,7 @@ impl KotlinCodeOracle {
             },
             FfiType::RustCallStatus => "UniffiRustCallStatusByValue".to_string(),
             FfiType::ForeignBytes => "ForeignBytesByValue".to_string(),
-            FfiType::Callback(_) => "Any".to_string(),
+            FfiType::Callback(name) => self.ffi_callback_name(name),
             FfiType::Struct(name) => self.ffi_struct_name(name),
             FfiType::Reference(inner) | FfiType::MutReference(inner) => {
                 self.ffi_type_label_by_reference(inner, ci)
@@ -1285,15 +1266,6 @@ mod filters {
         ci: &ComponentInterface,
     ) -> Result<String, askama::Error> {
         Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct(type_, ci))
-    }
-
-    #[askama::filter_fn]
-    pub fn ffi_type_name_for_ffi_struct_inner(
-        type_: &FfiType,
-        _: &dyn askama::Values,
-        ci: &ComponentInterface,
-    ) -> Result<String, askama::Error> {
-        Ok(KotlinCodeOracle.ffi_type_label_for_ffi_struct_inner(type_, ci))
     }
 
     /// Whether the Kotlin/Native mapping of this FFI type is a raw cinterop pointer

@@ -27,7 +27,7 @@ internal open class {{ ffi_struct.name()|ffi_struct_name }}Struct(
     {%- endfor %}
 ) : com.sun.jna.Structure() {
     {% for field in ffi_struct.fields() %}
-    @JvmField internal var {{ field.name()|var_name }}: {{ (field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci)) }} = {% if field.type_().borrow()|is_callback %}{{ field.name()|var_name }} as {{ field.type_().borrow()|ffi_type_name_for_ffi_struct_inner(ci) }}{% else %}{{ field.name()|var_name }}{% endif %}
+    @JvmField internal var {{ field.name()|var_name }}: {{ field.type_().borrow()|ffi_type_name_for_ffi_struct(ci) }} = {{ field.name()|var_name }}
     {% endfor %}
 
     constructor(): this(

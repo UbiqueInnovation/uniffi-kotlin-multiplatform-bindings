@@ -28,7 +28,7 @@ internal var {{ ffi_struct.name()|ffi_struct_name }}.{{ field.name()|var_name }}
         {%- if field.type_().borrow()|is_pointer_type -%}
         pointed.{{ field.name()|var_name }} = value?.inner
         {%- else if field.type_().borrow()|is_callback -%}
-        pointed.{{ field.name()|var_name }} = (value as CPointer<*>?)?.reinterpret()
+        pointed.{{ field.name()|var_name }} = value
         {%- else -%}
         pointed.{{ field.name()|var_name }} = value
         {%- endif -%}
@@ -64,7 +64,7 @@ fun {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue(
         {%- if field.type_().borrow()|is_pointer_type -%}
         this.{{ field.name()|var_name }} = {{ field.name()|var_name }}?.inner
         {%- else if field.type_().borrow()|is_callback -%}
-        this.{{ field.name()|var_name }} = ({{ field.name()|var_name }} as CPointer<*>?)?.reinterpret()
+        this.{{ field.name()|var_name }} = {{ field.name()|var_name }}
         {%- else -%}
         this.{{ field.name()|var_name }} = {{ field.name()|var_name }}
         {%- endif -%}
