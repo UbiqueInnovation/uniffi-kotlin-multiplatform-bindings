@@ -1,11 +1,5 @@
 package uniffi.runtime
 
-const val IDX_CALLBACK_FREE = 0
-// Callback return codes
-const val UNIFFI_CALLBACK_SUCCESS = 0
-const val UNIFFI_CALLBACK_ERROR = 1
-const val UNIFFI_CALLBACK_UNEXPECTED_ERROR = 2
-
 abstract class FfiConverterCallbackInterface<CallbackInterface: Any>:
     FfiConverter<CallbackInterface, Long> {
     val handleMap = UniffiHandleMap<CallbackInterface>()

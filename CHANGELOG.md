@@ -2,6 +2,16 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.3.1...HEAD)
 
+### Changed
+
+- Callback interfaces use the runtime's `FfiConverterCallbackInterface` instead of declaring their
+  own copy.
+
+### Removed
+
+- The unused runtime constants `IDX_CALLBACK_FREE`, `UNIFFI_CALLBACK_SUCCESS`,
+  `UNIFFI_CALLBACK_ERROR` and `UNIFFI_CALLBACK_UNEXPECTED_ERROR`.
+
 ## [1.3.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.1) - 2026-10-07
 
 ### Fixed
