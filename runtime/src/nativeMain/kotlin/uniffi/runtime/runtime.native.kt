@@ -16,8 +16,6 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.write
 
-actual fun foo() = "Native"
-
 //////// POINTER ////////
 typealias GenericPointer = CPointer<out CPointed>
 actual class Pointer (val inner: GenericPointer) {
