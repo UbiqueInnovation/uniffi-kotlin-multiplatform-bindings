@@ -8,10 +8,10 @@ import com.sun.jna.Structure
 @Structure.FieldOrder("handle", "free")
 open class UniffiForeignFutureDroppedCallbackStructStruct(
     handle: Long,
-    free: Any?,
+    free: UniffiForeignFutureDroppedCallback?,
 ) : Structure() {
     @JvmField var handle: Long = handle
-    @JvmField var free: UniffiForeignFutureDroppedCallback? = free as UniffiForeignFutureDroppedCallback?
+    @JvmField var free: UniffiForeignFutureDroppedCallback? = free
 
     constructor() : this(
         handle = 0.toLong(),
@@ -20,23 +20,11 @@ open class UniffiForeignFutureDroppedCallbackStructStruct(
 
     class UniffiByValue(
         handle: Long,
-        free: Any?,
+        free: UniffiForeignFutureDroppedCallback?,
     ) : UniffiForeignFutureDroppedCallbackStruct(handle, free), ByValue
 }
 
 typealias UniffiForeignFutureDroppedCallbackStruct = UniffiForeignFutureDroppedCallbackStructStruct
-
-var UniffiForeignFutureDroppedCallbackStruct.handle: Long
-    get() = this.handle
-    set(value) {
-        this.handle = value
-    }
-
-var UniffiForeignFutureDroppedCallbackStruct.free: Any?
-    get() = this.free
-    set(value) {
-        this.free = value as UniffiForeignFutureDroppedCallback?
-    }
 
 fun UniffiForeignFutureDroppedCallbackStruct.uniffiSetValue(other: UniffiForeignFutureDroppedCallbackStruct) {
     handle = other.handle
@@ -49,12 +37,6 @@ fun UniffiForeignFutureDroppedCallbackStruct.uniffiSetValue(other: UniffiForeign
 }
 
 typealias UniffiForeignFutureDroppedCallbackStructUniffiByValue = UniffiForeignFutureDroppedCallbackStructStruct.UniffiByValue
-
-val UniffiForeignFutureDroppedCallbackStructUniffiByValue.handle: Long
-    get() = this.handle
-
-val UniffiForeignFutureDroppedCallbackStructUniffiByValue.free: Any?
-    get() = this.free
 
 @Structure.FieldOrder("returnValue", "callStatus")
 open class UniffiForeignFutureResultU8Struct(

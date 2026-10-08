@@ -4,7 +4,7 @@ interface FfiConverter<KotlinType, FfiType> {
     // Convert an FFI type to a Kotlin type
     fun lift(value: FfiType): KotlinType
 
-    // Convert an Kotlin type to an FFI type
+    // Convert a Kotlin type to an FFI type
     fun lower(value: KotlinType): FfiType
 
     // Read a Kotlin type from a `ByteBuffer`

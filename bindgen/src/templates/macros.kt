@@ -236,7 +236,7 @@
 
 {%- macro arg_list_ffi_decl_for_ffi_function(func) %}
     {%- for arg in func.arguments() %}
-        {{- arg.name()|var_name }}: {{ arg.type_().borrow()|ffi_type_name_for_ffi_function(ci) -}},
+        {{- arg.name()|var_name }}: {{ arg.type_().borrow()|ffi_type_name_by_value(ci) -}},
     {%- endfor %}
     {%- if func.has_rust_call_status_arg() %}uniffiCallStatus: UniffiRustCallStatus, {% endif %}
 {%- endmacro -%}
@@ -244,7 +244,7 @@
 {%- macro arg_list_ffi_call(func) %}
     {%- for arg in func.arguments() %}
         {%- if arg.type_().borrow()|is_callback -%}
-        {{ arg.name()|var_name }} as cinterop.{{ arg.type_().borrow()|ffi_type_name_for_ffi_callback }}
+        {{ arg.name()|var_name }}
         {%- else if arg.type_().borrow()|is_rustbuffer -%}
         {{- arg.name()|var_name }}
         {%- else if arg.type_().borrow()|is_foreignbytes -%}

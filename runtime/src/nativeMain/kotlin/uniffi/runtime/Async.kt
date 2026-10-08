@@ -27,7 +27,7 @@ val UniffiRustFutureContinuationCallbackCallback = staticCFunction { handle: Lon
 // FFI type for Rust future continuations
 suspend fun<T, F, E: Exception> uniffiRustCallAsync(
     rustFuture: Long,
-    pollFunc: (Long, Any, Long) -> Unit,
+    pollFunc: (Long, UniffiRustFutureContinuationCallback, Long) -> Unit,
     completeFunc: (Long, UniffiRustCallStatus) -> F,
     freeFunc: (Long) -> Unit,
     cancelFunc: (Long) -> Unit,
@@ -75,7 +75,7 @@ inline fun<T> uniffiTraitInterfaceCallAsync(
     // However, our parent task is a Rust future, so we're going to need to break structure concurrency in any case.
     //
     // Uniffi does its best to support structured concurrency across the FFI.
-    // If the Rust future is dropped, `uniffiForeignFutureFreeImpl` is called, which will cancel the Kotlin coroutine if it's still running.
+    // If the Rust future is dropped, `UniffiForeignFutureDroppedCallbackImpl` is called, which will cancel the Kotlin coroutine if it's still running.
     @OptIn(DelicateCoroutinesApi::class)
     val job = GlobalScope.launch {
         try {

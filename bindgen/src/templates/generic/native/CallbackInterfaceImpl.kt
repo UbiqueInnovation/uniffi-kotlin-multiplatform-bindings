@@ -1,4 +1,3 @@
-{% if self.include_once_check("generic/ffi/CallbackInterfaceRuntime.kt") %}{% include "generic/ffi/CallbackInterfaceRuntime.kt" %}{% endif %}
 {{ self.add_import("kotlinx.cinterop.invoke") }}
 
 {%- let trait_impl=format!("uniffiCallbackInterface{}", name) %}
@@ -127,7 +126,7 @@ internal object {{ trait_impl }} {
                 uniffiCallStatus,
                 {%- endif -%}
             )
-        } as cinterop.{{ ffi_callback.name()|ffi_callback_name }}
+        }.reinterpret()
         {%- endfor %}
         this.uniffiFree = staticCFunction { handle: Long ->
             {{ trait_impl }}.uniffiFree(handle)

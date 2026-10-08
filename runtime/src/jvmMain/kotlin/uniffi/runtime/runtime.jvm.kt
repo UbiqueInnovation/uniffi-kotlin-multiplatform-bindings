@@ -5,8 +5,6 @@ package uniffi.runtime
 import com.sun.jna.Callback
 import com.sun.jna.Structure
 
-actual fun foo() = "JVM"
-
 //////// POINTER ////////
 actual typealias Pointer = com.sun.jna.Pointer
 actual val NullPointer: Pointer? = com.sun.jna.Pointer.NULL

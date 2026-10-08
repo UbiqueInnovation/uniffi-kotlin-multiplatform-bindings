@@ -2,6 +2,22 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.3.1...HEAD)
 
+### Changed
+
+- Callback interfaces use the runtime's `FfiConverterCallbackInterface` instead of declaring their
+  own copy.
+- FFI callback parameters and struct fields use their callback types instead of `Any`, which
+  removes the unchecked casts in generated code and the runtime. This includes the `pollFunc` of
+  `uniffiRustCallAsync`.
+
+### Removed
+
+- The unused runtime constants `IDX_CALLBACK_FREE`, `UNIFFI_CALLBACK_SUCCESS`,
+  `UNIFFI_CALLBACK_ERROR` and `UNIFFI_CALLBACK_UNEXPECTED_ERROR`.
+- The runtime's unused `Disposable`, `use` and `NoHandle`. Generated bindings declare their own,
+  and star-importing both packages made these references ambiguous.
+- The placeholder `foo()` from the runtime.
+
 ## [1.3.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.1) - 2026-10-07
 
 ### Fixed
