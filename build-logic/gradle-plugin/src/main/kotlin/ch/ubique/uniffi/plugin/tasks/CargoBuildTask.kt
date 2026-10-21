@@ -81,6 +81,40 @@ abstract class CargoBuildTask : DefaultTask() {
     @get:Optional
     abstract val crateTypes: SetProperty<CrateType>
 
+    /** The crate types declared in the package's `[lib] crate-type`, as reported by `cargo metadata`. */
+    @get:Input
+    @get:Optional
+    abstract val declaredCrateTypes: SetProperty<CrateType>
+
+    /**
+     * The `--crate-type` override passed to cargo, or null if the declared crate types already
+     * cover [crateTypes].
+     *
+     * Cargo fingerprints a `cdylib` package in a single slot per target, whether it is built as
+     * the root of `cargo rustc --crate-type ...` or as the dependency of another package. With a
+     * shared target directory, a workspace whose libraries depend on each other then rebuilds
+     * every library below the root on each invocation, as the two configurations keep replacing
+     * each other's fingerprint. Without the override the root is built exactly like a
+     * dependency, so an unchanged workspace stays fresh.
+     */
+    @get:Internal
+    val crateTypeOverride: Provider<String>
+        get() = crateTypes.zip(declaredCrateTypes.orElse(emptySet())) { requested, declared ->
+            requested.takeUnless { it.isEmpty() || declared.containsAll(it) }
+                ?.sortedBy { it.toString() }
+                ?.joinToString(",")
+                ?: ""
+        }.filter { it.isNotEmpty() }
+
+    /**
+     * The workspace packages to build alongside [packageName], see
+     * [ch.ubique.uniffi.plugin.dsl.CargoExtension.buildWorkspaceLibraries]. Empty builds only
+     * [packageName].
+     */
+    @get:Input
+    @get:Optional
+    abstract val workspacePackageNames: SetProperty<String>
+
     /** Optional rustc wrapper, for example `sccache`. */
     @get:Input
     @get:Optional
@@ -134,25 +168,54 @@ abstract class CargoBuildTask : DefaultTask() {
             }
     ) { directory, library -> directory.file(library) }
 
+    /** The packages built together, or just [packageName] if they are built one by one. */
+    private fun packagesToBuild(override: String?): List<String> {
+        val workspacePackages = workspacePackageNames.getOrElse(emptySet())
+        if (workspacePackages.isEmpty()) return listOf(packageName.get())
+        if (override != null) {
+            // `cargo rustc` only takes the crate type override for a single package.
+            logger.warn(
+                "${packageName.get()} needs crate-type $override, so it is built without the " +
+                    "other workspace libraries."
+            )
+            return listOf(packageName.get())
+        }
+        return (workspacePackages + packageName.get()).sorted()
+    }
+
     @TaskAction
     fun build() {
+        val override = crateTypeOverride.orNull
+        val packages = packagesToBuild(override)
         CargoRunner(execOperations, logger, useCross = useCross.get()) {
-            argument("rustc")
+            // Without the override there are no rustc arguments, and `cargo build` builds
+            // exactly what `cargo rustc` would, but for any number of packages.
+            argument(if (packages.size > 1) "build" else "rustc")
             argument("--lib")
             if (rustTarget.isPresent) {
                 argument("--target")
                 argument(rustTarget.get().rustTriple)
             }
-            argument("--package")
-            argument(packageName.get())
+            packages.forEach {
+                argument("--package")
+                argument(it)
+            }
 
             if (release.get()) {
                 argument("--release")
             }
 
-            if (crateTypes.isPresent && crateTypes.get().isNotEmpty()) {
+            override?.let { override ->
+                if (declaredCrateTypes.getOrElse(emptySet()).any(CrateType::isDynamic)) {
+                    logger.warn(
+                        "${packageName.get()} declares crate-type " +
+                            "${declaredCrateTypes.get().sorted()} without $override. Cargo may " +
+                            "rebuild it and its dependents on every invocation; add $override to " +
+                            "[lib] crate-type in its Cargo.toml."
+                    )
+                }
                 argument("--crate-type")
-                argument(crateTypes.get().sortedBy { it.toString() }.joinToString(","))
+                argument(override)
             }
 
             workdir(packageDirectory.asFile.get())

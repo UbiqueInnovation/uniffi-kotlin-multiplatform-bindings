@@ -10,6 +10,7 @@ data class CargoMetadata(
     @SerialName("packages") val packages: List<Package>,
     @SerialName("target_directory") val targetDirectory: String,
     @SerialName("workspace_root") val workspaceRoot: String,
+    @SerialName("workspace_members") val workspaceMembers: List<String> = emptyList(),
 ) {
     @Serializable
     data class Package(

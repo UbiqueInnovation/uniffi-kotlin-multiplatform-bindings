@@ -19,6 +19,7 @@ import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
 import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
 import ch.ubique.uniffi.plugin.utils.BindgenSource
 import ch.ubique.uniffi.plugin.utils.targetPackage
+import ch.ubique.uniffi.plugin.utils.workspaceForeignLibraryPackages
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -108,6 +109,8 @@ class UniffiPlugin : Plugin<Project> {
         val cargoInfo = CargoInfo(
             packageName = targetPackage.map { it.name },
             libraryName = targetPackage.map { it.targets.first().name },
+            declaredCrateTypes = targetPackage.map { it.targets.first().crateTypes },
+            workspaceLibraryPackages = metadata.map { it.workspaceForeignLibraryPackages() },
             targetDirectory = cargoExtension.targetDirectory.orElse(
                 project.layout.dir(metadata.map { File(it.targetDirectory) })
             ),
@@ -387,6 +390,12 @@ class UniffiPlugin : Plugin<Project> {
         task.libraryName.set(cargoInfo.libraryName)
         task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
         task.crateTypes.add(crateType)
+        task.declaredCrateTypes.set(cargoInfo.declaredCrateTypes)
+        task.workspacePackageNames.set(
+            cargoExtension.buildWorkspaceLibraries.flatMap { enabled ->
+                if (enabled) cargoInfo.workspaceLibraryPackages else project.provider { emptyList() }
+            }
+        )
         task.rustcWrapper.set(cargoExtension.rustcWrapper)
         task.rustcWorkspaceWrapper.set(cargoExtension.rustcWorkspaceWrapper)
 

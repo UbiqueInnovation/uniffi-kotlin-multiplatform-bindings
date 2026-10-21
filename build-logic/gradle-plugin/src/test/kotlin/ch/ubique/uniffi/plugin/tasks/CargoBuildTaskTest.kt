@@ -8,6 +8,7 @@ import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
@@ -65,6 +66,36 @@ class CargoBuildTaskTest {
         assertEquals(TaskOutcome.SUCCESS, second.task(":testCargoBuild")?.outcome)
         assertEquals(TaskOutcome.UP_TO_DATE, second.task(":testBindings")?.outcome)
         assertEquals(2, root.resolve("target/invocations").toFile().readLines().size)
+    }
+
+    @Test
+    fun `crate type override is only passed when the declared crate types lack it`() {
+        val project = ProjectBuilder.builder()
+            .withProjectDir(createTempDirectory("uniffi-cargo-crate-types").toFile())
+            .build()
+        fun override(requested: Set<CrateType>, declared: Set<CrateType>?): String? {
+            val task = project.tasks.register(
+                "cargoBuild${project.tasks.size}",
+                CargoBuildTask::class.java,
+            ).get()
+            task.crateTypes.set(requested)
+            declared?.let { task.declaredCrateTypes.set(it) }
+            return task.crateTypeOverride.orNull
+        }
+
+        val all = setOf(CrateType.SystemDynamicLibrary, CrateType.SystemStaticLibrary, CrateType.Library)
+        assertNull(override(setOf(CrateType.SystemDynamicLibrary), all))
+        assertNull(override(setOf(CrateType.SystemStaticLibrary), all))
+        assertNull(override(emptySet(), setOf(CrateType.Library)))
+        assertEquals("cdylib", override(setOf(CrateType.SystemDynamicLibrary), setOf(CrateType.Library)))
+        assertEquals("cdylib", override(setOf(CrateType.SystemDynamicLibrary), null))
+        assertEquals(
+            "cdylib,staticlib",
+            override(
+                setOf(CrateType.SystemStaticLibrary, CrateType.SystemDynamicLibrary),
+                setOf(CrateType.SystemDynamicLibrary),
+            ),
+        )
     }
 
     @Test

@@ -29,6 +29,22 @@ abstract class CargoExtension(project: Project) {
      */
     val targetDirectory: DirectoryProperty = project.objects.directoryProperty()
 
+    /**
+     * Build every library of the Cargo workspace that declares a `cdylib` or `staticlib` in
+     * each Cargo invocation, instead of only this package.
+     *
+     * Cargo resolves features per invocation, so workspace libraries that depend on each other
+     * see different feature sets of their shared dependencies depending on which package is
+     * built. A library declaring a `cdylib` keeps a single build per target, so it is rebuilt
+     * whenever the previous invocation built another package. Building the same set of packages
+     * every time resolves features once for all of them: the first invocation builds, the
+     * following ones find everything fresh.
+     *
+     * Enable it in every project of the workspace, e.g. from a `subprojects` block.
+     */
+    val buildWorkspaceLibraries: Property<Boolean> =
+        project.objects.property(Boolean::class.java).convention(false)
+
     /** Optional compiler wrapper, such as `sccache`. */
     val rustcWrapper: Property<String> = project.objects.property(String::class.java).apply {
         convention(project.providers.environmentVariable("RUSTC_WRAPPER"))

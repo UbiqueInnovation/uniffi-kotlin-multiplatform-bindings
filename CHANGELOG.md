@@ -2,6 +2,20 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.3.2...HEAD)
 
+### Added
+
+- `cargo { buildWorkspaceLibraries = true }` builds every workspace library declaring a `cdylib` or
+  `staticlib` in each Cargo invocation. Cargo then resolves the same features for all of them, so
+  workspaces whose libraries depend on each other stay fresh between builds instead of rebuilding
+  them for each Gradle project.
+
+### Fixed
+
+- Cargo no longer rebuilds an unchanged workspace on every build when its libraries depend on
+  each other and declare a `cdylib`. The Cargo tasks only pass `--crate-type` if the package's
+  `[lib] crate-type` lacks a required crate type, and warn when that override makes Cargo
+  rebuild dependents.
+
 ## [1.3.2](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.2) - 2026-10-09
 
 ### Changed
