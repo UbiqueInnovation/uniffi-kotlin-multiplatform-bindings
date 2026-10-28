@@ -115,6 +115,22 @@ abstract class CargoBuildTask : DefaultTask() {
     @get:Optional
     abstract val workspacePackageNames: SetProperty<String>
 
+    /** Cargo features to enable, passed as `--features`. */
+    @get:Input
+    abstract val features: SetProperty<String>
+
+    /**
+     * The [features] that apply when [packageName] is built on its own: blank names and names
+     * qualified with another of the [workspacePackageNames] are left out. Names qualified with a
+     * dependency stay. The def file probe uses these as well.
+     */
+    @get:Internal
+    val packageFeatures: Provider<List<String>>
+        get() = features.map { features ->
+            val otherMembers = workspacePackageNames.getOrElse(emptySet()) - packageName.get()
+            features.filter { it.isNotBlank() && it.substringBefore('/', "") !in otherMembers }.sorted()
+        }
+
     /** Optional rustc wrapper, for example `sccache`. */
     @get:Input
     @get:Optional
@@ -183,6 +199,17 @@ abstract class CargoBuildTask : DefaultTask() {
         return (workspacePackages + packageName.get()).sorted()
     }
 
+    /**
+     * The `--features` value, or null without features. Built together with other packages, bare
+     * names are qualified with [packageName]; built alone, the package gets its [packageFeatures].
+     */
+    private fun featureArgument(packages: List<String>): String? {
+        val enabled = if (packages.size == 1) packageFeatures.get() else features.get()
+            .filter { it.isNotBlank() }
+            .map { if ('/' in it) it else "${packageName.get()}/$it" }
+        return enabled.sorted().joinToString(",").ifEmpty { null }
+    }
+
     @TaskAction
     fun build() {
         val override = crateTypeOverride.orNull
@@ -216,6 +243,11 @@ abstract class CargoBuildTask : DefaultTask() {
                 }
                 argument("--crate-type")
                 argument(override)
+            }
+
+            featureArgument(packages)?.let { features ->
+                argument("--features")
+                argument(features)
             }
 
             workdir(packageDirectory.asFile.get())

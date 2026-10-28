@@ -399,8 +399,11 @@ class UniffiPlugin : Plugin<Project> {
         task.rustcWrapper.set(cargoExtension.rustcWrapper)
         task.rustcWorkspaceWrapper.set(cargoExtension.rustcWorkspaceWrapper)
 
-        val useCross = cargoExtension.compilations.getByName(rustTarget.name).useCross
+        val config = cargoExtension.compilations.getByName(rustTarget.name)
+        val useCross = config.useCross
         task.useCross.set(useCross)
+        task.features.addAll(cargoExtension.features)
+        task.features.addAll(config.features)
 
         // An android rust target can only be requested once the android plugin created the
         // android build target, so touching AndroidSupport - and with it AGP - is safe here.
@@ -507,6 +510,8 @@ class UniffiPlugin : Plugin<Project> {
             // The probe must use the same crate-type set as the shared Cargo build. Otherwise it
             // can overwrite the static library produced by that build and invalidate it again.
             task.crateTypes.set(cargoBuild.flatMap { it.crateTypes })
+            // Same for the features that apply to this package, the only one the probe builds.
+            task.features.set(cargoBuild.flatMap { it.packageFeatures })
             // Carries the dependency on the bindings.
             task.headersDir.set(headersDir)
             task.useCross.set(config.useCross)

@@ -57,6 +57,10 @@ abstract class GenerateDefFileTask : DefaultTask() {
     @get:Optional
     abstract val crateTypes: SetProperty<CrateType>
 
+    /** The features the shared Cargo build enables for this package and target. */
+    @get:Input
+    abstract val features: SetProperty<String>
+
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.ABSOLUTE)
     abstract val headersDir: DirectoryProperty
@@ -131,6 +135,10 @@ abstract class GenerateDefFileTask : DefaultTask() {
                     .sortedBy { it.toString() }
                     .joinToString(",")
             )
+            if (features.get().isNotEmpty()) {
+                argument("--features")
+                argument(features.get().sorted().joinToString(","))
+            }
             argument("--")
             argument("--print")
             argument("native-static-libs")
