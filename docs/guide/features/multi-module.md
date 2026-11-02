@@ -96,6 +96,9 @@ which they usually do.
 
 Each module needs its own `package_name`.
 
+If Cargo recompiles the shared crate on every build, see
+[Build performance](../configuration/build-performance.md#workspaces-with-dependent-libraries).
+
 ### Using it
 
 ```kotlin
