@@ -29,6 +29,11 @@ example because `rustup` is not available, install the target yourself.
 features): Kotlin/Native's bundled linker is older than your Rust toolchain. Use
 [`useRustUpLinker()`](targets.md#linking-with-rusts-linker) for the affected compilation.
 
+**Cargo recompiles unchanged crates on every build**, or warns that a crate
+`declares crate-type [...] without ...` or `is built without the other workspace libraries`: add
+the missing crate types to its `Cargo.toml`. See
+[Build performance](configuration/build-performance.md#workspaces-with-dependent-libraries).
+
 **Unresolved references to `cinterop.*` in the generated `nativeMain` code**: cinterop
 commonization is off, or the IDE hasn't run a sync since it was turned on.
 

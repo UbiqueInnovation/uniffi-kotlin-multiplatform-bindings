@@ -53,15 +53,25 @@ Gradle infers them. The only explicit `dependsOn` is `prepareKotlinIdeaImport` â
 `CargoBuildTask` runs
 
 ```
-cargo rustc --lib [--target <triple>] --package <name> [--release] --crate-type <types>
+cargo rustc --lib [--target <triple>] --package <name> [--release] [--crate-type <types>]
 ```
 
 with `CARGO_TARGET_DIR` set. Some details:
 
 - **One task per Rust target and profile.** `registerCargoBuildTask` uses `maybeRegister`: if two
   Kotlin targets need the same Rust target (the host build for bindings and the JVM debug build),
-  the second request reuses the task and adds its crate type. `--crate-type` makes Cargo build
-  only what is needed, regardless of `Cargo.toml`.
+  the second request reuses the task and adds its crate type.
+- **`--crate-type` only when needed.** It is passed only if the package's `[lib] crate-type` lacks
+  a requested type (`crateTypeOverride`). Cargo keeps a single fingerprint per target for a
+  package declaring a `cdylib`, whether it is built as the root of `cargo rustc --crate-type` or
+  as a dependency. With the override, the two configurations keep replacing each other, and the
+  package and its dependents are rebuilt on every call. The task warns when it passes the override
+  to a package declaring a dynamic crate type.
+- **Workspace builds.** With `buildWorkspaceLibraries`, the task runs `cargo build` with a
+  `--package` for every workspace member declaring a `cdylib` or `staticlib`
+  (`workspaceForeignLibraryPackages`), so Cargo resolves features identically in every call.
+  Without the override, `cargo build` builds exactly what `cargo rustc` would. A package that needs
+  the override is built alone, because `cargo rustc` only takes it for a single package.
 - **Outputs in Cargo's own target directory.** Library paths are derived from Cargo's layout
   (`<target-dir>/<triple>/<profile>/`), not copied, so Cargo's incremental cache is shared
   between Gradle modules and with plain `cargo` invocations.
