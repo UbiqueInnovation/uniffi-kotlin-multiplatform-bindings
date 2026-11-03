@@ -214,6 +214,15 @@ abstract class CargoBuildTask : DefaultTask() {
     fun build() {
         val override = crateTypeOverride.orNull
         val packages = packagesToBuild(override)
+        val otherMembers = workspacePackageNames.getOrElse(emptySet()) - packageName.get()
+        if (otherMembers.isNotEmpty() && features.get().any { it.isNotBlank() }) {
+            logger.warn(
+                "${packageName.get()} enables Cargo features with buildWorkspaceLibraries. All " +
+                    "modules building this workspace must enable the same features, qualified with " +
+                    "their package (<package>/<feature>), or they rebuild each other's libraries " +
+                    "without them."
+            )
+        }
         CargoRunner(execOperations, logger, useCross = useCross.get()) {
             // Without the override there are no rustc arguments, and `cargo build` builds
             // exactly what `cargo rustc` would, but for any number of packages.
