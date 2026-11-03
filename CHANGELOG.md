@@ -15,6 +15,11 @@
   each other and declare a `cdylib`. The Cargo tasks only pass `--crate-type` if the package's
   `[lib] crate-type` lacks a required crate type, and warn when that override makes Cargo
   rebuild dependents.
+- Builds no longer fail when the Gradle project lives inside the crate directory
+  ([#42](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/42)).
+  `cargoBuild` and `buildBindings` took the whole crate directory as input, which then included
+  other tasks' outputs. `buildBindings` now only tracks `uniffi.toml` next to the library or UDL
+  file, and `cargoBuild` leaves change detection to Cargo.
 
 ## [1.3.2](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.2) - 2026-10-09
 
