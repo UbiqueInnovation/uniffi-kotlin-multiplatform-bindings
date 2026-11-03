@@ -7,7 +7,6 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.FileTree
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.MapProperty
@@ -37,15 +36,6 @@ abstract class CargoBuildTask : DefaultTask() {
     @get:Input
     val packageDirectoryPath: String
         get() = packageDirectory.get().asFile.absolutePath
-
-    @get:InputFiles
-    @get:PathSensitive(PathSensitivity.ABSOLUTE)
-    val rustSources: FileTree
-        get() = packageDirectory.get().asFileTree.matching { pattern ->
-            pattern.exclude("build")
-            pattern.include("**/*.rs")
-            pattern.include("Cargo.toml", "Cargo.lock")
-        }
 
     /**
      * The rust target to build for.

@@ -6,9 +6,10 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemOperations
-import org.gradle.api.file.FileTree
+import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
@@ -28,15 +29,17 @@ abstract class BuildBindingsTask : DefaultTask() {
     @get:Internal
     abstract val packageDirectory: DirectoryProperty
 
+    /**
+     * The crate's bindgen config. The Rust code reaches the bindings through [libraryFile] or
+     * [udlFile] instead, so the crate directory itself is not an input: it may contain other
+     * tasks' outputs, for example when the Gradle project lives inside it.
+     *
+     * [InputFiles] rather than [InputFile], as the config is optional.
+     */
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.ABSOLUTE)
-    val rustSources: FileTree
-        get() = packageDirectory.get().asFileTree.matching { pattern ->
-            pattern.exclude("build")
-            pattern.include("**/*.rs")
-            pattern.include("Cargo.toml", "Cargo.lock")
-            pattern.include("uniffi.toml")
-        }
+    val uniffiConfig: Provider<RegularFile>
+        get() = packageDirectory.file("uniffi.toml")
 
     /**
      * The executable itself is shared by sibling projects and therefore is not declared as a

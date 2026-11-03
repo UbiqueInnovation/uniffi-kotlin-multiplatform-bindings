@@ -120,10 +120,11 @@ uniffi-bindgen-kotlin-multiplatform --library <host cdylib> --out-dir build/unif
 
 or passes the UDL file instead of `--library`. `--crate` limits generation to the module's own crate,
 and is left out when `generateBindingsForExternalCrates` is on. `--package-name` is passed when
-`packageName` is set in the DSL. Its inputs are all `*.rs` files,
-`Cargo.toml`, `Cargo.lock` and `uniffi.toml` in the package directory, the host library and the
-bindgen marker. The five output directories are separate `@OutputDirectory` properties so that
-each source set can depend on exactly one of them.
+`packageName` is set in the DSL. Its inputs are the host library or UDL file, `uniffi.toml` in the
+package directory and the bindgen marker. The package directory itself is not an input, because it
+may contain other tasks' outputs, for example when the Gradle project lives inside the crate. The
+Rust sources reach the task through the library. The five output directories are separate
+`@OutputDirectory` properties so that each source set can depend on exactly one of them.
 
 ### Native targets
 
