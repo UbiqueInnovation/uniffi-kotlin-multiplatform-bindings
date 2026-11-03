@@ -123,8 +123,8 @@ and is left out when `generateBindingsForExternalCrates` is on. `--package-name`
 `packageName` is set in the DSL. Its inputs are the host library or UDL file, `uniffi.toml` in the
 package directory and the bindgen marker. The package directory itself is not an input, because it
 may contain other tasks' outputs, for example when the Gradle project lives inside the crate. The
-Rust sources reach the task through the library. The five output directories are separate `@OutputDirectory` properties so that
-each source set can depend on exactly one of them.
+Rust sources reach the task through the library. The five output directories are separate
+`@OutputDirectory` properties so that each source set can depend on exactly one of them.
 
 ### Native targets
 
