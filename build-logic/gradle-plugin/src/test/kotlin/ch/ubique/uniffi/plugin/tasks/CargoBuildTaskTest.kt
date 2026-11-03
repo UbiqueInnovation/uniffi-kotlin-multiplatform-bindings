@@ -99,6 +99,86 @@ class CargoBuildTaskTest {
     }
 
     @Test
+    fun `features are passed to cargo`() {
+        assertEquals("first,second", cargoFeatures("['second', 'first']"))
+    }
+
+    @Test
+    fun `features are qualified with the package when workspace libraries are built together`() {
+        assertEquals(
+            "other/feature,sample/first",
+            cargoFeatures("['first', '', 'other/feature']", workspacePackages = "['other']"),
+        )
+    }
+
+    @Test
+    fun `a package built on its own only gets the features that apply to it`() {
+        val project = ProjectBuilder.builder().build()
+        fun packageFeatures(workspacePackages: Set<String>?): List<String> {
+            val task = project.tasks.register("cargoBuild${project.tasks.size}", CargoBuildTask::class.java).get()
+            task.packageName.set("sample")
+            task.features.set(setOf("first", "", "sample/own", "dependency/feature", "other/feature"))
+            workspacePackages?.let { task.workspacePackageNames.set(it) }
+            return task.packageFeatures.get()
+        }
+
+        // Without a workspace build, qualified names are left to Cargo.
+        assertEquals(
+            listOf("dependency/feature", "first", "other/feature", "sample/own"),
+            packageFeatures(null),
+        )
+        // Features of the other workspace members don't apply to this package.
+        assertEquals(
+            listOf("dependency/feature", "first", "sample/own"),
+            packageFeatures(setOf("sample", "other")),
+        )
+    }
+
+    /**
+     * Runs a [CargoBuildTask] against a fake cargo and returns the value of the `--features`
+     * argument it received, if any. [features] and [workspacePackages] are Groovy list literals;
+     * [workspacePackages] is left unset when null.
+     */
+    private fun cargoFeatures(features: String, workspacePackages: String? = null): String? {
+        val root = createTempDirectory("uniffi-cargo-features")
+        val fakeBin = root.resolve("fake-bin").createDirectories()
+        val cargo = fakeBin.resolve("cargo")
+        cargo.writeText("""#!/bin/sh
+            mkdir -p "${'$'}CARGO_TARGET_DIR"
+            printf '%s\n' "${'$'}@" > "${'$'}CARGO_TARGET_DIR/arguments"
+        """.trimIndent() + "\n")
+        assertTrue(cargo.toFile().setExecutable(true))
+        root.resolve("settings.gradle").writeText("rootProject.name = 'cargo-features-test'\n")
+        root.resolve("build.gradle").writeText("""
+            plugins { id 'ch.ubique.uniffi.plugin' apply false }
+            tasks.register('testCargoBuild', ch.ubique.uniffi.plugin.tasks.CargoBuildTask) {
+                packageDirectory.set(layout.projectDirectory)
+                cargoTargetDirectory.set(layout.projectDirectory.dir('target'))
+                dynamicLibraryFile.set(layout.projectDirectory.file('target/debug/library.so'))
+                staticLibraryFile.set(layout.projectDirectory.file('target/debug/library.a'))
+                packageName.set('sample')
+                libraryName.set('sample')
+                release.set(false)
+                useCross.set(false)
+                additionalEnvironment.set([:])
+                features.set($features)
+                ${workspacePackages?.let { "workspacePackageNames.set($it)" }.orEmpty()}
+            }
+        """.trimIndent())
+
+        GradleRunner.create()
+            .withProjectDir(root.toFile())
+            .withPluginClasspath()
+            .withEnvironment(System.getenv() + ("PATH" to "${fakeBin}:${System.getenv("PATH")}"))
+            .withArguments("testCargoBuild")
+            .build()
+
+        return root.resolve("target/arguments").toFile().readLines()
+            .dropWhile { it != "--features" }
+            .getOrNull(1)
+    }
+
+    @Test
     fun `library outputs use Cargo shared target layout`() {
         val projectDirectory = createTempDirectory("uniffi-cargo-build-task-test")
         val project = ProjectBuilder.builder()
