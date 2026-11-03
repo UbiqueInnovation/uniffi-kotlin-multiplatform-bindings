@@ -22,6 +22,9 @@ enum class CrateType(private val actualName: String) {
     SystemDynamicLibrary("cdylib"),
     ProceduralMacro("proc-macro");
 
+    val isDynamic: Boolean
+        get() = this == DynamicLibrary || this == SystemDynamicLibrary
+
     fun outputFileNameForMsvc(crateName: String): String? {
         return when (this) {
             Executable -> "${crateName}.exe"

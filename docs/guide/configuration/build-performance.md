@@ -3,8 +3,8 @@
 Rust builds are usually the slowest part of a build with this plugin. These options help.
 
 !!! note
-    `targetDirectory`, `rustcWrapper`, `rustcWorkspaceWrapper` and `androidDebugAbis` are
-    available since `1.2.2`.
+`targetDirectory`, `rustcWrapper`, `rustcWorkspaceWrapper` and `androidDebugAbis` are
+available since `1.2.2`.
 
 ## Build only what you need
 
@@ -35,6 +35,48 @@ scripts.
 - The directory survives Gradle's `clean`. Delete it yourself when you need a fresh Rust build.
 - Don't point it at a Gradle `build` directory. Kotlin and Android outputs stay project-local.
 - In CI, persist it with the CI cache if separate jobs or runs should reuse it.
+
+## Workspaces with dependent libraries
+
+If the crates of several modules are in one Cargo workspace and depend on each other, as in a
+[multi-module project](../features/multi-module.md), Cargo can end up recompiling them on every
+build. Two things prevent that.
+
+First, declare the crate types the plugin builds in each crate's `Cargo.toml`: `cdylib` for JVM and
+Android, `staticlib` for Kotlin/Native, and `lib` if other crates depend on it:
+
+```toml
+[lib]
+crate-type = ["lib", "cdylib", "staticlib"]
+```
+
+If one is missing, the plugin passes `--crate-type` to Cargo. A crate that declares a `cdylib` is
+then built differently as the root of a build than as a dependency of another module's crate, and
+is rebuilt with its dependents every time. The plugin warns about this.
+
+Second, if Cargo still recompiles the shared crates whenever another module was built in between,
+enable `buildWorkspaceLibraries` in every module of the workspace, for example from
+the root project:
+
+```kotlin
+// build.gradle.kts of the root project
+plugins {
+    id("ch.ubique.uniffi.plugin") version "1.3.3" apply false
+}
+
+subprojects {
+    plugins.withId("ch.ubique.uniffi.plugin") {
+        extensions.configure<ch.ubique.uniffi.plugin.dsl.CargoExtension> {
+            buildWorkspaceLibraries = true
+        }
+    }
+}
+```
+
+Cargo resolves features per invocation, so the shared dependencies of `mod-a` and `mod-b` may be
+compiled with different features depending on which one is built. With this option, every Cargo
+call builds all libraries of the workspace that declare a `cdylib` or `staticlib`, so the features
+are always the same. The first call builds them all, the following ones find them up to date.
 
 ## sccache
 

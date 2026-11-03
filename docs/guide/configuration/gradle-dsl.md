@@ -71,6 +71,7 @@ cargo {
 | ------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `packageDirectory`                          | the project directory      | The directory containing `Cargo.toml`.                                                                 |
 | `targetDirectory`                           | from `cargo metadata`      | Cargo's target directory. See [Build performance](build-performance.md#shared-cargo-target-directory). |
+| `buildWorkspaceLibraries`                   | `false`                    | Build all workspace libraries in each Cargo call. See [Build performance](build-performance.md#workspaces-with-dependent-libraries). |
 | `rustcWrapper`                              | `$RUSTC_WRAPPER`           | Passed to Cargo as `RUSTC_WRAPPER`, for example `sccache`.                                             |
 | `rustcWorkspaceWrapper`                     | `$RUSTC_WORKSPACE_WRAPPER` | Passed to Cargo as `RUSTC_WORKSPACE_WRAPPER`.                                                          |
 | `ndkVersion`                                | newest installed           | The NDK used for Android targets. See [Targets](../targets.md#ndk).                                    |
