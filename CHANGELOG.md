@@ -8,6 +8,9 @@
   `staticlib` in each Cargo invocation. Cargo then resolves the same features for all of them, so
   workspaces whose libraries depend on each other stay fresh between builds instead of rebuilding
   them for each Gradle project.
+- `cargo { features }` and `cargo { compilations.<target> { features } }` enable Cargo features,
+  for every build or for one Rust target. With `buildWorkspaceLibraries`, bare feature names are
+  qualified with the package.
 
 ### Fixed
 

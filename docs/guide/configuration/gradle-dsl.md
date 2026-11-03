@@ -60,9 +60,13 @@ cargo {
     rustcWrapper = "sccache"
     ndkVersion = "28.1.13356709"
     androidDebugAbis.add("arm64-v8a")
+    features.add("logging")
 
     compilations.linuxArm64 {
         useCross = true
+    }
+    compilations.iosArm64 {
+        features.add("ios-only")
     }
 }
 ```
@@ -74,12 +78,20 @@ cargo {
 | `buildWorkspaceLibraries`                   | `false`                    | Build all workspace libraries in each Cargo call. See [Build performance](build-performance.md#workspaces-with-dependent-libraries). |
 | `rustcWrapper`                              | `$RUSTC_WRAPPER`           | Passed to Cargo as `RUSTC_WRAPPER`, for example `sccache`.                                             |
 | `rustcWorkspaceWrapper`                     | `$RUSTC_WORKSPACE_WRAPPER` | Passed to Cargo as `RUSTC_WORKSPACE_WRAPPER`.                                                          |
+| `features`                                  | none                       | Cargo features for every build, passed as `--features`.                                                |
 | `ndkVersion`                                | newest installed           | The NDK used for Android targets. See [Targets](../targets.md#ndk).                                    |
 | `androidDebugAbis`                          | host ABI(s)                | Android ABIs built in debug builds. See [Targets](../targets.md#debug-abis).                           |
 | `compilations.<target> { useCross = true }` | `false`                    | Build that Rust target with [`cross`](https://github.com/cross-rs/cross) instead of `cargo`.           |
+| `compilations.<target> { features }`        | none                       | Extra Cargo features for that Rust target, on top of `features`.                                       |
 
 `compilations` has shortcuts for `iosArm64`, `iosX64`, `macosArm64`, `macosX64`, `linuxArm64`,
 `linuxX64`, `windowsX64`, `androidArm64`, `androidArmV7` and `androidX64`.
+
+A feature name qualified with a package, `<package>/<feature>`, enables that dependency's feature,
+or in a workspace build that member's. With `buildWorkspaceLibraries`, bare names are qualified
+with the module's package. The bindings are generated from the library built for the host, so
+per-target features must not change the exported UniFFI interface, for example by gating a
+`#[uniffi::export]`.
 
 ## Gradle properties
 

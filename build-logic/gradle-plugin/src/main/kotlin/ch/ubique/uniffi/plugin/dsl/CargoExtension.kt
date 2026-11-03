@@ -7,6 +7,7 @@ import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
 
 abstract class CargoExtension(project: Project) {
     /**
@@ -55,6 +56,22 @@ abstract class CargoExtension(project: Project) {
         project.objects.property(String::class.java).apply {
             convention(project.providers.environmentVariable("RUSTC_WORKSPACE_WRAPPER"))
         }
+
+    /**
+     * Cargo features to enable for every build of the crate, passed to Cargo as `--features`.
+     * A name qualified with a package, `<package>/<feature>`, enables that dependency's feature,
+     * or in a workspace build that member's.
+     *
+     * Features for some targets only go into [compilations] instead, for example:
+     *
+     * ```kotlin
+     * cargo {
+     *     features.add("logging")
+     *     compilations.iosArm64 { features.add("ios-only") }
+     * }
+     * ```
+     */
+    val features: SetProperty<String> = project.objects.setProperty(String::class.java)
 
     /**
      * Android ABIs to compile for debug builds.

@@ -53,7 +53,7 @@ Gradle infers them. The only explicit `dependsOn` is `prepareKotlinIdeaImport` â
 `CargoBuildTask` runs
 
 ```
-cargo rustc --lib [--target <triple>] --package <name> [--release] [--crate-type <types>]
+cargo rustc --lib [--target <triple>] --package <name> [--release] [--crate-type <types>] [--features <features>]
 ```
 
 with `CARGO_TARGET_DIR` set. Some details:
@@ -72,6 +72,11 @@ with `CARGO_TARGET_DIR` set. Some details:
   (`workspaceForeignLibraryPackages`), so Cargo resolves features identically in every call.
   Without the override, `cargo build` builds exactly what `cargo rustc` would. A package that needs
   the override is built alone, because `cargo rustc` only takes it for a single package.
+- **Features.** `cargo { features }` and the target's `compilations.<target> { features }` are
+  combined per Rust target and passed as `--features`. In a workspace build, bare names are
+  qualified with their package. A package built on its own, and the def file probe, get only
+  `packageFeatures`, without names qualified with other members. Per-target features must not
+  change the exported UniFFI interface: the bindings come from the host's library.
 - **Outputs in Cargo's own target directory.** Library paths are derived from Cargo's layout
   (`<target-dir>/<triple>/<profile>/`), not copied, so Cargo's incremental cache is shared
   between Gradle modules and with plain `cargo` invocations.
@@ -139,7 +144,9 @@ linkerOpts = <native-static-libs> [--allow-multiple-definition]
 ```
 
 `linkerOpts` comes from asking rustc for `--print native-static-libs`, the system libraries the
-static library needs. `--allow-multiple-definition` is added on Linux and Windows, because several
+static library needs. The probe builds with the target's crate types and the features that apply
+to its package: it writes to the same output as the `CargoBuildTask`, so different ones would
+replace the library. `--allow-multiple-definition` is added on Linux and Windows, because several
 UniFFI static libraries in one binary can contain the same Rust symbols (see
 [External and remote types](external-and-remote-types.md#multi-module-builds)).
 
