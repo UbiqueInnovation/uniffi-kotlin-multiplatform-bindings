@@ -104,42 +104,98 @@ class CargoBuildTaskTest {
     }
 
     @Test
-    fun `features are qualified with the package when workspace libraries are built together`() {
+    fun `projects building the workspace share one cargo run`() {
+        val root = createTempDirectory("uniffi-cargo-workspace")
+        val fakeBin = root.resolve("fake-bin").createDirectories()
+        val cargo = fakeBin.resolve("cargo")
+        cargo.writeText("""#!/bin/sh
+            mkdir -p "${'$'}CARGO_TARGET_DIR"
+            echo invoked >> "${'$'}CARGO_TARGET_DIR/invocations"
+            { pwd -P; printf '%s\n' "${'$'}@"; } > "${'$'}CARGO_TARGET_DIR/arguments"
+        """.trimIndent() + "\n")
+        assertTrue(cargo.toFile().setExecutable(true))
+        root.resolve("settings.gradle").writeText("rootProject.name = 'cargo-workspace-test'\ninclude 'a', 'b'\n")
+        root.resolve("a").createDirectories()
+        root.resolve("b").createDirectories()
+        root.resolve("build.gradle").writeText("""
+            plugins { id 'ch.ubique.uniffi.plugin' apply false }
+            def service = gradle.sharedServices.registerIfAbsent('cargoWorkspace', ch.ubique.uniffi.plugin.services.CargoWorkspaceService) {}
+            subprojects {
+                tasks.register('testCargoBuild', ch.ubique.uniffi.plugin.tasks.CargoBuildTask) {
+                    packageDirectory.set(layout.projectDirectory)
+                    workspaceDirectory.set(rootProject.layout.projectDirectory)
+                    workspaceService.set(service)
+                    usesService(service)
+                    cargoTargetDirectory.set(rootProject.layout.projectDirectory.dir('target'))
+                    packageName.set(project.name)
+                    libraryName.set(project.name)
+                    release.set(false)
+                    useCross.set(false)
+                    additionalEnvironment.set([:])
+                    workspacePackageNames.set(['a', 'b'])
+                    features.set(['b/second', 'a/first'])
+                }
+            }
+        """.trimIndent())
+
+        val result = GradleRunner.create()
+            .withProjectDir(root.toFile())
+            .withPluginClasspath()
+            .withEnvironment(System.getenv() + ("PATH" to "${fakeBin}:${System.getenv("PATH")}"))
+            .withArguments("testCargoBuild", "--parallel")
+            .build()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":a:testCargoBuild")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":b:testCargoBuild")?.outcome)
+        assertEquals(1, root.resolve("target/invocations").toFile().readLines().size)
+        val arguments = root.resolve("target/arguments").toFile().readLines()
+        assertEquals(root.toRealPath().toString(), arguments.first())
         assertEquals(
-            "other/feature,sample/first",
-            cargoFeatures("['first', '', 'other/feature']", workspacePackages = "['other']"),
+            listOf("build", "--lib", "--package", "a", "--package", "b", "--features", "a/first,b/second"),
+            arguments.drop(1),
         )
     }
 
     @Test
     fun `a package built on its own only gets the features that apply to it`() {
         val project = ProjectBuilder.builder().build()
-        fun packageFeatures(workspacePackages: Set<String>?): List<String> {
+        fun packageFeatures(features: Set<String>, workspacePackages: Set<String>?): List<String> {
             val task = project.tasks.register("cargoBuild${project.tasks.size}", CargoBuildTask::class.java).get()
             task.packageName.set("sample")
-            task.features.set(setOf("first", "", "sample/own", "dependency/feature", "other/feature"))
+            task.dependencyNames.set(setOf("dependency", "member-dependency"))
+            task.features.set(features)
             workspacePackages?.let { task.workspacePackageNames.set(it) }
             return task.packageFeatures.get()
         }
 
-        // Without a workspace build, qualified names are left to Cargo.
+        // Without a workspace build, the features are passed as configured and Cargo checks them.
         assertEquals(
             listOf("dependency/feature", "first", "other/feature", "sample/own"),
-            packageFeatures(null),
+            packageFeatures(setOf("first", "", "sample/own", "dependency/feature", "other/feature"), null),
         )
-        // Features of the other workspace members don't apply to this package.
+        // A workspace build has the features of all projects. Only those of this package and of
+        // its dependencies apply, including a workspace member it depends on.
         assertEquals(
-            listOf("dependency/feature", "first", "sample/own"),
-            packageFeatures(setOf("sample", "other")),
+            listOf("dependency/feature", "dependency?/weak", "member-dependency/feature", "sample/own"),
+            packageFeatures(
+                setOf(
+                    "sample/own",
+                    "dependency/feature",
+                    "dependency?/weak",
+                    "member-dependency/feature",
+                    "other/feature",
+                    "unrelated/feature",
+                ),
+                workspacePackages = setOf("sample", "other", "member-dependency"),
+            ),
         )
     }
 
     /**
      * Runs a [CargoBuildTask] against a fake cargo and returns the value of the `--features`
-     * argument it received, if any. [features] and [workspacePackages] are Groovy list literals;
-     * [workspacePackages] is left unset when null.
+     * argument it received, if any. [features] is a Groovy list literal.
      */
-    private fun cargoFeatures(features: String, workspacePackages: String? = null): String? {
+    private fun cargoFeatures(features: String): String? {
         val root = createTempDirectory("uniffi-cargo-features")
         val fakeBin = root.resolve("fake-bin").createDirectories()
         val cargo = fakeBin.resolve("cargo")
@@ -162,7 +218,6 @@ class CargoBuildTaskTest {
                 useCross.set(false)
                 additionalEnvironment.set([:])
                 features.set($features)
-                ${workspacePackages?.let { "workspacePackageNames.set($it)" }.orEmpty()}
             }
         """.trimIndent())
 

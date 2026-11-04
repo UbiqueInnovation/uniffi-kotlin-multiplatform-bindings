@@ -2,6 +2,7 @@ package ch.ubique.uniffi.plugin.tasks
 
 import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.model.CrateType
+import ch.ubique.uniffi.plugin.services.CargoWorkspaceService
 import ch.ubique.uniffi.plugin.utils.CargoRunner
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -105,20 +106,40 @@ abstract class CargoBuildTask : DefaultTask() {
     @get:Optional
     abstract val workspacePackageNames: SetProperty<String>
 
-    /** Cargo features to enable, passed as `--features`. */
+    /** Where Cargo runs when it builds the [workspacePackageNames], i.e. the workspace root. */
+    @get:Internal
+    abstract val workspaceDirectory: DirectoryProperty
+
+    /** Runs the workspace build once for all projects that request it. */
+    @get:Internal
+    abstract val workspaceService: Property<CargoWorkspaceService>
+
+    /**
+     * Cargo features to enable, passed as `--features`. With [workspacePackageNames], these are
+     * the features of every project building the workspace, qualified with their package.
+     */
     @get:Input
     abstract val features: SetProperty<String>
 
+    /** The dependencies of [packageName] by their name in its `Cargo.toml`. */
+    @get:Input
+    @get:Optional
+    abstract val dependencyNames: SetProperty<String>
+
     /**
-     * The [features] that apply when [packageName] is built on its own: blank names and names
-     * qualified with another of the [workspacePackageNames] are left out. Names qualified with a
-     * dependency stay. The def file probe uses these as well.
+     * The [features] for a build of [packageName] on its own, which the def file probe uses as
+     * well. With [workspacePackageNames], only the features of [packageName] and of its
+     * dependencies are kept: Cargo rejects any other when it builds a single package.
      */
     @get:Internal
     val packageFeatures: Provider<List<String>>
         get() = features.map { features ->
-            val otherMembers = workspacePackageNames.getOrElse(emptySet()) - packageName.get()
-            features.filter { it.isNotBlank() && it.substringBefore('/', "") !in otherMembers }.sorted()
+            if (workspacePackageNames.getOrElse(emptySet()).isEmpty()) {
+                features.filter(String::isNotBlank).sorted()
+            } else {
+                val packages = dependencyNames.getOrElse(emptySet()) + packageName.get()
+                features.filter { it.substringBefore('/').removeSuffix("?") in packages }.sorted()
+            }
         }
 
     /** Optional rustc wrapper, for example `sccache`. */
@@ -189,34 +210,21 @@ abstract class CargoBuildTask : DefaultTask() {
         return (workspacePackages + packageName.get()).sorted()
     }
 
-    /**
-     * The `--features` value, or null without features. Built together with other packages, bare
-     * names are qualified with [packageName]; built alone, the package gets its [packageFeatures].
-     */
+    /** The `--features` value, or null without features. */
     private fun featureArgument(packages: List<String>): String? {
-        val enabled = if (packages.size == 1) packageFeatures.get() else features.get()
-            .filter { it.isNotBlank() }
-            .map { if ('/' in it) it else "${packageName.get()}/$it" }
-        return enabled.sorted().joinToString(",").ifEmpty { null }
+        val enabled = if (packages.size == 1) packageFeatures.get() else features.get().sorted()
+        return enabled.joinToString(",").ifEmpty { null }
     }
 
     @TaskAction
     fun build() {
         val override = crateTypeOverride.orNull
         val packages = packagesToBuild(override)
-        val otherMembers = workspacePackageNames.getOrElse(emptySet()) - packageName.get()
-        if (otherMembers.isNotEmpty() && features.get().any { it.isNotBlank() }) {
-            logger.warn(
-                "${packageName.get()} enables Cargo features with buildWorkspaceLibraries. All " +
-                    "modules building this workspace must enable the same features, qualified with " +
-                    "their package (<package>/<feature>), or they rebuild each other's libraries " +
-                    "without them."
-            )
-        }
-        CargoRunner(execOperations, logger, useCross = useCross.get()) {
+        val workspaceBuild = packages.size > 1
+        val cargo = CargoRunner(execOperations, logger, useCross = useCross.get()) {
             // Without the override there are no rustc arguments, and `cargo build` builds
             // exactly what `cargo rustc` would, but for any number of packages.
-            argument(if (packages.size > 1) "build" else "rustc")
+            argument(if (workspaceBuild) "build" else "rustc")
             argument("--lib")
             if (rustTarget.isPresent) {
                 argument("--target")
@@ -249,7 +257,8 @@ abstract class CargoBuildTask : DefaultTask() {
                 argument(features)
             }
 
-            workdir(packageDirectory.asFile.get())
+            // From the workspace root, every project building the workspace runs the same command.
+            workdir((if (workspaceBuild) workspaceDirectory else packageDirectory).get().asFile)
 
             env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
             rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
@@ -258,6 +267,12 @@ abstract class CargoBuildTask : DefaultTask() {
             additionalEnvironment.get().forEach { (key, value) ->
                 env(key, value)
             }
-        }.run()
+        }
+
+        if (workspaceBuild) {
+            workspaceService.get().runOnce(cargo.invocation) { cargo.run() }
+        } else {
+            cargo.run()
+        }
     }
 }

@@ -74,9 +74,12 @@ subprojects {
 ```
 
 Cargo resolves features per invocation, so the shared dependencies of `mod-a` and `mod-b` may be
-compiled with different features depending on which one is built. With this option, every Cargo
-call builds all libraries of the workspace that declare a `cdylib` or `staticlib`, so the features
-are always the same. The first call builds them all, the following ones find them up to date.
+compiled with different features depending on which one is built. With this option, the modules
+share a single Cargo call per Rust target and profile. It builds all libraries of the workspace
+that declare a `cdylib` or `staticlib`, with the [features](gradle-dsl.md#cargo) of every module,
+and the other modules reuse its output. The features are collected while Gradle configures the
+modules, so all of them have to be configured, which is Gradle's default (not the case with
+configure-on-demand).
 
 ## sccache
 

@@ -11,6 +11,10 @@ fun CargoMetadata.targetPackage(packageDirectory: File): CargoMetadata.Package {
     }
 }
 
+/** The names of the package's dependencies as in its `Cargo.toml`, which `<dependency>/<feature>` refers to. */
+fun CargoMetadata.Package.dependencyNames(): Set<String> =
+    dependencies.mapTo(sortedSetOf()) { it.rename ?: it.name }
+
 /** The workspace members whose library target declares a `cdylib` or `staticlib`. */
 fun CargoMetadata.workspaceForeignLibraryPackages(): List<String> = packages
     .filter { it.id in workspaceMembers }

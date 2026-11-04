@@ -27,4 +27,20 @@ class CargoMetadataUtilTest {
 
         assertEquals(listOf("ios", "util", "wallet"), metadata.workspaceForeignLibraryPackages())
     }
+
+    @Test
+    fun `dependency names are the names in the manifest`() {
+        fun dependency(name: String, rename: String?) = """
+            {"name": "$name", ${rename?.let { "\"rename\": \"$it\"," }.orEmpty()}
+             "kind": null, "optional": false, "uses_default_features": true, "features": []}
+        """
+        val metadata = CargoMetadata.fromJsonString("""
+            {"target_directory": "/ws/target", "workspace_root": "/ws",
+             "packages": [{"name": "wallet", "id": "wallet-id", "manifest_path": "/ws/wallet/Cargo.toml",
+                           "features": {}, "targets": [],
+                           "dependencies": [${dependency("serde", null)}, ${dependency("util", "wallet-util")}]}]}
+        """)
+
+        assertEquals(setOf("serde", "wallet-util"), metadata.packages.single().dependencyNames())
+    }
 }

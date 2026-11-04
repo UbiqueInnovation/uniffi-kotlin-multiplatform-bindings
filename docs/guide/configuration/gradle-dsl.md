@@ -88,9 +88,9 @@ cargo {
 `compilations` has shortcuts for `iosArm64`, `iosX64`, `macosArm64`, `macosX64`, `linuxArm64`,
 `linuxX64`, `windowsX64`, `androidArm64`, `androidArmV7` and `androidX64`.
 
-A feature name qualified with a package, `<package>/<feature>`, enables that dependency's feature,
-or in a workspace build that member's. With `buildWorkspaceLibraries`, bare names are qualified
-with the module's package. The bindings are generated from the library built for the host, so
+`<dependency>/<feature>` enables a feature of one of the crate's dependencies. With `buildWorkspaceLibraries`, the modules of the workspace
+share one Cargo build, which enables the features of all of them, with bare names qualified with
+their module's package. The bindings are generated from the library built for the host, so
 per-target features must not change the exported UniFFI interface, for example by gating a
 `#[uniffi::export]`.
 

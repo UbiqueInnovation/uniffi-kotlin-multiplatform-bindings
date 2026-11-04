@@ -10,6 +10,7 @@ import ch.ubique.uniffi.plugin.model.CargoInfo
 import ch.ubique.uniffi.plugin.model.CargoMetadata
 import ch.ubique.uniffi.plugin.model.CrateType
 import ch.ubique.uniffi.plugin.services.CargoMetadataService
+import ch.ubique.uniffi.plugin.services.CargoWorkspaceService
 import ch.ubique.uniffi.plugin.tasks.BuildBindingsTask
 import ch.ubique.uniffi.plugin.tasks.CargoBuildAliasTask
 import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
@@ -18,6 +19,7 @@ import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
 import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
 import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
 import ch.ubique.uniffi.plugin.utils.BindgenSource
+import ch.ubique.uniffi.plugin.utils.dependencyNames
 import ch.ubique.uniffi.plugin.utils.targetPackage
 import ch.ubique.uniffi.plugin.utils.workspaceForeignLibraryPackages
 import org.gradle.api.Action
@@ -86,6 +88,11 @@ class UniffiPlugin : Plugin<Project> {
 
     private lateinit var cargoExtension: CargoExtension
 
+    /** Whether this project's library is built together with the workspace libraries. */
+    private lateinit var buildsWithWorkspace: Provider<Boolean>
+
+    private lateinit var workspaceService: Provider<CargoWorkspaceService>
+
     override fun apply(project: Project) {
         // Create the DSL extensions
         uniffiExtension = project.extensions.create("uniffi", UniffiExtension::class.java)
@@ -110,11 +117,38 @@ class UniffiPlugin : Plugin<Project> {
             packageName = targetPackage.map { it.name },
             libraryName = targetPackage.map { it.targets.first().name },
             declaredCrateTypes = targetPackage.map { it.targets.first().crateTypes },
+            dependencyNames = targetPackage.map { it.dependencyNames() },
             workspaceLibraryPackages = metadata.map { it.workspaceForeignLibraryPackages() },
+            workspaceRoot = project.layout.dir(metadata.map { File(it.workspaceRoot) }),
             targetDirectory = cargoExtension.targetDirectory.orElse(
                 project.layout.dir(metadata.map { File(it.targetDirectory) })
             ),
         )
+
+        // A crate without a cdylib or staticlib is always built on its own.
+        buildsWithWorkspace = cargoExtension.buildWorkspaceLibraries.zip(
+            cargoInfo.workspaceLibraryPackages.zip(cargoInfo.packageName) { packages, name -> name in packages }
+        ) { enabled, isLibrary -> enabled && isLibrary }
+
+        workspaceService = project.gradle.sharedServices.registerIfAbsent(
+            // Each class loader that loads the plugin needs its own registration.
+            "uniffiCargoWorkspace-${System.identityHashCode(CargoWorkspaceService::class.java)}",
+            CargoWorkspaceService::class.java,
+        ) {}
+        // Every target, not only this project's: the workspace build is the same for all projects.
+        BuildTarget.RustTarget.entries.forEach { rustTarget ->
+            workspaceService.get().addFeatures(
+                workspaceRoot = cargoInfo.workspaceRoot.map { it.asFile.path },
+                rustTarget = rustTarget,
+                features = project.provider<Set<String>> {
+                    if (!buildsWithWorkspace.get()) return@provider emptySet()
+                    val packageName = cargoInfo.packageName.get()
+                    cargoFeatures(rustTarget).get()
+                        .filter(String::isNotBlank)
+                        .mapTo(sortedSetOf()) { if ('/' in it) it else "$packageName/$it" }
+                },
+            )
+        }
 
         // Set up the bindings tasks
         val installBindgenTask = project.registerInstallBindgenTask()
@@ -398,9 +432,27 @@ class UniffiPlugin : Plugin<Project> {
         task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
         task.crateTypes.add(crateType)
         task.declaredCrateTypes.set(cargoInfo.declaredCrateTypes)
+        task.dependencyNames.set(cargoInfo.dependencyNames)
         task.workspacePackageNames.set(
-            cargoExtension.buildWorkspaceLibraries.flatMap { enabled ->
+            buildsWithWorkspace.flatMap { enabled ->
                 if (enabled) cargoInfo.workspaceLibraryPackages else project.provider { emptyList() }
+            }
+        )
+        task.workspaceDirectory.set(cargoInfo.workspaceRoot)
+        task.workspaceService.set(workspaceService)
+        task.usesService(workspaceService)
+        task.features.set(
+            buildsWithWorkspace.flatMap { enabled ->
+                if (enabled) {
+                    // A plain provider, not workspaceService.map: the configuration cache must
+                    // store the union, as only the service that configured the build knows it.
+                    project.provider {
+                        workspaceService.get()
+                            .features(cargoInfo.workspaceRoot.get().asFile.path, rustTarget)
+                    }
+                } else {
+                    cargoFeatures(rustTarget)
+                }
             }
         )
         task.rustcWrapper.set(cargoExtension.rustcWrapper)
@@ -409,8 +461,6 @@ class UniffiPlugin : Plugin<Project> {
         val config = cargoExtension.compilations.getByName(rustTarget.name)
         val useCross = config.useCross
         task.useCross.set(useCross)
-        task.features.addAll(cargoExtension.features)
-        task.features.addAll(config.features)
 
         // An android rust target can only be requested once the android plugin created the
         // android build target, so touching AndroidSupport - and with it AGP - is safe here.
@@ -424,6 +474,12 @@ class UniffiPlugin : Plugin<Project> {
             )
         }
     }
+
+    /** The features this project enables for [rustTarget], as configured. */
+    private fun cargoFeatures(rustTarget: BuildTarget.RustTarget): Provider<Set<String>> =
+        cargoExtension.features.zip(cargoExtension.compilations.getByName(rustTarget.name).features) { all, target ->
+            all + target
+        }
 
     /**
      * The library for [rustTarget] in [CargoExtension.prebuiltLibraries] if that is set, otherwise

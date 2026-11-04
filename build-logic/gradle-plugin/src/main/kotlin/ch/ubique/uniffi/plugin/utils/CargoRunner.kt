@@ -45,6 +45,10 @@ class CargoRunner(
         workingDir = dir
     }
 
+    /** Everything that makes up this invocation; equal for two runners that run the same command. */
+    val invocation: List<Any?>
+        get() = listOf(useCross, arguments.toList(), environment.toMap(), workingDir)
+
     fun run(): String {
         val commandName = if (useCross) "cross" else "cargo"
         val command = RustLocator.findRustExecutable(commandName).path

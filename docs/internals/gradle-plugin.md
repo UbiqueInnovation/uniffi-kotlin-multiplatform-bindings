@@ -72,16 +72,20 @@ with `CARGO_TARGET_DIR` set. Some details:
   as a dependency. With the override, the two configurations keep replacing each other, and the
   package and its dependents are rebuilt on every call. The task warns when it passes the override
   to a package declaring a dynamic crate type.
-- **Workspace builds.** With `buildWorkspaceLibraries`, the task runs `cargo build` with a
-  `--package` for every workspace member declaring a `cdylib` or `staticlib`
-  (`workspaceForeignLibraryPackages`), so Cargo resolves features identically in every call.
-  Without the override, `cargo build` builds exactly what `cargo rustc` would. A package that needs
-  the override is built alone, because `cargo rustc` only takes it for a single package.
+- **Workspace builds.** With `buildWorkspaceLibraries`, the task runs `cargo build` from the
+  workspace root with a `--package` for every workspace member declaring a `cdylib` or `staticlib`
+  (`workspaceForeignLibraryPackages`). Without the override, `cargo build` builds exactly what
+  `cargo rustc` would. Every module computes the same command, and `CargoWorkspaceService`, a
+  build service, runs it once per build (`runOnce`). The other modules' tasks wait for it and
+  reuse its output. A package that needs the override is built alone, because `cargo rustc` only
+  takes it for a single package.
 - **Features.** `cargo { features }` and the target's `compilations.<target> { features }` are
-  combined per Rust target and passed as `--features`. In a workspace build, bare names are
-  qualified with their package. A package built on its own, and the def file probe, get only
-  `packageFeatures`, without names qualified with other members. Per-target features must not
-  change the exported UniFFI interface: the bindings come from the host's library.
+  combined per Rust target and passed as `--features`. In workspace mode, each module adds its
+  features to `CargoWorkspaceService` while it is configured, with bare names qualified with its
+  package, and the workspace build gets the union. A package built on its own, and the def file
+  probe, get `packageFeatures`: the ones for the package itself or one of its dependencies (by
+  their name in its `Cargo.toml`), since Cargo rejects any other for a single package. Per-target
+  features must not change the exported UniFFI interface: the bindings come from the host's library.
 - **Outputs in Cargo's own target directory.** Library paths are derived from Cargo's layout
   (`<target-dir>/<triple>/<profile>/`), not copied, so Cargo's incremental cache is shared
   between Gradle modules and with plain `cargo` invocations.

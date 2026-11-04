@@ -52,9 +52,9 @@ abstract class CargoExtension(project: Project) {
      * Cargo resolves features per invocation, so workspace libraries that depend on each other
      * see different feature sets of their shared dependencies depending on which package is
      * built. A library declaring a `cdylib` keeps a single build per target, so it is rebuilt
-     * whenever the previous invocation built another package. Building the same set of packages
-     * every time resolves features once for all of them: the first invocation builds, the
-     * following ones find everything fresh.
+     * whenever the previous invocation built another package. With this option, all projects of
+     * the workspace share one Cargo invocation per Rust target and profile, which enables the
+     * [features] of all of them.
      *
      * Enable it in every project of the workspace, e.g. from a `subprojects` block.
      */
@@ -74,8 +74,9 @@ abstract class CargoExtension(project: Project) {
 
     /**
      * Cargo features to enable for every build of the crate, passed to Cargo as `--features`.
-     * A name qualified with a package, `<package>/<feature>`, enables that dependency's feature,
-     * or in a workspace build that member's.
+     * `<dependency>/<feature>` enables a feature of one of the crate's dependencies. With
+     * [buildWorkspaceLibraries], bare names are qualified with the crate's package, and the
+     * features of all projects of the workspace are enabled together.
      *
      * Features for some targets only go into [compilations] instead, for example:
      *

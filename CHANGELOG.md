@@ -17,6 +17,17 @@
 
 - Published POMs name the license `MPL-2.0` instead of `License`.
 
+### Changed
+
+- With `buildWorkspaceLibraries`, the modules of a Cargo workspace share one Cargo build per Rust
+  target and profile instead of running Cargo once each. It enables the features of all modules, so
+  they no longer have to repeat each other's features.
+
+### Fixed
+
+- With `buildWorkspaceLibraries`, the Kotlin/Native def file probe no longer drops
+  `<dependency>/<feature>` when the dependency is a workspace member.
+
 ## [1.3.3](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.3) - 2026-11-03
 
 ### Added
