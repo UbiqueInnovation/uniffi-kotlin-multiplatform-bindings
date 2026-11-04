@@ -31,6 +31,21 @@ abstract class CargoExtension(project: Project) {
     val targetDirectory: DirectoryProperty = project.objects.directoryProperty()
 
     /**
+     * Libraries built outside of Gradle, used instead of building them with Cargo. Laid out like
+     * Cargo's target directory, `<target triple>/<profile>/<library file>`. Kotlin/Native targets
+     * also need the linker options for the library's native dependencies in
+     * `<library name>.native-static-libs` next to it, as written by rustc's
+     * `--print native-static-libs=<file>`.
+     *
+     * ```kotlin
+     * cargo {
+     *     prebuiltLibraries = rootProject.layout.projectDirectory.dir("prebuilt")
+     * }
+     * ```
+     */
+    val prebuiltLibraries: DirectoryProperty = project.objects.directoryProperty()
+
+    /**
      * Build every library of the Cargo workspace that declares a `cdylib` or `staticlib` in
      * each Cargo invocation, instead of only this package.
      *

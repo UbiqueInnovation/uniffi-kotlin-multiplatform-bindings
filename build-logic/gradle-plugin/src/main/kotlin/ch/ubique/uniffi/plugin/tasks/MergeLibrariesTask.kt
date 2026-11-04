@@ -1,6 +1,7 @@
 package ch.ubique.uniffi.plugin.tasks
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemOperations
@@ -66,6 +67,12 @@ abstract class MergeLibrariesTask : DefaultTask() {
 
     @TaskAction
     fun merge() {
+        // A missing file would otherwise be skipped silently, leaving the package without it.
+        val missing = libraries.get().flatMap { it.files.files }.filterNot { it.exists() }
+        if (missing.isNotEmpty()) {
+            throw GradleException("Missing libraries:\n${missing.joinToString("\n") { "  $it" }}")
+        }
+
         // sync, not copy: a target dropped from the list must not survive in the output.
         fileSystemOperations.sync { spec ->
             spec.into(outputDirectory)

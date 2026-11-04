@@ -39,6 +39,16 @@ abstract class GenerateDefFileTask : DefaultTask() {
     @get:PathSensitive(PathSensitivity.ABSOLUTE)
     abstract val staticLibrary: RegularFileProperty
 
+    /**
+     * The linker options for the library's native dependencies, as rustc's
+     * `--print native-static-libs` reports them. When set, they're read from here instead of
+     * being probed with Cargo, which would build the library again.
+     */
+    @get:InputFile
+    @get:Optional
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val nativeStaticLibsFile: RegularFileProperty
+
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
 
@@ -105,7 +115,12 @@ abstract class GenerateDefFileTask : DefaultTask() {
 			""".trimIndent()
         )
 
-        val opts = listOfNotNull(getLinkerOpts(), duplicateSymbolOpt())
+        val nativeStaticLibs = if (nativeStaticLibsFile.isPresent) {
+            nativeStaticLibsFile.get().asFile.readText().trim().ifEmpty { null }
+        } else {
+            getLinkerOpts()
+        }
+        val opts = listOfNotNull(nativeStaticLibs, duplicateSymbolOpt())
         if (opts.isNotEmpty()) {
             output.appendText("\nlinkerOpts = ${opts.joinToString(" ")}")
         }

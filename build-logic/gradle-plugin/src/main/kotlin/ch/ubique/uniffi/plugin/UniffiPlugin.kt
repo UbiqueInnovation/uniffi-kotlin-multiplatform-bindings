@@ -122,7 +122,11 @@ class UniffiPlugin : Plugin<Project> {
         val buildBindingsTask = project.registerBuildBindingsTask(
             bindgenBin = installBindgenTask.flatMap { it.bindgenBinPath },
             bindgenReadyFile = installBindgenTask.flatMap { it.bindgenReadyFile },
-            libraryForBindings = buildLibraryForBindingsTask.flatMap { it.dynamicLibraryFile },
+            // Bindings only depend on the library's metadata, so any host library will do.
+            libraryForBindings = project.library(
+                cargoInfo, BuildTarget.RustTarget.forCurrentPlatform, isRelease, dynamic = true,
+                buildLibraryForBindingsTask,
+            ),
             metadataJson = metadataJsonProvider,
         )
 
@@ -199,12 +203,15 @@ class UniffiPlugin : Plugin<Project> {
                             staticLibrary = if (isSync) {
                                 null
                             } else {
-                                project.registerCargoBuildTask(
-                                    rustTarget = buildTarget.checkedNativeTarget,
-                                    release = isRelease,
-                                    cargoInfo = cargoInfo,
-                                    crateType = CrateType.SystemStaticLibrary,
-                                ).flatMap { it.staticLibraryFile }
+                                project.library(
+                                    cargoInfo, buildTarget.checkedNativeTarget, isRelease, dynamic = false,
+                                    project.registerCargoBuildTask(
+                                        rustTarget = buildTarget.checkedNativeTarget,
+                                        release = isRelease,
+                                        cargoInfo = cargoInfo,
+                                        crateType = CrateType.SystemStaticLibrary,
+                                    ),
+                                )
                             },
                         )
                     }
@@ -419,6 +426,40 @@ class UniffiPlugin : Plugin<Project> {
     }
 
     /**
+     * The library for [rustTarget] in [CargoExtension.prebuiltLibraries] if that is set, otherwise
+     * [cargoBuild]'s. The prebuilt one carries no dependency on [cargoBuild], so it never runs.
+     *
+     * Selected with `flatMap` rather than `orElse`, whose result loses the dependency on [cargoBuild].
+     */
+    private fun Project.library(
+        cargoInfo: CargoInfo,
+        rustTarget: BuildTarget.RustTarget,
+        release: Boolean,
+        dynamic: Boolean,
+        cargoBuild: TaskProvider<CargoBuildTask>,
+    ): Provider<RegularFile> =
+        cargoExtension.prebuiltLibraries.map { true }.orElse(false).flatMap { prebuilt ->
+            if (prebuilt) {
+                prebuiltFile(cargoInfo, rustTarget, release) { name ->
+                    if (dynamic) rustTarget.dynamicLibraryName(name) else rustTarget.staticLibraryName(name)
+                }
+            } else {
+                cargoBuild.flatMap { if (dynamic) it.dynamicLibraryFile else it.staticLibraryFile }
+            }
+        }
+
+    private fun Project.prebuiltFile(
+        cargoInfo: CargoInfo,
+        rustTarget: BuildTarget.RustTarget,
+        release: Boolean,
+        fileName: (String) -> String?,
+    ): Provider<RegularFile> =
+        cargoExtension.prebuiltLibraries.zip(cargoInfo.libraryName) { directory, name ->
+            val file = fileName(name) ?: throw GradleException("Could not determine library file name for $rustTarget")
+            directory.file("${rustTarget.rustTriple}/${if (release) "release" else "debug"}/$file")
+        }
+
+    /**
      * JVM / Android targets need multiple libraries to be in the correct directory structure.
      *
      * The [MergeLibrariesTask] combines outputs from multiple [CargoBuildTask]s and copies the
@@ -452,13 +493,7 @@ class UniffiPlugin : Plugin<Project> {
             cargoBuilds.forEach { (rustTarget, cargoBuild) ->
                 task.library(
                     directoryName = leafName(rustTarget),
-                    files = cargoBuild.flatMap {
-                        if (buildTarget.usesDynamicLibrary) {
-                            it.dynamicLibraryFile
-                        } else {
-                            it.staticLibraryFile
-                        }
-                    },
+                    files = library(cargoInfo, rustTarget, isRelease, buildTarget.usesDynamicLibrary, cargoBuild),
                 )
             }
         }
@@ -500,7 +535,8 @@ class UniffiPlugin : Plugin<Project> {
             Tasks.generateDefFile(buildTarget),
             GenerateDefFileTask::class.java,
         ) { task ->
-            task.staticLibrary.set(cargoBuild.flatMap { it.staticLibraryFile })
+            task.staticLibrary.set(library(cargoInfo, rustTarget, isRelease, dynamic = false, cargoBuild))
+            task.nativeStaticLibsFile.set(prebuiltFile(cargoInfo, rustTarget, isRelease) { "$it.native-static-libs" })
             task.outputFile.set(
                 project.layout.buildDirectory.file("$CINTEROP_DEF_PATH/uniffi-${buildTarget.name}.def")
             )
