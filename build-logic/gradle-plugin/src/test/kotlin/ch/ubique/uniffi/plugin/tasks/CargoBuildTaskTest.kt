@@ -6,10 +6,13 @@ import kotlin.io.path.createTempDirectory
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.gradle.api.GradleException
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.testfixtures.ProjectBuilder
@@ -154,6 +157,18 @@ class CargoBuildTaskTest {
             listOf("build", "--lib", "--package", "a", "--package", "b", "--features", "a/first,b/second"),
             arguments.drop(1),
         )
+    }
+
+    @Test
+    fun `a workspace build fails when a package lacks a required crate type`() {
+        val task = ProjectBuilder.builder().build().tasks.register("cargoBuild", CargoBuildTask::class.java).get()
+        task.packageName.set("sample")
+        task.crateTypes.set(setOf(CrateType.SystemDynamicLibrary))
+        task.declaredCrateTypes.set(setOf(CrateType.Library, CrateType.SystemStaticLibrary))
+        task.workspacePackageNames.set(setOf("sample", "other"))
+
+        val error = assertFailsWith<GradleException> { task.build() }
+        assertContains(error.message.orEmpty(), "Add cdylib to [lib] crate-type")
     }
 
     @Test

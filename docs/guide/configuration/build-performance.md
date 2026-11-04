@@ -79,7 +79,14 @@ share a single Cargo call per Rust target and profile. It builds all libraries o
 that declare a `cdylib` or `staticlib`, with the [features](gradle-dsl.md#cargo) of every module,
 and the other modules reuse its output. The features are collected while Gradle configures the
 modules, so all of them have to be configured, which is Gradle's default (not the case with
-configure-on-demand).
+configure-on-demand). Each library must declare the crate types its targets need, or the build
+fails.
+
+On Kotlin/Native targets, each module also builds its crate alone, to ask rustc which system
+libraries to link. A feature that reaches a module's crates only through another module, from
+that module's `Cargo.toml` or for a crate this module doesn't depend on directly, makes the two
+builds differ, and Cargo recompiles on every build. Enable such a feature in `features` instead,
+for a crate the affected modules depend on directly.
 
 ## sccache
 

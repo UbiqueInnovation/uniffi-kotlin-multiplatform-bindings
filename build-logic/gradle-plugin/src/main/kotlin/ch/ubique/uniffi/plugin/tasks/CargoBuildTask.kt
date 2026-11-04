@@ -199,13 +199,12 @@ abstract class CargoBuildTask : DefaultTask() {
     private fun packagesToBuild(override: String?): List<String> {
         val workspacePackages = workspacePackageNames.getOrElse(emptySet())
         if (workspacePackages.isEmpty()) return listOf(packageName.get())
+        // `cargo build` can't add a crate type, and `cargo rustc` only adds one to a single package.
         if (override != null) {
-            // `cargo rustc` only takes the crate type override for a single package.
-            logger.warn(
-                "${packageName.get()} needs crate-type $override, so it is built without the " +
-                    "other workspace libraries."
+            throw GradleException(
+                "${packageName.get()} needs crate-type $override, which buildWorkspaceLibraries " +
+                    "can't add. Add $override to [lib] crate-type in its Cargo.toml."
             )
-            return listOf(packageName.get())
         }
         return (workspacePackages + packageName.get()).sorted()
     }

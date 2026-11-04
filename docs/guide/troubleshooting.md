@@ -29,8 +29,8 @@ example because `rustup` is not available, install the target yourself.
 features): Kotlin/Native's bundled linker is older than your Rust toolchain. Use
 [`useRustUpLinker()`](targets.md#linking-with-rusts-linker) for the affected compilation.
 
-**Cargo recompiles unchanged crates on every build**, or warns that a crate
-`declares crate-type [...] without ...` or `is built without the other workspace libraries`: add
+**Cargo recompiles unchanged crates on every build**, warns that a crate
+`declares crate-type [...] without ...`, or fails because a crate `needs crate-type ...`: add
 the missing crate types to its `Cargo.toml`. See
 [Build performance](configuration/build-performance.md#workspaces-with-dependent-libraries).
 

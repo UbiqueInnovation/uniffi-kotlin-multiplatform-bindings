@@ -56,7 +56,8 @@ abstract class CargoExtension(project: Project) {
      * the workspace share one Cargo invocation per Rust target and profile, which enables the
      * [features] of all of them.
      *
-     * Enable it in every project of the workspace, e.g. from a `subprojects` block.
+     * Enable it in every project of the workspace, e.g. from a `subprojects` block. Each library
+     * must declare the crate types its targets need, or the build fails.
      */
     val buildWorkspaceLibraries: Property<Boolean> =
         project.objects.property(Boolean::class.java).convention(false)

@@ -77,8 +77,8 @@ with `CARGO_TARGET_DIR` set. Some details:
   (`workspaceForeignLibraryPackages`). Without the override, `cargo build` builds exactly what
   `cargo rustc` would. Every module computes the same command, and `CargoWorkspaceService`, a
   build service, runs it once per build (`runOnce`). The other modules' tasks wait for it and
-  reuse its output. A package that needs the override is built alone, because `cargo rustc` only
-  takes it for a single package.
+  reuse its output. A package that needs the override fails the build: `cargo build` can't add a
+  crate type, and `cargo rustc` only adds one to a single package.
 - **Features.** `cargo { features }` and the target's `compilations.<target> { features }` are
   combined per Rust target and passed as `--features`. In workspace mode, each module adds its
   features to `CargoWorkspaceService` while it is configured, with bare names qualified with its
@@ -155,7 +155,10 @@ linkerOpts = <native-static-libs> [--allow-multiple-definition]
 `linkerOpts` comes from asking rustc for `--print native-static-libs`, the system libraries the
 static library needs. The probe builds with the target's crate types and the features that apply
 to its package: it writes to the same output as the `CargoBuildTask`, so different ones would
-replace the library. With prebuilt libraries, the options are read from
+replace the library. In workspace mode, the probe still resolves features for its package alone.
+A feature that only another member brings into the workspace build (from its `Cargo.toml`, or for
+a crate that isn't a direct dependency) makes the two builds replace each other's library and
+fingerprints on every build. With prebuilt libraries, the options are read from
 `<library name>.native-static-libs` next to the library instead, so that no Cargo build runs.
 `--allow-multiple-definition` is added on Linux and Windows, because several UniFFI static
 libraries in one binary can contain the same Rust symbols (see

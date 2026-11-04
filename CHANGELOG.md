@@ -22,6 +22,8 @@
 - With `buildWorkspaceLibraries`, the modules of a Cargo workspace share one Cargo build per Rust
   target and profile instead of running Cargo once each. It enables the features of all modules, so
   they no longer have to repeat each other's features.
+- With `buildWorkspaceLibraries`, a library that lacks a crate type its targets need fails the
+  build, instead of being built without the other workspace libraries.
 
 ### Fixed
 
