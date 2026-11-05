@@ -48,6 +48,11 @@ tasks receive providers.
 Task dependencies follow from wiring one task's output provider into another task's input, so
 Gradle infers them. The only explicit `dependsOn` is `prepareKotlinIdeaImport` → `buildBindings`.
 
+With `cargo { prebuiltLibraries }` set, every library input (the merges, the def files, the
+cinterop inputs and the bindings' host library) is a file in that directory instead of a
+`CargoBuildTask` output. Those files carry no task dependency, so the `CargoBuildTask`s are
+registered but never run.
+
 ### Cargo builds
 
 `CargoBuildTask` runs
@@ -146,8 +151,10 @@ linkerOpts = <native-static-libs> [--allow-multiple-definition]
 `linkerOpts` comes from asking rustc for `--print native-static-libs`, the system libraries the
 static library needs. The probe builds with the target's crate types and the features that apply
 to its package: it writes to the same output as the `CargoBuildTask`, so different ones would
-replace the library. `--allow-multiple-definition` is added on Linux and Windows, because several
-UniFFI static libraries in one binary can contain the same Rust symbols (see
+replace the library. With prebuilt libraries, the options are read from
+`<library name>.native-static-libs` next to the library instead, so that no Cargo build runs.
+`--allow-multiple-definition` is added on Linux and Windows, because several UniFFI static
+libraries in one binary can contain the same Rust symbols (see
 [External and remote types](external-and-remote-types.md#multi-module-builds)).
 
 The plugin registers a cinterop called `uniffi-cinterop` with package `cinterop` on each target's

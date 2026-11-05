@@ -79,6 +79,7 @@ cargo {
 | `rustcWrapper`                              | `$RUSTC_WRAPPER`           | Passed to Cargo as `RUSTC_WRAPPER`, for example `sccache`.                                             |
 | `rustcWorkspaceWrapper`                     | `$RUSTC_WORKSPACE_WRAPPER` | Passed to Cargo as `RUSTC_WORKSPACE_WRAPPER`.                                                          |
 | `features`                                  | none                       | Cargo features for every build, passed as `--features`.                                                |
+| `prebuiltLibraries`                         | none                       | Libraries built outside of Gradle, used instead of building them. See [Build performance](build-performance.md#prebuilt-libraries). |
 | `ndkVersion`                                | newest installed           | The NDK used for Android targets. See [Targets](../targets.md#ndk).                                    |
 | `androidDebugAbis`                          | host ABI(s)                | Android ABIs built in debug builds. See [Targets](../targets.md#debug-abis).                           |
 | `compilations.<target> { useCross = true }` | `false`                    | Build that Rust target with [`cross`](https://github.com/cross-rs/cross) instead of `cargo`.           |

@@ -92,6 +92,35 @@ cargo {
 or set `RUSTC_WRAPPER=sccache` (or `RUSTC_WORKSPACE_WRAPPER=sccache`) before running Gradle. The
 wrapper is passed to every Cargo invocation and is part of the task inputs.
 
+## Prebuilt libraries
+
+A release build compiles every Rust target one after another, in a single Gradle build. To build
+them elsewhere instead, for example in parallel CI jobs, point the plugin at the finished libraries:
+
+```kotlin
+cargo {
+    prebuiltLibraries = rootProject.layout.projectDirectory.dir("prebuilt")
+}
+```
+
+The plugin then packages and links those, and generates the bindings from the host library, without
+running Cargo. The directory is laid out like Cargo's target directory:
+
+```
+prebuilt/
+  aarch64-apple-darwin/release/libfoo.dylib
+  aarch64-linux-android/release/libfoo.so
+  aarch64-apple-ios/release/libfoo.a
+  aarch64-apple-ios/release/foo.native-static-libs
+```
+
+- Use the profile of the build: `debug`, or `release` with `-PreleaseBuild=true`.
+- Kotlin/Native targets also need the system libraries the static library links against, in
+  `<library name>.native-static-libs` next to it. rustc writes them when building the library with
+  `cargo rustc ... -- --print native-static-libs=<file>`.
+- Build the libraries with the same features as the plugin would. The plugin can't check them.
+- A missing library fails the build.
+
 ## IDE sync
 
 During an IntelliJ / Android Studio sync, the plugin generates the bindings so the IDE can resolve
