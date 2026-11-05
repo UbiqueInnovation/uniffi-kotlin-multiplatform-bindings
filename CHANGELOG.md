@@ -2,6 +2,10 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.3.3...HEAD)
 
+### Fixed
+
+- Published POMs name the license `MPL-2.0` instead of `License`.
+
 ## [1.3.3](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.3) - 2026-11-03
 
 ### Added
