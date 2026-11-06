@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * Gives the projects of a build one view of each workspace build, see
- * [ch.ubique.uniffi.plugin.dsl.CargoExtension.buildWorkspaceLibraries]: the features all of them
+ * [ch.ubique.uniffi.plugin.dsl.BuildMode.Workspace]: the features all of them
  * enable, and a single Cargo run that the others reuse.
  */
 abstract class CargoWorkspaceService : BuildService<BuildServiceParameters.None> {

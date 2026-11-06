@@ -2,6 +2,7 @@ package ch.ubique.uniffi.plugin
 
 import ch.ubique.uniffi.plugin.dsl.BindingsGenerationFromLibrary
 import ch.ubique.uniffi.plugin.dsl.BindingsGenerationFromUdl
+import ch.ubique.uniffi.plugin.dsl.BuildMode
 import ch.ubique.uniffi.plugin.dsl.CargoExtension
 import ch.ubique.uniffi.plugin.dsl.UniffiExtension
 import ch.ubique.uniffi.plugin.android.AndroidSupport
@@ -126,7 +127,7 @@ class UniffiPlugin : Plugin<Project> {
         )
 
         // A crate without a cdylib or staticlib is always built on its own.
-        buildsWithWorkspace = cargoExtension.buildWorkspaceLibraries.zip(
+        buildsWithWorkspace = cargoExtension.buildMode.map { it == BuildMode.Workspace }.zip(
             cargoInfo.workspaceLibraryPackages.zip(cargoInfo.packageName) { packages, name -> name in packages }
         ) { enabled, isLibrary -> enabled && isLibrary }
 

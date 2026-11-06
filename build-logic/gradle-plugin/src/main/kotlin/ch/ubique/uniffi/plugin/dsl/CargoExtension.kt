@@ -46,21 +46,18 @@ abstract class CargoExtension(project: Project) {
     val prebuiltLibraries: DirectoryProperty = project.objects.directoryProperty()
 
     /**
-     * Build every library of the Cargo workspace that declares a `cdylib` or `staticlib` in
-     * each Cargo invocation, instead of only this package.
+     * How Cargo is run for this project, see [BuildMode].
      *
      * Cargo resolves features per invocation, so workspace libraries that depend on each other
      * see different feature sets of their shared dependencies depending on which package is
-     * built. A library declaring a `cdylib` keeps a single build per target, so it is rebuilt
-     * whenever the previous invocation built another package. With this option, all projects of
-     * the workspace share one Cargo invocation per Rust target and profile, which enables the
-     * [features] of all of them.
+     * built. In [BuildMode.Workspace], all projects of the workspace share one Cargo invocation per
+     * Rust target and profile, which enables the [features] of all of them. Each library must
+     * declare the crate types its targets need, or the build fails.
      *
-     * Enable it in every project of the workspace, e.g. from a `subprojects` block. Each library
-     * must declare the crate types its targets need, or the build fails.
+     * Use the same mode in every project of the workspace, e.g. from a `subprojects` block.
      */
-    val buildWorkspaceLibraries: Property<Boolean> =
-        project.objects.property(Boolean::class.java).convention(false)
+    val buildMode: Property<BuildMode> =
+        project.objects.property(BuildMode::class.java).convention(BuildMode.Individual)
 
     /** Optional compiler wrapper, such as `sccache`. */
     val rustcWrapper: Property<String> = project.objects.property(String::class.java).apply {
@@ -75,9 +72,9 @@ abstract class CargoExtension(project: Project) {
 
     /**
      * Cargo features to enable for every build of the crate, passed to Cargo as `--features`.
-     * `<dependency>/<feature>` enables a feature of one of the crate's dependencies. With
-     * [buildWorkspaceLibraries], bare names are qualified with the crate's package, and the
-     * features of all projects of the workspace are enabled together.
+     * `<dependency>/<feature>` enables a feature of one of the crate's dependencies. In
+     * [BuildMode.Workspace], bare names are qualified with the crate's package, and the features
+     * of all projects of the workspace are enabled together.
      *
      * Features for some targets only go into [compilations] instead, for example:
      *

@@ -99,7 +99,7 @@ abstract class CargoBuildTask : DefaultTask() {
 
     /**
      * The workspace packages to build alongside [packageName], see
-     * [ch.ubique.uniffi.plugin.dsl.CargoExtension.buildWorkspaceLibraries]. Empty builds only
+     * [ch.ubique.uniffi.plugin.dsl.BuildMode.Workspace]. Empty builds only
      * [packageName].
      */
     @get:Input
@@ -202,7 +202,7 @@ abstract class CargoBuildTask : DefaultTask() {
         // `cargo build` can't add a crate type, and `cargo rustc` only adds one to a single package.
         if (override != null) {
             throw GradleException(
-                "${packageName.get()} needs crate-type $override, which buildWorkspaceLibraries " +
+                "${packageName.get()} needs crate-type $override, which the workspace build mode " +
                     "can't add. Add $override to [lib] crate-type in its Cargo.toml."
             )
         }
