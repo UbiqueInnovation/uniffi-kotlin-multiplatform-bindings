@@ -1,5 +1,6 @@
 package ch.ubique.uniffi.plugin.tasks
 
+import ch.ubique.uniffi.plugin.dsl.BuildMode
 import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.model.CrateType
 import kotlin.io.path.createTempDirectory
@@ -10,7 +11,6 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.gradle.api.GradleException
 import org.gradle.testkit.runner.GradleRunner
@@ -72,38 +72,39 @@ class CargoBuildTaskTest {
     }
 
     @Test
-    fun `crate type override is only passed when the declared crate types lack it`() {
-        val project = ProjectBuilder.builder()
-            .withProjectDir(createTempDirectory("uniffi-cargo-crate-types").toFile())
-            .build()
-        fun override(requested: Set<CrateType>, declared: Set<CrateType>?): String? {
-            val task = project.tasks.register(
-                "cargoBuild${project.tasks.size}",
-                CargoBuildTask::class.java,
-            ).get()
-            task.crateTypes.set(requested)
-            declared?.let { task.declaredCrateTypes.set(it) }
-            return task.crateTypeOverride.orNull
-        }
-
-        val all = setOf(CrateType.SystemDynamicLibrary, CrateType.SystemStaticLibrary, CrateType.Library)
-        assertNull(override(setOf(CrateType.SystemDynamicLibrary), all))
-        assertNull(override(setOf(CrateType.SystemStaticLibrary), all))
-        assertNull(override(emptySet(), setOf(CrateType.Library)))
-        assertEquals("cdylib", override(setOf(CrateType.SystemDynamicLibrary), setOf(CrateType.Library)))
-        assertEquals("cdylib", override(setOf(CrateType.SystemDynamicLibrary), null))
+    fun `an individual build passes exactly the crate types its targets need`() {
+        val crateType = "ch.ubique.uniffi.plugin.model.CrateType"
+        // Declared crate types don't matter: the crate is the root of its own build.
         assertEquals(
-            "cdylib,staticlib",
-            override(
-                setOf(CrateType.SystemStaticLibrary, CrateType.SystemDynamicLibrary),
-                setOf(CrateType.SystemDynamicLibrary),
+            listOf("rustc", "--lib", "--package", "sample", "--crate-type", "cdylib"),
+            cargoArguments(
+                "crateTypes.set([$crateType.SystemDynamicLibrary]); " +
+                    "declaredCrateTypes.set([$crateType.Library, $crateType.SystemDynamicLibrary, $crateType.SystemStaticLibrary])"
             ),
+        )
+        assertEquals(
+            listOf("rustc", "--lib", "--package", "sample", "--crate-type", "cdylib,staticlib"),
+            cargoArguments("crateTypes.set([$crateType.SystemStaticLibrary, $crateType.SystemDynamicLibrary])"),
         )
     }
 
     @Test
+    fun `an individual build fails when a workspace dependency declares a cdylib`() {
+        val task = ProjectBuilder.builder().build().tasks.register("cargoBuild", CargoBuildTask::class.java).get()
+        task.packageName.set("sample")
+        task.buildMode.set(BuildMode.Individual)
+        task.cdylibDependencies.set(setOf("util", "common"))
+
+        val error = assertFailsWith<GradleException> { task.build() }
+        assertContains(error.message.orEmpty(), "declaring crate-type cdylib: common, util")
+    }
+
+    @Test
     fun `features are passed to cargo`() {
-        assertEquals("first,second", cargoFeatures("['second', 'first']"))
+        assertEquals(
+            "first,second",
+            cargoArguments("features.set(['second', 'first'])").dropWhile { it != "--features" }.getOrNull(1),
+        )
     }
 
     @Test
@@ -135,6 +136,7 @@ class CargoBuildTaskTest {
                     release.set(false)
                     useCross.set(false)
                     additionalEnvironment.set([:])
+                    buildMode.set(ch.ubique.uniffi.plugin.dsl.BuildMode.Workspace)
                     workspacePackageNames.set(['a', 'b'])
                     features.set(['b/second', 'a/first'])
                 }
@@ -163,12 +165,13 @@ class CargoBuildTaskTest {
     fun `a workspace build fails when a package lacks a required crate type`() {
         val task = ProjectBuilder.builder().build().tasks.register("cargoBuild", CargoBuildTask::class.java).get()
         task.packageName.set("sample")
+        task.buildMode.set(BuildMode.Workspace)
         task.crateTypes.set(setOf(CrateType.SystemDynamicLibrary))
         task.declaredCrateTypes.set(setOf(CrateType.Library, CrateType.SystemStaticLibrary))
         task.workspacePackageNames.set(setOf("sample", "other"))
 
         val error = assertFailsWith<GradleException> { task.build() }
-        assertContains(error.message.orEmpty(), "Add cdylib to [lib] crate-type")
+        assertContains(error.message.orEmpty(), "need crate-type cdylib, missing from [lib] crate-type")
     }
 
     @Test
@@ -179,11 +182,14 @@ class CargoBuildTaskTest {
             task.packageName.set("sample")
             task.dependencyNames.set(setOf("dependency", "member-dependency"))
             task.features.set(features)
-            workspacePackages?.let { task.workspacePackageNames.set(it) }
+            workspacePackages?.let {
+                task.buildMode.set(BuildMode.Workspace)
+                task.workspacePackageNames.set(it)
+            }
             return task.packageFeatures.get()
         }
 
-        // Without a workspace build, the features are passed as configured and Cargo checks them.
+        // In individual mode, the features are passed as configured and Cargo checks them.
         assertEquals(
             listOf("dependency/feature", "first", "other/feature", "sample/own"),
             packageFeatures(setOf("first", "", "sample/own", "dependency/feature", "other/feature"), null),
@@ -207,11 +213,11 @@ class CargoBuildTaskTest {
     }
 
     /**
-     * Runs a [CargoBuildTask] against a fake cargo and returns the value of the `--features`
-     * argument it received, if any. [features] is a Groovy list literal.
+     * Runs an individual [CargoBuildTask] for the package `sample` against a fake cargo and returns
+     * the arguments it received. [configuration] is Groovy code configuring the task.
      */
-    private fun cargoFeatures(features: String): String? {
-        val root = createTempDirectory("uniffi-cargo-features")
+    private fun cargoArguments(configuration: String): List<String> {
+        val root = createTempDirectory("uniffi-cargo-arguments")
         val fakeBin = root.resolve("fake-bin").createDirectories()
         val cargo = fakeBin.resolve("cargo")
         cargo.writeText("""#!/bin/sh
@@ -232,7 +238,7 @@ class CargoBuildTaskTest {
                 release.set(false)
                 useCross.set(false)
                 additionalEnvironment.set([:])
-                features.set($features)
+                $configuration
             }
         """.trimIndent())
 
@@ -244,8 +250,6 @@ class CargoBuildTaskTest {
             .build()
 
         return root.resolve("target/arguments").toFile().readLines()
-            .dropWhile { it != "--features" }
-            .getOrNull(1)
     }
 
     @Test

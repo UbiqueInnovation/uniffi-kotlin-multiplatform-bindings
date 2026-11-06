@@ -1,5 +1,6 @@
 package ch.ubique.uniffi.plugin.tasks
 
+import ch.ubique.uniffi.plugin.dsl.BuildMode
 import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.model.CrateType
 import ch.ubique.uniffi.plugin.services.CargoWorkspaceService
@@ -15,15 +16,13 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.gradle.work.DisableCachingByDefault
+import java.io.File
 import javax.inject.Inject
 
 @DisableCachingByDefault(because = "Cargo caches incrementally, and the rust toolchain is not a declared input")
@@ -67,40 +66,39 @@ abstract class CargoBuildTask : DefaultTask() {
     @get:Input
     abstract val useCross: Property<Boolean>
 
+    /** Whether the crate is built alone or together with the workspace, see [BuildMode]. */
+    @get:Input
+    abstract val buildMode: Property<BuildMode>
+
     /** The system crate types required by the consuming Kotlin targets. */
     @get:Input
     @get:Optional
     abstract val crateTypes: SetProperty<CrateType>
 
-    /** The crate types declared in the package's `[lib] crate-type`, as reported by `cargo metadata`. */
+    /**
+     * The crate types declared in the package's `[lib] crate-type`, as reported by `cargo metadata`.
+     * In [BuildMode.Workspace] they must include [crateTypes]: `cargo build` can't add a crate type,
+     * and `cargo rustc` only adds one to a single package.
+     */
     @get:Input
     @get:Optional
     abstract val declaredCrateTypes: SetProperty<CrateType>
 
     /**
-     * The `--crate-type` override passed to cargo, or null if the declared crate types already
-     * cover [crateTypes].
+     * The workspace crates the package depends on, directly or through other workspace crates,
+     * that declare a `cdylib`. [BuildMode.Individual] fails if there are any.
      *
-     * Cargo fingerprints a `cdylib` package in a single slot per target, whether it is built as
-     * the root of `cargo rustc --crate-type ...` or as the dependency of another package. With a
-     * shared target directory, a workspace whose libraries depend on each other then rebuilds
-     * every library below the root on each invocation, as the two configurations keep replacing
-     * each other's fingerprint. Without the override the root is built exactly like a
-     * dependency, so an unchanged workspace stays fresh.
+     * Cargo fingerprints a package declaring a `cdylib` in a single slot per target. When it is
+     * compiled as a dependency of several packages, with different features or as the root of its
+     * own `cargo rustc --crate-type` build, these builds keep replacing each other's fingerprint, and
+     * the package and everything depending on it is rebuilt on every invocation.
      */
-    @get:Internal
-    val crateTypeOverride: Provider<String>
-        get() = crateTypes.zip(declaredCrateTypes.orElse(emptySet())) { requested, declared ->
-            requested.takeUnless { it.isEmpty() || declared.containsAll(it) }
-                ?.sortedBy { it.toString() }
-                ?.joinToString(",")
-                ?: ""
-        }.filter { it.isNotEmpty() }
+    @get:Input
+    @get:Optional
+    abstract val cdylibDependencies: SetProperty<String>
 
     /**
-     * The workspace packages to build alongside [packageName], see
-     * [ch.ubique.uniffi.plugin.dsl.BuildMode.Workspace]. Empty builds only
-     * [packageName].
+     * The workspace packages to build alongside [packageName] in [BuildMode.Workspace].
      */
     @get:Input
     @get:Optional
@@ -115,8 +113,8 @@ abstract class CargoBuildTask : DefaultTask() {
     abstract val workspaceService: Property<CargoWorkspaceService>
 
     /**
-     * Cargo features to enable, passed as `--features`. With [workspacePackageNames], these are
-     * the features of every project building the workspace, qualified with their package.
+     * Cargo features to enable, passed as `--features`. In [BuildMode.Workspace], these are the
+     * features of every project building the workspace, qualified with their package.
      */
     @get:Input
     abstract val features: SetProperty<String>
@@ -128,13 +126,13 @@ abstract class CargoBuildTask : DefaultTask() {
 
     /**
      * The [features] for a build of [packageName] on its own, which the def file probe uses as
-     * well. With [workspacePackageNames], only the features of [packageName] and of its
-     * dependencies are kept: Cargo rejects any other when it builds a single package.
+     * well. In [BuildMode.Workspace], only the features of [packageName] and of its dependencies
+     * are kept: Cargo rejects any other when it builds a single package.
      */
     @get:Internal
     val packageFeatures: Provider<List<String>>
-        get() = features.map { features ->
-            if (workspacePackageNames.getOrElse(emptySet()).isEmpty()) {
+        get() = features.zip(buildMode) { features, mode ->
+            if (mode == BuildMode.Individual) {
                 features.filter(String::isNotBlank).sorted()
             } else {
                 val packages = dependencyNames.getOrElse(emptySet()) + packageName.get()
@@ -181,6 +179,7 @@ abstract class CargoBuildTask : DefaultTask() {
     init {
         // Cargo checks its complete dependency graph and toolchain state on every invocation.
         outputs.upToDateWhen { false }
+        buildMode.convention(BuildMode.Individual)
         dynamicLibraryFile.set(libraryFile(BuildTarget.RustTarget::dynamicLibraryName))
         staticLibraryFile.set(libraryFile(BuildTarget.RustTarget::staticLibraryName))
     }
@@ -195,83 +194,95 @@ abstract class CargoBuildTask : DefaultTask() {
             }
     ) { directory, library -> directory.file(library) }
 
-    /** The packages built together, or just [packageName] if they are built one by one. */
-    private fun packagesToBuild(override: String?): List<String> {
-        val workspacePackages = workspacePackageNames.getOrElse(emptySet())
-        if (workspacePackages.isEmpty()) return listOf(packageName.get())
-        // `cargo build` can't add a crate type, and `cargo rustc` only adds one to a single package.
-        if (override != null) {
-            throw GradleException(
-                "${packageName.get()} needs crate-type $override, which the workspace build mode " +
-                    "can't add. Add $override to [lib] crate-type in its Cargo.toml."
-            )
-        }
-        return (workspacePackages + packageName.get()).sorted()
-    }
-
-    /** The `--features` value, or null without features. */
-    private fun featureArgument(packages: List<String>): String? {
-        val enabled = if (packages.size == 1) packageFeatures.get() else features.get().sorted()
-        return enabled.joinToString(",").ifEmpty { null }
-    }
-
     @TaskAction
     fun build() {
-        val override = crateTypeOverride.orNull
-        val packages = packagesToBuild(override)
-        val workspaceBuild = packages.size > 1
-        val cargo = CargoRunner(execOperations, logger, useCross = useCross.get()) {
-            // Without the override there are no rustc arguments, and `cargo build` builds
-            // exactly what `cargo rustc` would, but for any number of packages.
-            argument(if (workspaceBuild) "build" else "rustc")
-            argument("--lib")
-            if (rustTarget.isPresent) {
-                argument("--target")
-                argument(rustTarget.get().rustTriple)
-            }
-            packages.forEach {
-                argument("--package")
-                argument(it)
-            }
+        when (buildMode.get()) {
+            BuildMode.Workspace -> buildWithWorkspace()
+            BuildMode.Individual -> buildIndividually()
+        }
+    }
 
-            if (release.get()) {
-                argument("--release")
-            }
+    /**
+     * Runs `cargo build` for [packageName] and the [workspacePackageNames] from the workspace root.
+     * Every project building the workspace runs the same command, so the [workspaceService] runs it
+     * once for all of them.
+     */
+    private fun buildWithWorkspace() {
+        val missing = crateTypes.getOrElse(emptySet()) - declaredCrateTypes.getOrElse(emptySet())
+        if (missing.isNotEmpty()) {
+            val types = missing.map(CrateType::toString).sorted().joinToString(", ")
+            throw GradleException(
+                "The Kotlin targets of ${packageName.get()} need crate-type $types, missing from " +
+                    "[lib] crate-type in its Cargo.toml. Add it there, or build the crate on its own " +
+                    "with cargo { buildMode = BuildMode.Individual }."
+            )
+        }
+        val cargo = cargo(
+            subcommand = "build",
+            workdir = workspaceDirectory.get().asFile,
+            packages = (workspacePackageNames.getOrElse(emptySet()) + packageName.get()).sorted(),
+            features = features.get().filter(String::isNotBlank).sorted(),
+        )
+        workspaceService.get().runOnce(cargo.invocation) { cargo.run() }
+    }
 
-            override?.let { override ->
-                if (declaredCrateTypes.getOrElse(emptySet()).any(CrateType::isDynamic)) {
-                    logger.warn(
-                        "${packageName.get()} declares crate-type " +
-                            "${declaredCrateTypes.get().sorted()} without $override. Cargo may " +
-                            "rebuild it and its dependents on every invocation; add $override to " +
-                            "[lib] crate-type in its Cargo.toml."
-                    )
-                }
-                argument("--crate-type")
-                argument(override)
-            }
+    /** Runs `cargo rustc` for [packageName] alone, with exactly the [crateTypes] it needs. */
+    private fun buildIndividually() {
+        val cdylibs = cdylibDependencies.getOrElse(emptySet())
+        if (cdylibs.isNotEmpty()) {
+            throw GradleException(
+                "${packageName.get()} depends on workspace crates declaring crate-type cdylib: " +
+                    "${cdylibs.sorted().joinToString(", ")}. Cargo would rebuild them and everything " +
+                    "depending on them on every build. Remove cdylib from their [lib] crate-type, or " +
+                    "build the workspace together with cargo { buildMode = BuildMode.Workspace }."
+            )
+        }
+        cargo(
+            subcommand = "rustc",
+            workdir = packageDirectory.get().asFile,
+            packages = listOf(packageName.get()),
+            crateTypes = crateTypes.getOrElse(emptySet()).map(CrateType::toString).sorted(),
+            features = packageFeatures.get(),
+        ).run()
+    }
 
-            featureArgument(packages)?.let { features ->
-                argument("--features")
-                argument(features)
-            }
-
-            // From the workspace root, every project building the workspace runs the same command.
-            workdir((if (workspaceBuild) workspaceDirectory else packageDirectory).get().asFile)
-
-            env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
-            rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
-            rustcWorkspaceWrapper.orNull?.let { env("RUSTC_WORKSPACE_WRAPPER", it) }
-
-            additionalEnvironment.get().forEach { (key, value) ->
-                env(key, value)
-            }
+    private fun cargo(
+        subcommand: String,
+        workdir: File,
+        packages: List<String>,
+        crateTypes: List<String> = emptyList(),
+        features: List<String>,
+    ) = CargoRunner(execOperations, logger, useCross = useCross.get()) {
+        argument(subcommand)
+        argument("--lib")
+        rustTarget.orNull?.let {
+            argument("--target")
+            argument(it.rustTriple)
+        }
+        packages.forEach {
+            argument("--package")
+            argument(it)
+        }
+        if (release.get()) {
+            argument("--release")
+        }
+        if (crateTypes.isNotEmpty()) {
+            argument("--crate-type")
+            argument(crateTypes.joinToString(","))
+        }
+        if (features.isNotEmpty()) {
+            argument("--features")
+            argument(features.joinToString(","))
         }
 
-        if (workspaceBuild) {
-            workspaceService.get().runOnce(cargo.invocation) { cargo.run() }
-        } else {
-            cargo.run()
+        workdir(workdir)
+
+        env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
+        rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
+        rustcWorkspaceWrapper.orNull?.let { env("RUSTC_WORKSPACE_WRAPPER", it) }
+
+        additionalEnvironment.get().forEach { (key, value) ->
+            env(key, value)
         }
     }
 }

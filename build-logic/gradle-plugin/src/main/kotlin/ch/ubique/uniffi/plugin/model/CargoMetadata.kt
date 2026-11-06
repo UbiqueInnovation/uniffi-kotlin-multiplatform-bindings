@@ -30,6 +30,8 @@ data class CargoMetadata(
             @SerialName("optional") val optional: Boolean,
             @SerialName("uses_default_features") val usesDefaultFeatures: Boolean,
             @SerialName("features") val features: List<String>,
+            /** The directory of a path dependency. */
+            @SerialName("path") val path: String? = null,
         )
 
         @Serializable

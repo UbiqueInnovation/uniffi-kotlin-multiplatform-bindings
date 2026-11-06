@@ -20,6 +20,7 @@ import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
 import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
 import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
 import ch.ubique.uniffi.plugin.utils.BindgenSource
+import ch.ubique.uniffi.plugin.utils.cdylibWorkspaceDependencies
 import ch.ubique.uniffi.plugin.utils.dependencyNames
 import ch.ubique.uniffi.plugin.utils.targetPackage
 import ch.ubique.uniffi.plugin.utils.workspaceForeignLibraryPackages
@@ -119,6 +120,9 @@ class UniffiPlugin : Plugin<Project> {
             libraryName = targetPackage.map { it.targets.first().name },
             declaredCrateTypes = targetPackage.map { it.targets.first().crateTypes },
             dependencyNames = targetPackage.map { it.dependencyNames() },
+            cdylibDependencies = metadata.zip(targetPackage) { cargoMetadata, pkg ->
+                cargoMetadata.cdylibWorkspaceDependencies(pkg)
+            },
             workspaceLibraryPackages = metadata.map { it.workspaceForeignLibraryPackages() },
             workspaceRoot = project.layout.dir(metadata.map { File(it.workspaceRoot) }),
             targetDirectory = cargoExtension.targetDirectory.orElse(
@@ -126,10 +130,7 @@ class UniffiPlugin : Plugin<Project> {
             ),
         )
 
-        // A crate without a cdylib or staticlib is always built on its own.
-        buildsWithWorkspace = cargoExtension.buildMode.map { it == BuildMode.Workspace }.zip(
-            cargoInfo.workspaceLibraryPackages.zip(cargoInfo.packageName) { packages, name -> name in packages }
-        ) { enabled, isLibrary -> enabled && isLibrary }
+        buildsWithWorkspace = cargoExtension.buildMode.map { it == BuildMode.Workspace }
 
         workspaceService = project.gradle.sharedServices.registerIfAbsent(
             // Each class loader that loads the plugin needs its own registration.
@@ -431,8 +432,10 @@ class UniffiPlugin : Plugin<Project> {
         task.packageName.set(cargoInfo.packageName)
         task.libraryName.set(cargoInfo.libraryName)
         task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
+        task.buildMode.set(cargoExtension.buildMode)
         task.crateTypes.add(crateType)
         task.declaredCrateTypes.set(cargoInfo.declaredCrateTypes)
+        task.cdylibDependencies.set(cargoInfo.cdylibDependencies)
         task.dependencyNames.set(cargoInfo.dependencyNames)
         task.workspacePackageNames.set(
             buildsWithWorkspace.flatMap { enabled ->
