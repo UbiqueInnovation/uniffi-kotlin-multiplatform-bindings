@@ -2,6 +2,13 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.3.4...HEAD)
 
+### Added
+
+- `cargo { prebuiltLibraries }` takes the libraries from a directory laid out like Cargo's target
+  directory instead of building them, so that they can be built elsewhere, for example in parallel
+  CI jobs. Kotlin/Native targets read the linker options from a `.native-static-libs` file next to
+  each static library.
+
 ## [1.3.4](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.4) - 2026-11-05
 
 ### Fixed

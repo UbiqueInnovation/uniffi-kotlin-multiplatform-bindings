@@ -58,6 +58,8 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(gradleApi())
     testImplementation(gradleTestKit())
+    // Lets plugin tests apply the Kotlin Multiplatform plugin to a ProjectBuilder project.
+    testImplementation(libs.kotlin.gradle.plugin)
 }
 
 gradlePlugin {
