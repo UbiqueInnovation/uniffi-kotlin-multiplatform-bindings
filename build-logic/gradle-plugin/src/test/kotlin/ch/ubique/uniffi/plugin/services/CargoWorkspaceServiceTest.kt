@@ -13,19 +13,29 @@ class CargoWorkspaceServiceTest {
     }
 
     @Test
-    fun `features are combined per workspace and rust target`() {
+    fun `packages and features are combined per workspace and rust target`() {
         val providers = ProjectBuilder.builder().build().providers
         val service = service()
-        fun add(workspace: String, target: RustTarget, vararg features: String) =
-            service.addFeatures(providers.provider { workspace }, target, providers.provider { features.toSet() })
+        fun add(workspace: String, target: RustTarget, packageName: String?, vararg features: String) =
+            service.addProject(
+                workspaceRoot = providers.provider { workspace },
+                rustTarget = target,
+                packageName = providers.provider { packageName },
+                features = providers.provider { features.toSet() },
+            )
 
-        add("/ws", RustTarget.X64LinuxGnu, "b/second", "a/first")
-        add("/ws", RustTarget.X64LinuxGnu, "a/first", "c/third")
-        add("/ws", RustTarget.Aarch64AppleIos, "a/ios")
-        add("/other", RustTarget.X64LinuxGnu, "d/other")
+        add("/ws", RustTarget.X64LinuxGnu, "b", "b/second", "a/first")
+        add("/ws", RustTarget.X64LinuxGnu, "a", "a/first", "c/third")
+        add("/ws", RustTarget.Aarch64AppleIos, "a", "a/ios")
+        add("/other", RustTarget.X64LinuxGnu, "d", "d/other")
+        // Builds its crate on its own.
+        add("/ws", RustTarget.X64LinuxGnu, null, "e/individual")
 
+        assertEquals(listOf("a", "b"), service.packages("/ws", RustTarget.X64LinuxGnu).toList())
         assertEquals(listOf("a/first", "b/second", "c/third"), service.features("/ws", RustTarget.X64LinuxGnu).toList())
+        assertEquals(setOf("a"), service.packages("/ws", RustTarget.Aarch64AppleIos))
         assertEquals(setOf("a/ios"), service.features("/ws", RustTarget.Aarch64AppleIos))
+        assertEquals(emptySet(), service.packages("/ws", RustTarget.X64AppleDarwin))
         assertEquals(emptySet(), service.features("/ws", RustTarget.X64AppleDarwin))
     }
 

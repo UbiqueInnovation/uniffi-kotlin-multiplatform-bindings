@@ -19,16 +19,6 @@ fun CargoMetadata.Package.dependencyNames(): Set<String> =
 val CargoMetadata.Package.libraryTarget: CargoMetadata.Package.Target?
     get() = targets.firstOrNull { target -> target.kinds.none { it.crateType == CrateType.Executable } }
 
-/** The workspace members whose library target declares a `cdylib` or `staticlib`. */
-fun CargoMetadata.workspaceForeignLibraryPackages(): List<String> = packages
-    .filter { it.id in workspaceMembers }
-    .filter { pkg ->
-        pkg.targets.firstOrNull()?.crateTypes.orEmpty()
-            .any { it == CrateType.SystemDynamicLibrary || it == CrateType.SystemStaticLibrary }
-    }
-    .map { it.name }
-    .sorted()
-
 /**
  * The workspace members [pkg] depends on, directly or through other members, whose library
  * declares a `cdylib`. Only normal dependencies count, the ones `cargo rustc --lib` builds.

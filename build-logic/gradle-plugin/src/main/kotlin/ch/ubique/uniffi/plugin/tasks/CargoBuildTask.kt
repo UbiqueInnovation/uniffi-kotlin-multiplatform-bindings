@@ -98,7 +98,8 @@ abstract class CargoBuildTask : DefaultTask() {
     abstract val cdylibDependencies: SetProperty<String>
 
     /**
-     * The workspace packages to build alongside [packageName] in [BuildMode.Workspace].
+     * The packages built together in [BuildMode.Workspace]: those of every project in the workspace
+     * that builds this Rust target in that mode.
      */
     @get:Input
     @get:Optional

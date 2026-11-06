@@ -12,8 +12,6 @@ internal data class CargoInfo(
     val dependencyNames: Provider<Set<String>>,
     /** The workspace crates the package depends on that declare a `cdylib`. */
     val cdylibDependencies: Provider<Set<String>>,
-    /** The workspace members declaring a `cdylib` or `staticlib`. */
-    val workspaceLibraryPackages: Provider<List<String>>,
     val workspaceRoot: Provider<Directory>,
     val targetDirectory: Provider<Directory>,
 )
