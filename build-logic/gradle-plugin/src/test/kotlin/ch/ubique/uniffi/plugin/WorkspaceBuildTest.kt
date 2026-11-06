@@ -5,10 +5,12 @@ import ch.ubique.uniffi.plugin.dsl.CargoExtension
 import ch.ubique.uniffi.plugin.dsl.UniffiExtension
 import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
+import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import org.gradle.api.Project
 import org.gradle.api.internal.project.ProjectInternal
 import org.gradle.testfixtures.ProjectBuilder
@@ -21,7 +23,7 @@ class WorkspaceBuildTest {
     val temporaryFolder = TemporaryFolder()
 
     @Test
-    fun `a workspace build contains the projects building that target in workspace mode`() {
+    fun `projects in workspace mode build together, individual projects on their own`() {
         val root = temporaryFolder.root.toPath()
         root.resolve("Cargo.toml").writeText("[workspace]\nmembers = [\"a\", \"b\", \"c\"]\n")
         root.resolve("gradle.properties").writeText("kotlin.mpp.enableCInteropCommonization=true\n")
@@ -74,5 +76,14 @@ class WorkspaceBuildTest {
         assertEquals(setOf("a"), a.cargoBuild(ios).workspacePackageNames.get())
         assertEquals(emptySet(), c.cargoBuild(host).workspacePackageNames.get())
         assertEquals(emptySet(), c.cargoBuild(ios).workspacePackageNames.get())
+
+        // The def file of a workspace build probes the linker options, an individual build reports them.
+        fun Project.defFile() = tasks.getByName(Tasks.generateDefFile(BuildTarget.IosArm64)) as GenerateDefFileTask
+        assertFalse(a.defFile().nativeStaticLibsFile.isPresent)
+        assertEquals(
+            c.cargoBuild(ios).cargoOutputDirectory.get().file("c.native-static-libs").asFile,
+            c.defFile().nativeStaticLibsFile.get().asFile,
+        )
+        assertEquals(c.defFile().nativeStaticLibsFile.get(), c.cargoBuild(ios).nativeStaticLibsFile.get())
     }
 }

@@ -5,6 +5,8 @@ import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.model.CrateType
 import ch.ubique.uniffi.plugin.services.CargoWorkspaceService
 import ch.ubique.uniffi.plugin.utils.CargoRunner
+import ch.ubique.uniffi.plugin.utils.PRINT_NATIVE_STATIC_LIBS
+import ch.ubique.uniffi.plugin.utils.nativeStaticLibs
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.Directory
@@ -177,6 +179,17 @@ abstract class CargoBuildTask : DefaultTask() {
     @get:Optional
     abstract val staticLibraryFile: RegularFileProperty
 
+    /**
+     * Where a [BuildMode.Individual] build of a static library writes the linker options for its
+     * native dependencies, as rustc's `--print native-static-libs` reports them. Usually
+     * `<library name>.native-static-libs` next to the library, like for
+     * [prebuilt libraries][ch.ubique.uniffi.plugin.dsl.CargoExtension.prebuiltLibraries]. A
+     * workspace build can't pass rustc arguments, so the def file task probes them instead.
+     */
+    @get:OutputFile
+    @get:Optional
+    abstract val nativeStaticLibsFile: RegularFileProperty
+
     init {
         // Cargo checks its complete dependency graph and toolchain state on every invocation.
         outputs.upToDateWhen { false }
@@ -238,13 +251,16 @@ abstract class CargoBuildTask : DefaultTask() {
                     "build the workspace together with cargo { buildMode = BuildMode.Workspace }."
             )
         }
-        cargo(
+        val nativeStaticLibsFile = nativeStaticLibsFile.orNull?.asFile
+        val output = cargo(
             subcommand = "rustc",
             workdir = packageDirectory.get().asFile,
             packages = listOf(packageName.get()),
             crateTypes = crateTypes.getOrElse(emptySet()).map(CrateType::toString).sorted(),
             features = packageFeatures.get(),
+            rustcArguments = if (nativeStaticLibsFile != null) PRINT_NATIVE_STATIC_LIBS else emptyList(),
         ).run()
+        nativeStaticLibsFile?.writeText(nativeStaticLibs(output).orEmpty())
     }
 
     private fun cargo(
@@ -253,6 +269,7 @@ abstract class CargoBuildTask : DefaultTask() {
         packages: List<String>,
         crateTypes: List<String> = emptyList(),
         features: List<String>,
+        rustcArguments: List<String> = emptyList(),
     ) = CargoRunner(execOperations, logger, useCross = useCross.get()) {
         argument(subcommand)
         argument("--lib")
@@ -274,6 +291,12 @@ abstract class CargoBuildTask : DefaultTask() {
         if (features.isNotEmpty()) {
             argument("--features")
             argument(features.joinToString(","))
+        }
+        if (rustcArguments.isNotEmpty()) {
+            argument("--")
+            rustcArguments.forEach(::argument)
+            // rustc reports on stderr.
+            redirectErrorStream(true)
         }
 
         workdir(workdir)

@@ -2,6 +2,8 @@ package ch.ubique.uniffi.plugin.tasks
 
 import ch.ubique.uniffi.plugin.model.CrateType
 import ch.ubique.uniffi.plugin.utils.CargoRunner
+import ch.ubique.uniffi.plugin.utils.PRINT_NATIVE_STATIC_LIBS
+import ch.ubique.uniffi.plugin.utils.nativeStaticLibs
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -19,8 +21,10 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.gradle.work.DisableCachingByDefault
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import javax.inject.Inject
-import kotlin.String
 
 @DisableCachingByDefault(because = "Generating the def file is cheaper than fetching it from the build cache")
 abstract class GenerateDefFileTask : DefaultTask() {
@@ -42,7 +46,8 @@ abstract class GenerateDefFileTask : DefaultTask() {
     /**
      * The linker options for the library's native dependencies, as rustc's
      * `--print native-static-libs` reports them. When set, they're read from here instead of
-     * being probed with Cargo, which would build the library again.
+     * being probed with Cargo, which would build the library again. Prebuilt libraries and
+     * individual builds have it, workspace builds don't.
      */
     @get:InputFile
     @get:Optional
@@ -61,11 +66,6 @@ abstract class GenerateDefFileTask : DefaultTask() {
 
     @get:Input
     abstract val targetString: Property<String>
-
-    /** The crate types already requested by the shared Cargo build for this target. */
-    @get:Input
-    @get:Optional
-    abstract val crateTypes: SetProperty<CrateType>
 
     /** The features the shared Cargo build enables for this package and target. */
     @get:Input
@@ -118,7 +118,7 @@ abstract class GenerateDefFileTask : DefaultTask() {
         val nativeStaticLibs = if (nativeStaticLibsFile.isPresent) {
             nativeStaticLibsFile.get().asFile.readText().trim().ifEmpty { null }
         } else {
-            getLinkerOpts()
+            keepingLibrary(::getLinkerOpts)
         }
         val opts = listOfNotNull(nativeStaticLibs, duplicateSymbolOpt())
         if (opts.isNotEmpty()) {
@@ -138,25 +138,42 @@ abstract class GenerateDefFileTask : DefaultTask() {
         }
     }
 
+    /**
+     * Runs [probe] with the library Cargo leaves for the debug profile moved aside. The probe builds
+     * the package on its own, so Cargo puts the probe's library there, built with different crate
+     * types and possibly with different features than the workspace build's. Without moving it
+     * back, cinterop would get the probe's library.
+     */
+    private fun <T> keepingLibrary(probe: () -> T): T {
+        val library = cargoTargetDirectory.get().asFile
+            .resolve("${targetString.get()}/debug/${staticLibrary.get().asFile.name}")
+        if (!library.isFile) return probe()
+        val kept = File(library.parentFile, "${library.name}.uniffi-kept")
+        Files.move(library.toPath(), kept.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        try {
+            return probe()
+        } finally {
+            Files.move(kept.toPath(), library.toPath(), StandardCopyOption.ATOMIC_MOVE)
+        }
+    }
+
     private fun getLinkerOpts(): String? {
         val output = CargoRunner(execOperations, logger, useCross = useCross.get()) {
             argument("rustc")
             argument("--lib")
             argument("--target")
             argument(targetString.get())
+            // Cargo fingerprints the extra rustc arguments below, so the probe needs its own
+            // fingerprint. A staticlib alone gets one, while a crate type set that includes a cdylib
+            // would share it with the workspace build, and the two would keep rebuilding each other.
             argument("--crate-type")
-            argument(
-                crateTypes.getOrElse(setOf(CrateType.SystemStaticLibrary))
-                    .sortedBy { it.toString() }
-                    .joinToString(",")
-            )
+            argument(CrateType.SystemStaticLibrary.toString())
             if (features.get().isNotEmpty()) {
                 argument("--features")
                 argument(features.get().sorted().joinToString(","))
             }
             argument("--")
-            argument("--print")
-            argument("native-static-libs")
+            PRINT_NATIVE_STATIC_LIBS.forEach(::argument)
 
             workdir(packageDirectory.asFile.get())
 
@@ -170,10 +187,6 @@ abstract class GenerateDefFileTask : DefaultTask() {
             redirectErrorStream(true)
         }.run()
 
-        val linkerFlag = output.split('\n')
-            .map { it.trim().substringAfter("note: native-static-libs: ", "") }
-            .firstOrNull(String::isNotEmpty)
-
-        return linkerFlag
+        return nativeStaticLibs(output)
     }
 }

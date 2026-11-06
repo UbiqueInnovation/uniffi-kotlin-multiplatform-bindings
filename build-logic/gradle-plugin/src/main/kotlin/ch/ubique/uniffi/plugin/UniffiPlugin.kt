@@ -432,6 +432,22 @@ class UniffiPlugin : Plugin<Project> {
             task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
             task.buildMode.set(cargoExtension.buildMode)
             task.crateTypes.add(crateType)
+            if (crateType == CrateType.SystemStaticLibrary) {
+                // Individual builds report the linker options of the library's native dependencies,
+                // where prebuilt libraries have them too. Workspace builds can't, so the def file
+                // task probes them.
+                task.nativeStaticLibsFile.set(
+                    buildsWithWorkspace.flatMap { enabled ->
+                        if (enabled) {
+                            provider<RegularFile> { null }
+                        } else {
+                            task.cargoOutputDirectory.zip(cargoInfo.libraryName) { directory, name ->
+                                directory.file("$name.native-static-libs")
+                            }
+                        }
+                    }
+                )
+            }
             task.declaredCrateTypes.set(cargoInfo.declaredCrateTypes)
             task.cdylibDependencies.set(cargoInfo.cdylibDependencies)
             task.dependencyNames.set(cargoInfo.dependencyNames)
@@ -595,17 +611,22 @@ class UniffiPlugin : Plugin<Project> {
             GenerateDefFileTask::class.java,
         ) { task ->
             task.staticLibrary.set(library(cargoInfo, rustTarget, isRelease, dynamic = false, cargoBuild))
-            task.nativeStaticLibsFile.set(prebuiltFile(cargoInfo, rustTarget, isRelease) { "$it.native-static-libs" })
+            task.nativeStaticLibsFile.set(
+                cargoExtension.prebuiltLibraries.map { true }.orElse(false).flatMap { prebuilt ->
+                    if (prebuilt) {
+                        prebuiltFile(cargoInfo, rustTarget, isRelease) { "$it.native-static-libs" }
+                    } else {
+                        cargoBuild.flatMap { it.nativeStaticLibsFile }
+                    }
+                }
+            )
             task.outputFile.set(
                 project.layout.buildDirectory.file("$CINTEROP_DEF_PATH/uniffi-${buildTarget.name}.def")
             )
             task.packageDirectory.set(cargoExtension.packageDirectory)
             task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
             task.targetString.set(rustTarget.rustTriple)
-            // The probe must use the same crate-type set as the shared Cargo build. Otherwise it
-            // can overwrite the static library produced by that build and invalidate it again.
-            task.crateTypes.set(cargoBuild.flatMap { it.crateTypes })
-            // Same for the features that apply to this package, the only one the probe builds.
+            // The probe builds only this package, so it gets the features that apply to it.
             task.features.set(cargoBuild.flatMap { it.packageFeatures })
             // Carries the dependency on the bindings.
             task.headersDir.set(headersDir)

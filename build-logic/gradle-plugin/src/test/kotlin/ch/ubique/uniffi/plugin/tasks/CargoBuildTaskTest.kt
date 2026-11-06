@@ -3,6 +3,7 @@ package ch.ubique.uniffi.plugin.tasks
 import ch.ubique.uniffi.plugin.dsl.BuildMode
 import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.model.CrateType
+import java.nio.file.Path
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
@@ -86,6 +87,19 @@ class CargoBuildTaskTest {
             listOf("rustc", "--lib", "--package", "sample", "--crate-type", "cdylib,staticlib"),
             cargoArguments("crateTypes.set([$crateType.SystemStaticLibrary, $crateType.SystemDynamicLibrary])"),
         )
+    }
+
+    @Test
+    fun `an individual build writes the native static libs rustc reports`() {
+        val root = runCargoBuild(
+            "crateTypes.set([ch.ubique.uniffi.plugin.model.CrateType.SystemStaticLibrary]); " +
+                "nativeStaticLibsFile.set(layout.projectDirectory.file('target/debug/sample.native-static-libs'))"
+        )
+        assertEquals(
+            listOf("--crate-type", "staticlib", "--", "--print", "native-static-libs"),
+            root.resolve("target/arguments").toFile().readLines().takeLast(5),
+        )
+        assertEquals("-lSystem -lc", root.resolve("target/debug/sample.native-static-libs").toFile().readText())
     }
 
     @Test
@@ -216,13 +230,21 @@ class CargoBuildTaskTest {
      * Runs an individual [CargoBuildTask] for the package `sample` against a fake cargo and returns
      * the arguments it received. [configuration] is Groovy code configuring the task.
      */
-    private fun cargoArguments(configuration: String): List<String> {
+    private fun cargoArguments(configuration: String): List<String> =
+        runCargoBuild(configuration).resolve("target/arguments").toFile().readLines()
+
+    /**
+     * Runs an individual [CargoBuildTask] for the package `sample` against a fake cargo, which
+     * reports native static libs like rustc, and returns the project directory.
+     */
+    private fun runCargoBuild(configuration: String): Path {
         val root = createTempDirectory("uniffi-cargo-arguments")
         val fakeBin = root.resolve("fake-bin").createDirectories()
         val cargo = fakeBin.resolve("cargo")
         cargo.writeText("""#!/bin/sh
             mkdir -p "${'$'}CARGO_TARGET_DIR"
             printf '%s\n' "${'$'}@" > "${'$'}CARGO_TARGET_DIR/arguments"
+            echo 'note: native-static-libs: -lSystem -lc' >&2
         """.trimIndent() + "\n")
         assertTrue(cargo.toFile().setExecutable(true))
         root.resolve("settings.gradle").writeText("rootProject.name = 'cargo-features-test'\n")
@@ -249,7 +271,7 @@ class CargoBuildTaskTest {
             .withArguments("testCargoBuild")
             .build()
 
-        return root.resolve("target/arguments").toFile().readLines()
+        return root
     }
 
     @Test
