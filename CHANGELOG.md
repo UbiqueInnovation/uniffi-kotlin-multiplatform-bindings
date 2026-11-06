@@ -21,7 +21,9 @@
 
 ### Fixed
 
-- In workspace mode, the Kotlin/Native linker options probe no longer replaces the library of the
+- In workspace mode, Kotlin/Native builds no longer recompile the workspace crates a module
+  depends on in every build. The linker options probe runs in its own task, on the first build and
+  when `Cargo.lock` or a workspace manifest changes, and no longer replaces the library of the
   workspace build, so cinterop gets the library built with the workspace's features.
 - In workspace mode, the Kotlin/Native def file probe no longer drops `<dependency>/<feature>` when
   the dependency is a workspace member.

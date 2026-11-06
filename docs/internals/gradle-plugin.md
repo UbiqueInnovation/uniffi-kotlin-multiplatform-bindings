@@ -43,6 +43,7 @@ tasks receive providers.
 | `mergeUniffiAndroidJniLibs` | `MergeLibrariesTask` | Android `jniLibs` tree |
 | `mergeUniffiAndroidHostTestResources` | `MergeLibrariesTask` | resources for Android host tests |
 | `generateDefFileFor<Target>` | `GenerateDefFileTask` | `build/uniffi/cinterop/uniffi-<Target>.def` |
+| `probeNativeStaticLibsFor<Target>` | `ProbeNativeStaticLibsTask` | `build/uniffi/native-static-libs/<triple>/<library>.native-static-libs`, in workspace mode |
 | `generateDummyDefFile` | `GenerateDummyDefFileTask` | a def file without a library, during IDE sync |
 
 Task dependencies follow from wiring one task's output provider into another task's input, so
@@ -158,20 +159,24 @@ linkerOpts = <native-static-libs> [--allow-multiple-definition]
 ```
 
 `linkerOpts` comes from asking rustc for `--print native-static-libs`, the system libraries the
-static library needs. With prebuilt libraries and in individual mode, the def file task reads them
-from `<library name>.native-static-libs` next to the library. In workspace mode, it probes them with
+static library needs. `GenerateDefFileTask` reads them from a file: next to a prebuilt library,
+written by an individual Cargo build, or in workspace mode written by `ProbeNativeStaticLibsTask`.
+The workspace build can't pass rustc arguments, so the probe runs
 `cargo rustc --crate-type staticlib … -- --print native-static-libs`, a build of its package alone,
 with the features that apply to it (`packageFeatures`), for the debug profile:
 
-- Cargo fingerprints the extra rustc arguments, so the probe needs a fingerprint of its own. A
-  `staticlib` alone gets one, while a crate type set with a `cdylib` would share the workspace
-  build's, and the two would keep rebuilding each other.
+- It builds the package's workspace dependencies with these features too. A dependency declaring
+  a `cdylib` has a single fingerprint per target, shared with the workspace build, so the next
+  workspace build compiles it again. The probe's inputs are therefore only what decides the native
+  dependencies: the `cargo metadata` output, which covers all workspace manifests, the workspace's
+  `Cargo.lock`, the features and the target. It runs on the first build and when they change, not
+  when the library does. It must still run after the package's `CargoBuildTask` (`mustRunAfter`).
+- Cargo fingerprints the extra rustc arguments, so the probe needs a fingerprint of its own for
+  the package. A `staticlib` alone gets one, while a crate type set with a `cdylib` would share the
+  workspace build's, and the two would keep rebuilding each other.
 - Cargo puts the probe's library where the workspace build's library for the debug profile is. The
   task moves that one aside while the probe runs, and back afterwards (`keepingLibrary`), so
   cinterop gets the workspace build's library.
-- The probe's features can differ from the workspace build's. It can then compile dependencies a
-  second time, and in rare cases miss a system library that only another project's features bring
-  in.
 
 `--allow-multiple-definition` is added on Linux and Windows, because several UniFFI static
 libraries in one binary can contain the same Rust symbols (see

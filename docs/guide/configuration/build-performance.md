@@ -65,10 +65,17 @@ What it costs:
 - The crates and features are collected while Gradle configures the modules, so all of them have
   to be configured. That is Gradle's default, but not the case with configure-on-demand.
 
-On Kotlin/Native targets, each module also builds its crate on its own, to ask rustc which system
-libraries to link. That build only has the features of the module's own crate. It can compile some
-dependencies a second time, and in rare cases it misses a system library that only another
-module's features bring in. Add such a library to the binary's `linkerOpts` yourself.
+On Kotlin/Native targets, each module also builds its crate on its own once, to ask rustc which
+system libraries to link. It does so on the first build, and again when `Cargo.lock` or a manifest
+of the workspace changes. That build only has the features of the module's own crate, so the next
+workspace build recompiles the workspace crates it depends on once. In rare cases it misses a
+system library that only another module's features bring in. Add such a library to the binary's
+`linkerOpts` yourself.
+
+The probed system libraries are kept until the dependencies change. A change they don't show, like
+a feature turned on in a path dependency outside the workspace, `rustflags` in
+`.cargo/config.toml`, an environment variable a build script reads, or a new toolchain, can make
+the Kotlin/Native link fail with undefined symbols. Run the build with `--rerun-tasks` then.
 
 ### Individual mode
 

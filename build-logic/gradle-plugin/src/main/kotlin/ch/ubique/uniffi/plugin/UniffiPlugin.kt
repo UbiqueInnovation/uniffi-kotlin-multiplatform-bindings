@@ -19,6 +19,7 @@ import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
 import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
 import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
 import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
+import ch.ubique.uniffi.plugin.tasks.ProbeNativeStaticLibsTask
 import ch.ubique.uniffi.plugin.utils.BindgenSource
 import ch.ubique.uniffi.plugin.utils.cdylibWorkspaceDependencies
 import ch.ubique.uniffi.plugin.utils.dependencyNames
@@ -76,6 +77,9 @@ class UniffiPlugin : Plugin<Project> {
         /** Where the generated def files are written, relative to the project */
         private const val CINTEROP_DEF_PATH: String = "$PREFIX/cinterop"
 
+        /** Where the probed linker options of workspace builds are written, relative to the project */
+        private const val NATIVE_STATIC_LIBS_PATH: String = "$PREFIX/native-static-libs"
+
         /** KGP task that extracts the cinterop metadata of published dependencies of `nativeMain` */
         private const val TRANSFORM_NATIVE_MAIN_CINTEROP_METADATA: String =
             "transformNativeMainCInteropDependenciesMetadata"
@@ -115,6 +119,7 @@ class UniffiPlugin : Plugin<Project> {
             cargoMetadata.targetPackage(packageDirectory.asFile)
         }
         val cargoInfo = CargoInfo(
+            metadataJson = metadataJsonProvider,
             packageName = targetPackage.map { it.name },
             libraryName = targetPackage.map { it.targets.first().name },
             declaredCrateTypes = targetPackage.map { it.targets.first().crateTypes },
@@ -598,42 +603,79 @@ class UniffiPlugin : Plugin<Project> {
         headersDir: Provider<Directory>,
     ): TaskProvider<GenerateDefFileTask> {
         val rustTarget = buildTarget.checkedNativeTarget
-        val config = cargoExtension.compilations.getByName(rustTarget.name)
         val cargoBuild = registerCargoBuildTask(
             rustTarget = rustTarget,
             release = isRelease,
             cargoInfo = cargoInfo,
             crateType = CrateType.SystemStaticLibrary,
         )
+        val probe = registerProbeNativeStaticLibsTask(buildTarget, cargoInfo, cargoBuild)
 
         return tasks.maybeRegister(
             Tasks.generateDefFile(buildTarget),
             GenerateDefFileTask::class.java,
         ) { task ->
             task.staticLibrary.set(library(cargoInfo, rustTarget, isRelease, dynamic = false, cargoBuild))
+            // Selected with flatMap, like the library, so that only the selected task runs.
             task.nativeStaticLibsFile.set(
-                cargoExtension.prebuiltLibraries.map { true }.orElse(false).flatMap { prebuilt ->
-                    if (prebuilt) {
-                        prebuiltFile(cargoInfo, rustTarget, isRelease) { "$it.native-static-libs" }
-                    } else {
-                        cargoBuild.flatMap { it.nativeStaticLibsFile }
+                cargoExtension.prebuiltLibraries.map { true }.orElse(false).zip(buildsWithWorkspace) { prebuilt, workspace ->
+                    prebuilt to workspace
+                }.flatMap { (prebuilt, workspace) ->
+                    when {
+                        prebuilt -> prebuiltFile(cargoInfo, rustTarget, isRelease) { "$it.native-static-libs" }
+                        workspace -> probe.flatMap { it.nativeStaticLibsFile }
+                        else -> cargoBuild.flatMap { it.nativeStaticLibsFile }
                     }
                 }
             )
             task.outputFile.set(
                 project.layout.buildDirectory.file("$CINTEROP_DEF_PATH/uniffi-${buildTarget.name}.def")
             )
+            task.targetString.set(rustTarget.rustTriple)
+            // Carries the dependency on the bindings.
+            task.headersDir.set(headersDir)
+        }
+    }
+
+    /**
+     * Registers the [ProbeNativeStaticLibsTask] for a [BuildMode.Workspace] build of the
+     * [buildTarget]. It only runs when the def file needs it.
+     */
+    private fun Project.registerProbeNativeStaticLibsTask(
+        buildTarget: BuildTarget,
+        cargoInfo: CargoInfo,
+        cargoBuild: TaskProvider<CargoBuildTask>,
+    ): TaskProvider<ProbeNativeStaticLibsTask> {
+        val rustTarget = buildTarget.checkedNativeTarget
+        return tasks.maybeRegister(
+            Tasks.probeNativeStaticLibs(buildTarget),
+            ProbeNativeStaticLibsTask::class.java,
+        ) { task ->
+            task.cargoMetadata.set(cargoInfo.metadataJson)
+            task.lockFile.from(cargoInfo.workspaceRoot.map { it.file("Cargo.lock") })
             task.packageDirectory.set(cargoExtension.packageDirectory)
             task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
             task.targetString.set(rustTarget.rustTriple)
+            task.libraryFileName.set(
+                cargoInfo.libraryName.map { name ->
+                    rustTarget.staticLibraryName(name)
+                        ?: throw GradleException("Could not determine library file name for $rustTarget")
+                }
+            )
             // The probe builds only this package, so it gets the features that apply to it.
             task.features.set(cargoBuild.flatMap { it.packageFeatures })
-            // Carries the dependency on the bindings.
-            task.headersDir.set(headersDir)
-            task.useCross.set(config.useCross)
+            task.useCross.set(cargoExtension.compilations.getByName(rustTarget.name).useCross)
             task.rustcWrapper.set(cargoExtension.rustcWrapper)
             task.rustcWorkspaceWrapper.set(cargoExtension.rustcWorkspaceWrapper)
             task.additionalEnvironment.set(cargoBuild.flatMap { it.additionalEnvironment })
+            task.nativeStaticLibsFile.set(
+                project.layout.buildDirectory.file(
+                    cargoInfo.libraryName.map { "$NATIVE_STATIC_LIBS_PATH/${rustTarget.rustTriple}/$it.native-static-libs" }
+                )
+            )
+            // Not an input, or the probe would run on every change. The workspace build must still
+            // be done when the probe moves its library aside, or it would put back an old one.
+            task.mustRunAfter(cargoBuild)
         }
     }
 

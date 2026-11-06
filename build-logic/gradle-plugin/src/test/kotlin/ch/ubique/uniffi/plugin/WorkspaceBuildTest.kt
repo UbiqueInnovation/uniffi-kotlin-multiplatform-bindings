@@ -6,11 +6,11 @@ import ch.ubique.uniffi.plugin.dsl.UniffiExtension
 import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
 import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
+import ch.ubique.uniffi.plugin.tasks.ProbeNativeStaticLibsTask
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import org.gradle.api.Project
 import org.gradle.api.internal.project.ProjectInternal
 import org.gradle.testfixtures.ProjectBuilder
@@ -77,9 +77,10 @@ class WorkspaceBuildTest {
         assertEquals(emptySet(), c.cargoBuild(host).workspacePackageNames.get())
         assertEquals(emptySet(), c.cargoBuild(ios).workspacePackageNames.get())
 
-        // The def file of a workspace build probes the linker options, an individual build reports them.
+        // The def file of a workspace build reads the probed linker options, an individual build reports them.
         fun Project.defFile() = tasks.getByName(Tasks.generateDefFile(BuildTarget.IosArm64)) as GenerateDefFileTask
-        assertFalse(a.defFile().nativeStaticLibsFile.isPresent)
+        val probe = a.tasks.getByName(Tasks.probeNativeStaticLibs(BuildTarget.IosArm64)) as ProbeNativeStaticLibsTask
+        assertEquals(probe.nativeStaticLibsFile.get(), a.defFile().nativeStaticLibsFile.get())
         assertEquals(
             c.cargoBuild(ios).cargoOutputDirectory.get().file("c.native-static-libs").asFile,
             c.defFile().nativeStaticLibsFile.get().asFile,

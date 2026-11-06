@@ -4,6 +4,8 @@ import org.gradle.api.file.Directory
 import org.gradle.api.provider.Provider
 
 internal data class CargoInfo(
+    /** The output of `cargo metadata` for the package. */
+    val metadataJson: Provider<String>,
     val packageName: Provider<String>,
     val libraryName: Provider<String>,
     /** The crate types of the library target, i.e. its `[lib] crate-type`. */
