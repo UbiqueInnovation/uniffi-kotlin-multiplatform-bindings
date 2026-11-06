@@ -193,7 +193,6 @@ abstract class CargoBuildTask : DefaultTask() {
     init {
         // Cargo checks its complete dependency graph and toolchain state on every invocation.
         outputs.upToDateWhen { false }
-        buildMode.convention(BuildMode.Individual)
         dynamicLibraryFile.set(libraryFile(BuildTarget.RustTarget::dynamicLibraryName))
         staticLibraryFile.set(libraryFile(BuildTarget.RustTarget::staticLibraryName))
     }

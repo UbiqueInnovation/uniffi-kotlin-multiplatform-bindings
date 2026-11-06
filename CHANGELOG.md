@@ -2,6 +2,30 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.3.5...HEAD)
 
+### Changed
+
+- `cargo { buildMode }` replaces `buildWorkspaceLibraries`, and defaults to `BuildMode.Workspace`.
+  The modules of a Cargo workspace then share one `cargo build` per Rust target and profile instead
+  of running Cargo once each. It builds the crates of the modules that build that target, with the
+  features of all of them, so they no longer have to repeat each other's features. Each crate must
+  declare the crate types its targets need in `[lib] crate-type`, or the build fails. **Breaking:**
+  remove `buildWorkspaceLibraries = true`, replace `buildWorkspaceLibraries = false` with
+  `buildMode = BuildMode.Individual`, and declare the crate types the build asks for, or switch to
+  `BuildMode.Individual`.
+- `BuildMode.Individual` builds each crate with `cargo rustc` and exactly the crate types its
+  targets need, whatever it declares. It fails if the crate depends on a workspace crate declaring
+  a `cdylib`, which Cargo would rebuild on every build.
+- In individual mode, the build of a static library writes the linker options of its native
+  dependencies to `<library name>.native-static-libs` next to it, and Kotlin/Native targets read
+  them from there instead of building the crate a second time.
+
+### Fixed
+
+- In workspace mode, the Kotlin/Native linker options probe no longer replaces the library of the
+  workspace build, so cinterop gets the library built with the workspace's features.
+- In workspace mode, the Kotlin/Native def file probe no longer drops `<dependency>/<feature>` when
+  the dependency is a workspace member.
+
 ## [1.3.5](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.5) - 2026-11-06
 
 ### Added
@@ -16,19 +40,6 @@
 ### Fixed
 
 - Published POMs name the license `MPL-2.0` instead of `License`.
-
-### Changed
-
-- With `buildWorkspaceLibraries`, the modules of a Cargo workspace share one Cargo build per Rust
-  target and profile instead of running Cargo once each. It enables the features of all modules, so
-  they no longer have to repeat each other's features.
-- With `buildWorkspaceLibraries`, a library that lacks a crate type its targets need fails the
-  build, instead of being built without the other workspace libraries.
-
-### Fixed
-
-- With `buildWorkspaceLibraries`, the Kotlin/Native def file probe no longer drops
-  `<dependency>/<feature>` when the dependency is a workspace member.
 
 ## [1.3.3](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.3) - 2026-11-03
 

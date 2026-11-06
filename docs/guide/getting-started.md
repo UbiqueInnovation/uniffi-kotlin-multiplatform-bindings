@@ -40,10 +40,10 @@ path = "src/commonMain/rust/lib.rs"
 uniffi = "0.32.0"
 ```
 
-The JVM and Android targets load a `cdylib`, and Kotlin/Native targets link a `staticlib`. The
-plugin asks Cargo for exactly the crate type each build needs, but declaring both keeps plain
-`cargo build` working. `lib` is needed if another Rust crate depends on this one, for example in a
-[multi-module project](features/multi-module.md).
+The JVM and Android targets load a `cdylib`, and Kotlin/Native targets link a `staticlib`. Declare
+the ones your targets need, or the build fails. `lib` is needed if another Rust crate depends on
+this one, for example in a [multi-module project](features/multi-module.md). To build each crate
+with only the crate types it needs instead, see [Build modes](configuration/build-performance.md#build-modes).
 
 Export something:
 

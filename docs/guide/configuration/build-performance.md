@@ -36,13 +36,19 @@ scripts.
 - Don't point it at a Gradle `build` directory. Kotlin and Android outputs stay project-local.
 - In CI, persist it with the CI cache if separate jobs or runs should reuse it.
 
-## Workspaces with dependent libraries
+## Build modes
 
-If the crates of several modules are in one Cargo workspace and depend on each other, as in a
-[multi-module project](../features/multi-module.md), Cargo can end up recompiling them on every
-build. Two things prevent that.
+The plugin runs Cargo in one of two modes, set with `cargo { buildMode }`.
 
-First, declare the crate types the plugin builds in each crate's `Cargo.toml`: `cdylib` for JVM and
+### Workspace mode
+
+The default. The modules of a Cargo workspace share one `cargo build` per Rust target and profile.
+It builds the crates of all modules that build that target, with the
+[features](gradle-dsl.md#cargo) of all of them, and the other modules reuse its output. Cargo
+resolves the features once for all crates, so every library is built with the same features, and
+nothing is rebuilt because another module was built in between.
+
+Each crate must declare the crate types its targets need, or the build fails: `cdylib` for JVM and
 Android, `staticlib` for Kotlin/Native, and `lib` if other crates depend on it:
 
 ```toml
@@ -50,43 +56,62 @@ Android, `staticlib` for Kotlin/Native, and `lib` if other crates depend on it:
 crate-type = ["lib", "cdylib", "staticlib"]
 ```
 
-If one is missing, the plugin passes `--crate-type` to Cargo. A crate that declares a `cdylib` is
-then built differently as the root of a build than as a dependency of another module's crate, and
-is rebuilt with its dependents every time. The plugin warns about this.
+What it costs:
 
-Second, if Cargo still recompiles the shared crates whenever another module was built in between,
-enable `buildWorkspaceLibraries` in every module of the workspace, for example from
-the root project:
+- Cargo builds every crate type a crate declares, on every target. Android builds get a
+  `staticlib` they don't need, for example.
+- Building one module builds the crates of all modules for that target.
+- Each library is built with the features that all modules need.
+- The crates and features are collected while Gradle configures the modules, so all of them have
+  to be configured. That is Gradle's default, but not the case with configure-on-demand.
+
+On Kotlin/Native targets, each module also builds its crate on its own, to ask rustc which system
+libraries to link. That build only has the features of the module's own crate. It can compile some
+dependencies a second time, and in rare cases it misses a system library that only another
+module's features bring in. Add such a library to the binary's `linkerOpts` yourself.
+
+### Individual mode
+
+Each module runs `cargo rustc` for its own crate, with exactly the crate types its targets need,
+so the crate doesn't have to declare them. Building a module only builds what that module needs.
+
+```kotlin
+import ch.ubique.uniffi.plugin.dsl.BuildMode
+
+cargo {
+    buildMode = BuildMode.Individual
+}
+```
+
+Keep in mind:
+
+- A crate that other crates of the workspace depend on must not declare a `cdylib`. Cargo keeps a
+  single build of it per target, which the module's own build and the builds of the crates
+  depending on it would keep replacing. The build fails if a module's crate depends on one.
+  Without a `[lib] crate-type`, a crate is a plain `lib`, which is fine.
+- Cargo resolves features for each crate on its own. If the crates need different features of
+  shared dependencies, Cargo compiles those dependencies once per set of features. Full builds get
+  slower and the target directory bigger. [cargo-hakari](https://docs.rs/cargo-hakari) can unify the
+  features across the workspace.
+- Each library contains its own copy of the crates it depends on, and objects pass between modules
+  as pointers. If a shared crate's types change their layout with a feature, build it with the same
+  features for all modules. Otherwise a module reads another module's objects with the wrong
+  layout. See [Multi-module projects](../features/multi-module.md#limitations).
+- Plain `cargo build` only builds the crate types a crate declares. Tools outside Gradle that need a
+  `cdylib` or `staticlib` have to ask for it with `cargo rustc --crate-type`.
+
+Use the same mode in all modules of a workspace, for example from the root project:
 
 ```kotlin
 // build.gradle.kts of the root project
-plugins {
-    id("ch.ubique.uniffi.plugin") version "1.3.3" apply false
-}
-
 subprojects {
     plugins.withId("ch.ubique.uniffi.plugin") {
         extensions.configure<ch.ubique.uniffi.plugin.dsl.CargoExtension> {
-            buildWorkspaceLibraries = true
+            buildMode = ch.ubique.uniffi.plugin.dsl.BuildMode.Individual
         }
     }
 }
 ```
-
-Cargo resolves features per invocation, so the shared dependencies of `mod-a` and `mod-b` may be
-compiled with different features depending on which one is built. With this option, the modules
-share a single Cargo call per Rust target and profile. It builds all libraries of the workspace
-that declare a `cdylib` or `staticlib`, with the [features](gradle-dsl.md#cargo) of every module,
-and the other modules reuse its output. The features are collected while Gradle configures the
-modules, so all of them have to be configured, which is Gradle's default (not the case with
-configure-on-demand). Each library must declare the crate types its targets need, or the build
-fails.
-
-On Kotlin/Native targets, each module also builds its crate alone, to ask rustc which system
-libraries to link. A feature that reaches a module's crates only through another module, from
-that module's `Cargo.toml` or for a crate this module doesn't depend on directly, makes the two
-builds differ, and Cargo recompiles on every build. Enable such a feature in `features` instead,
-for a crate the affected modules depend on directly.
 
 ## sccache
 
@@ -127,8 +152,10 @@ prebuilt/
 - Use the profile of the build: `debug`, or `release` with `-PreleaseBuild=true`.
 - Kotlin/Native targets also need the system libraries the static library links against, in
   `<library name>.native-static-libs` next to it. rustc writes them when building the library with
-  `cargo rustc ... -- --print native-static-libs=<file>`.
-- Build the libraries with the same features as the plugin would. The plugin can't check them.
+  `cargo rustc ... -- --print native-static-libs=<file>`. In individual mode, the plugin's own
+  builds write this file too, so their Cargo target directory has the layout of a prebuilt one.
+- Build the libraries with the same features as the plugin would. In workspace mode, that is one
+  `cargo build` with the crates of all modules. The plugin can't check them.
 - A missing library fails the build.
 
 ## IDE sync

@@ -46,18 +46,25 @@ abstract class CargoExtension(project: Project) {
     val prebuiltLibraries: DirectoryProperty = project.objects.directoryProperty()
 
     /**
-     * How Cargo is run for this project, see [BuildMode].
+     * How Cargo is run for this project, see [BuildMode]. Defaults to [BuildMode.Workspace].
      *
      * Cargo resolves features per invocation, so workspace libraries that depend on each other
      * see different feature sets of their shared dependencies depending on which package is
      * built. In [BuildMode.Workspace], all projects of the workspace share one Cargo invocation per
      * Rust target and profile, which enables the [features] of all of them. Each library must
-     * declare the crate types its targets need, or the build fails.
+     * declare the crate types its targets need, or the build fails. [BuildMode.Individual] builds
+     * only this project's crate, with the crate types it needs.
      *
-     * Use the same mode in every project of the workspace, e.g. from a `subprojects` block.
+     * Use the same mode in every project of the workspace, e.g. from a `subprojects` block:
+     *
+     * ```kotlin
+     * cargo {
+     *     buildMode = BuildMode.Individual
+     * }
+     * ```
      */
     val buildMode: Property<BuildMode> =
-        project.objects.property(BuildMode::class.java).convention(BuildMode.Individual)
+        project.objects.property(BuildMode::class.java).convention(BuildMode.Workspace)
 
     /** Optional compiler wrapper, such as `sccache`. */
     val rustcWrapper: Property<String> = project.objects.property(String::class.java).apply {

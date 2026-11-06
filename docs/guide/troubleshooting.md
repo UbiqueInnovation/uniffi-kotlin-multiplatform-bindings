@@ -29,10 +29,17 @@ example because `rustup` is not available, install the target yourself.
 features): Kotlin/Native's bundled linker is older than your Rust toolchain. Use
 [`useRustUpLinker()`](targets.md#linking-with-rusts-linker) for the affected compilation.
 
-**Cargo recompiles unchanged crates on every build**, warns that a crate
-`declares crate-type [...] without ...`, or fails because a crate `needs crate-type ...`: add
-the missing crate types to its `Cargo.toml`. See
-[Build performance](configuration/build-performance.md#workspaces-with-dependent-libraries).
+**`The Kotlin targets of ... need crate-type ...`**: in workspace mode, add the missing crate types
+to `[lib] crate-type` in the crate's `Cargo.toml`, or build the crate on its own in individual
+mode. See [Build modes](configuration/build-performance.md#build-modes).
+
+**`... depends on workspace crates declaring crate-type cdylib`**: in individual mode, remove `cdylib`
+from the `[lib] crate-type` of those crates, or use workspace mode. See
+[Build modes](configuration/build-performance.md#individual-mode).
+
+**Cargo recompiles unchanged crates on every build** in a workspace of several modules: use the same
+[build mode](configuration/build-performance.md#build-modes) in all modules, and let Gradle configure
+all of them (no configure-on-demand). `cargo build -v` prints why it rebuilds each crate.
 
 **Unresolved references to `cinterop.*` in the generated `nativeMain` code**: cinterop
 commonization is off, or the IDE hasn't run a sync since it was turned on.

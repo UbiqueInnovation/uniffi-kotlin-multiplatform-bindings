@@ -46,6 +46,7 @@ class CargoBuildTaskTest {
                 release.set(false)
                 useCross.set(false)
                 additionalEnvironment.set([:])
+                buildMode.set(ch.ubique.uniffi.plugin.dsl.BuildMode.Individual)
             }
             tasks.register('testBindings') {
                 dependsOn tasks.named('testCargoBuild')
@@ -196,6 +197,7 @@ class CargoBuildTaskTest {
             task.packageName.set("sample")
             task.dependencyNames.set(setOf("dependency", "member-dependency"))
             task.features.set(features)
+            task.buildMode.set(BuildMode.Individual)
             workspacePackages?.let {
                 task.buildMode.set(BuildMode.Workspace)
                 task.workspacePackageNames.set(it)
@@ -260,6 +262,7 @@ class CargoBuildTaskTest {
                 release.set(false)
                 useCross.set(false)
                 additionalEnvironment.set([:])
+                buildMode.set(ch.ubique.uniffi.plugin.dsl.BuildMode.Individual)
                 $configuration
             }
         """.trimIndent())

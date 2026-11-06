@@ -96,8 +96,8 @@ which they usually do.
 
 Each module needs its own `package_name`.
 
-If Cargo recompiles the shared crate on every build, see
-[Build performance](../configuration/build-performance.md#workspaces-with-dependent-libraries).
+By default, the modules of a Cargo workspace share one Cargo build. See
+[Build modes](../configuration/build-performance.md#build-modes).
 
 ### Using it
 
@@ -139,6 +139,10 @@ the Linux and Windows linkers to allow this. Apple's linker accepts it by defaul
 - **Build all modules against the same version of the shared crate.** Each module embeds its own
   compiled copy of `rust-common`. If `mod-a` and `mod-b` are built against different versions of
   it, they disagree about the layout of shared types, and nothing checks for that at runtime.
+- **In individual mode, build them with the same features too.** Each module's crate is built with
+  its own features. If a feature changes the layout of a shared type, or of a type stored in a
+  shared object, the modules disagree about it in the same way. Workspace mode builds all of them
+  with the same features.
 
 ## External crates you don't control
 
