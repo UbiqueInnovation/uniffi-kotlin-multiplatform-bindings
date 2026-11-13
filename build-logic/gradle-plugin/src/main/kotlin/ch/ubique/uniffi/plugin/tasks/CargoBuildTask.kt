@@ -243,9 +243,9 @@ abstract class CargoBuildTask : DefaultTask() {
     private fun buildIndividually() {
         val cdylibs = cdylibDependencies.getOrElse(emptySet())
         if (cdylibs.isNotEmpty()) {
-            throw GradleException(
+            logger.warn(
                 "${packageName.get()} depends on workspace crates declaring crate-type cdylib: " +
-                    "${cdylibs.sorted().joinToString(", ")}. Cargo would rebuild them and everything " +
+                    "${cdylibs.sorted().joinToString(", ")}. Cargo rebuilds them and everything " +
                     "depending on them on every build. Remove cdylib from their [lib] crate-type, or " +
                     "build the workspace together with cargo { buildMode = BuildMode.Workspace }."
             )

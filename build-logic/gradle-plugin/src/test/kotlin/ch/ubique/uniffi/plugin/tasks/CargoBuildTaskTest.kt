@@ -95,7 +95,7 @@ class CargoBuildTaskTest {
         val root = runCargoBuild(
             "crateTypes.set([ch.ubique.uniffi.plugin.model.CrateType.SystemStaticLibrary]); " +
                 "nativeStaticLibsFile.set(layout.projectDirectory.file('target/debug/sample.native-static-libs'))"
-        )
+        ).root
         assertEquals(
             listOf("--crate-type", "staticlib", "--", "--print", "native-static-libs"),
             root.resolve("target/arguments").toFile().readLines().takeLast(5),
@@ -104,14 +104,9 @@ class CargoBuildTaskTest {
     }
 
     @Test
-    fun `an individual build fails when a workspace dependency declares a cdylib`() {
-        val task = ProjectBuilder.builder().build().tasks.register("cargoBuild", CargoBuildTask::class.java).get()
-        task.packageName.set("sample")
-        task.buildMode.set(BuildMode.Individual)
-        task.cdylibDependencies.set(setOf("util", "common"))
-
-        val error = assertFailsWith<GradleException> { task.build() }
-        assertContains(error.message.orEmpty(), "declaring crate-type cdylib: common, util")
+    fun `an individual build warns when a workspace dependency declares a cdylib`() {
+        val output = runCargoBuild("cdylibDependencies.set(['util', 'common'])").output
+        assertContains(output, "declaring crate-type cdylib: common, util")
     }
 
     @Test
@@ -233,13 +228,15 @@ class CargoBuildTaskTest {
      * the arguments it received. [configuration] is Groovy code configuring the task.
      */
     private fun cargoArguments(configuration: String): List<String> =
-        runCargoBuild(configuration).resolve("target/arguments").toFile().readLines()
+        runCargoBuild(configuration).root.resolve("target/arguments").toFile().readLines()
+
+    private class CargoBuild(val root: Path, val output: String)
 
     /**
      * Runs an individual [CargoBuildTask] for the package `sample` against a fake cargo, which
-     * reports native static libs like rustc, and returns the project directory.
+     * reports native static libs like rustc.
      */
-    private fun runCargoBuild(configuration: String): Path {
+    private fun runCargoBuild(configuration: String): CargoBuild {
         val root = createTempDirectory("uniffi-cargo-arguments")
         val fakeBin = root.resolve("fake-bin").createDirectories()
         val cargo = fakeBin.resolve("cargo")
@@ -267,14 +264,14 @@ class CargoBuildTaskTest {
             }
         """.trimIndent())
 
-        GradleRunner.create()
+        val result = GradleRunner.create()
             .withProjectDir(root.toFile())
             .withPluginClasspath()
             .withEnvironment(System.getenv() + ("PATH" to "${fakeBin}:${System.getenv("PATH")}"))
             .withArguments("testCargoBuild")
             .build()
 
-        return root
+        return CargoBuild(root, result.output)
     }
 
     @Test

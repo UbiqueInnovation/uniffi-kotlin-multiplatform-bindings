@@ -33,8 +33,8 @@ features): Kotlin/Native's bundled linker is older than your Rust toolchain. Use
 to `[lib] crate-type` in the crate's `Cargo.toml`, or build the crate on its own in individual
 mode. See [Build modes](configuration/build-performance.md#build-modes).
 
-**`... depends on workspace crates declaring crate-type cdylib`**: in individual mode, remove `cdylib`
-from the `[lib] crate-type` of those crates, or use workspace mode. See
+**`... depends on workspace crates declaring crate-type cdylib`**: in individual mode, Cargo rebuilds
+those crates on every build. Remove `cdylib` from their `[lib] crate-type`, or use workspace mode. See
 [Build modes](configuration/build-performance.md#individual-mode).
 
 **Cargo recompiles unchanged crates on every build** in a workspace of several modules: use the same

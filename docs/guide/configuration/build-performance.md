@@ -92,9 +92,9 @@ cargo {
 
 Keep in mind:
 
-- A crate that other crates of the workspace depend on must not declare a `cdylib`. Cargo keeps a
+- A crate that other crates of the workspace depend on should not declare a `cdylib`. Cargo keeps a
   single build of it per target, which the module's own build and the builds of the crates
-  depending on it would keep replacing. The build fails if a module's crate depends on one.
+  depending on it keep replacing. The build warns if a module's crate depends on one.
   Without a `[lib] crate-type`, a crate is a plain `lib`, which is fine.
 - Cargo resolves features for each crate on its own. If the crates need different features of
   shared dependencies, Cargo compiles those dependencies once per set of features. Full builds get
