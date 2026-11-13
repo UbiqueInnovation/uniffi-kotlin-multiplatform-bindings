@@ -75,7 +75,7 @@ them when the library is first used:
 
 ```kotlin
 internal val INSTANCE: UniffiLib by lazy {
-    loadIndirect<UniffiLib>(componentName = "my_crate").also { lib ->
+    uniffiLoadLibrary("my_crate", "my_crate", UniffiLib::class.java).also { lib ->
         uniffiCheckContractApiVersion(lib)
         uniffiCheckApiChecksums(lib)
         uniffiCallbackInterfaceLogger.register(lib)    // our own vtables

@@ -50,6 +50,24 @@ simple fix, because the allocation has to happen before Kotlin knows which crate
 buffer. The user guide warns about this in
 [Requirements](../guide/requirements.md#dont-use-a-custom-global-allocator).
 
+## Loading the libraries
+
+On JVM and Android, each namespace's `UniffiLib.INSTANCE` loads its library with
+`uniffiLoadLibrary` (`LibraryLoader.kt`). The system property
+`uniffi.component.<namespace>.libraryOverride` names another library to load. Otherwise Android
+looks the library up by name, and the JVM loads the library bundled on the classpath by its
+absolute path. JNA looks a name up in the library search paths before the classpath, and on macOS
+and Windows these include the working directory, so a library with the same name placed there
+would be loaded instead of the bundled one. Without a bundled library for the platform, the JVM
+looks the library up by name too.
+
+The loader is in the runtime because all the namespaces generated from one library have to share
+it (see [External types](external-and-remote-types.md#initialisation-order)). JNA extracts a
+library bundled in a JAR file to a new temporary file on every call, and each file is loaded as a
+library of its own, with its own statics. A callback vtable that one namespace registers would then
+be missing from the copy another namespace calls into. `uniffiLoadLibrary` extracts the library
+once, and every namespace loads it by the same path.
+
 ## Relation to the templates
 
 Much of the runtime started out as templates in `bindgen/src/templates/generic/ffi/`. Those
