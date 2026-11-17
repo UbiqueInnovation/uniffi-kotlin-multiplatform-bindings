@@ -56,6 +56,17 @@ Android, `staticlib` for Kotlin/Native, and `lib` if other crates depend on it:
 crate-type = ["lib", "cdylib", "staticlib"]
 ```
 
+Declare the plugin in the root project, and apply it in the modules without a version, like the
+Kotlin plugin. Otherwise Gradle can load it more than once, and modules applying different sets of
+plugins get Cargo builds of their own:
+
+```kotlin
+// build.gradle.kts of the root project
+plugins {
+    id("ch.ubique.uniffi.plugin") version "1.3.0" apply false
+}
+```
+
 What it costs:
 
 - Cargo builds every crate type a crate declares, on every target. Android builds get a
@@ -65,17 +76,17 @@ What it costs:
 - The crates and features are collected while Gradle configures the modules, so all of them have
   to be configured. That is Gradle's default, but not the case with configure-on-demand.
 
-On Kotlin/Native targets, each module also builds its crate on its own once, to ask rustc which
-system libraries to link. It does so on the first build, and again when `Cargo.lock` or a manifest
-of the workspace changes. That build only has the features of the module's own crate, so the next
-workspace build recompiles the workspace crates it depends on once. In rare cases it misses a
-system library that only another module's features bring in. Add such a library to the binary's
-`linkerOpts` yourself.
+On Kotlin/Native targets, each module also builds its crate on its own, to ask rustc which system
+libraries to link. That build only has the features of the module's own crate. In rare cases it
+misses a system library that only another module's features bring in. Add such a library to the
+binary's `linkerOpts` yourself.
 
-The probed system libraries are kept until the dependencies change. A change they don't show, like
-a feature turned on in a path dependency outside the workspace, `rustflags` in
-`.cargo/config.toml`, an environment variable a build script reads, or a new toolchain, can make
-the Kotlin/Native link fail with undefined symbols. Run the build with `--rerun-tasks` then.
+This probe runs on the first build, and again when `Cargo.lock` or a manifest of the workspace
+changes. Before Cargo 1.100, the next workspace build then recompiles the workspace crates the
+module depends on once. A change the probe doesn't see, like a feature turned on in a path
+dependency outside the workspace, `rustflags` in `.cargo/config.toml`, an environment variable a
+build script reads, or a new toolchain, can make the Kotlin/Native link fail with undefined
+symbols. Run the build with `--rerun-tasks` then.
 
 ### Individual mode
 
@@ -92,10 +103,10 @@ cargo {
 
 Keep in mind:
 
-- A crate that other crates of the workspace depend on should not declare a `cdylib`. Cargo keeps a
-  single build of it per target, which the module's own build and the builds of the crates
-  depending on it keep replacing. The build warns if a module's crate depends on one.
-  Without a `[lib] crate-type`, a crate is a plain `lib`, which is fine.
+- With Cargo before 1.100, a crate that other crates of the workspace depend on should not declare
+  a `cdylib`. Cargo then keeps a single build of it per target, which the module's own build and
+  the builds of the crates depending on it keep replacing. The build warns if a module's crate
+  depends on one. Without a `[lib] crate-type`, a crate is a plain `lib`, which is fine.
 - Cargo resolves features for each crate on its own. If the crates need different features of
   shared dependencies, Cargo compiles those dependencies once per set of features. Full builds get
   slower and the target directory bigger. [cargo-hakari](https://docs.rs/cargo-hakari) can unify the

@@ -11,7 +11,8 @@ enum class BuildMode {
 
     /**
      * Each project runs `cargo rustc` for its own crate, with exactly the crate types its Kotlin
-     * targets need. Crates that other workspace crates depend on must not declare a `cdylib`.
+     * targets need. With Cargo before 1.100, crates that other workspace crates depend on must not
+     * declare a `cdylib`.
      */
     Individual,
 }

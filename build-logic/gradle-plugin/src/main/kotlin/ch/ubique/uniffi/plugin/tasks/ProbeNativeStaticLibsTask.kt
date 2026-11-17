@@ -33,10 +33,10 @@ import javax.inject.Inject
  * `cargo rustc --crate-type staticlib -- --print native-static-libs`.
  *
  * That build compiles the crate's workspace dependencies with the features of this crate alone.
- * A dependency declaring a `cdylib` shares its place in Cargo's cache with the workspace build, so
- * the next workspace build compiles it again. The task therefore only depends on what decides the
- * native dependencies, the workspace's manifests and lock file, and not on the library: it runs on
- * the first build and when the dependencies change, not on every build.
+ * Before Cargo 1.100, a dependency declaring a `cdylib` shares its place in Cargo's cache with the
+ * workspace build, so the next workspace build compiles it again. The task therefore only depends on
+ * what decides the native dependencies, the workspace's manifests and lock file, and not on the
+ * library: it runs on the first build and when the dependencies change, not on every build.
  */
 @DisableCachingByDefault(because = "The rust toolchain is not a declared input")
 abstract class ProbeNativeStaticLibsTask : DefaultTask() {

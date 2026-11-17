@@ -96,8 +96,8 @@ which they usually do.
 
 Each module needs its own `package_name`.
 
-By default, the modules of a Cargo workspace share one Cargo build. See
-[Build modes](../configuration/build-performance.md#build-modes).
+By default, the modules of a Cargo workspace share one Cargo build. For that, declare the plugin in
+the root project with `apply false`. See [Workspace mode](../configuration/build-performance.md#workspace-mode).
 
 ### Using it
 

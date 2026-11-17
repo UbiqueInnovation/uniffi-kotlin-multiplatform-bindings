@@ -165,9 +165,10 @@ The workspace build can't pass rustc arguments, so the probe runs
 `cargo rustc --crate-type staticlib … -- --print native-static-libs`, a build of its package alone,
 with the features that apply to it (`packageFeatures`), for the debug profile:
 
-- It builds the package's workspace dependencies with these features too. A dependency declaring
-  a `cdylib` has a single fingerprint per target, shared with the workspace build, so the next
-  workspace build compiles it again. The probe's inputs are therefore only what decides the native
+- It builds the package's workspace dependencies with these features too. Before Cargo 1.100, a
+  dependency declaring a `cdylib` has a single fingerprint per target, shared with the workspace
+  build, so the next workspace build compiles it again. (Cargo 1.100's build directory layout gives
+  each feature set its own.) The probe's inputs are therefore only what decides the native
   dependencies: the `cargo metadata` output, which covers all workspace manifests, the workspace's
   `Cargo.lock`, the features and the target. It runs on the first build and when they change, not
   when the library does. It must still run after the package's `CargoBuildTask` (`mustRunAfter`).

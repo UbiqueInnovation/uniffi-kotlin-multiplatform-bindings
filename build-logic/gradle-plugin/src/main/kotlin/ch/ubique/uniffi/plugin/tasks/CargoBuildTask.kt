@@ -88,12 +88,12 @@ abstract class CargoBuildTask : DefaultTask() {
 
     /**
      * The workspace crates the package depends on, directly or through other workspace crates,
-     * that declare a `cdylib`. [BuildMode.Individual] fails if there are any.
+     * that declare a `cdylib`. [BuildMode.Individual] warns if there are any.
      *
-     * Cargo fingerprints a package declaring a `cdylib` in a single slot per target. When it is
-     * compiled as a dependency of several packages, with different features or as the root of its
-     * own `cargo rustc --crate-type` build, these builds keep replacing each other's fingerprint, and
-     * the package and everything depending on it is rebuilt on every invocation.
+     * Before 1.100, Cargo fingerprints a package declaring a `cdylib` in a single slot per target.
+     * When it is compiled as a dependency of several packages, with different features or as the
+     * root of its own `cargo rustc --crate-type` build, these builds keep replacing each other's
+     * fingerprint, and the package and everything depending on it is rebuilt on every invocation.
      */
     @get:Input
     @get:Optional
@@ -245,9 +245,10 @@ abstract class CargoBuildTask : DefaultTask() {
         if (cdylibs.isNotEmpty()) {
             logger.warn(
                 "${packageName.get()} depends on workspace crates declaring crate-type cdylib: " +
-                    "${cdylibs.sorted().joinToString(", ")}. Cargo rebuilds them and everything " +
-                    "depending on them on every build. Remove cdylib from their [lib] crate-type, or " +
-                    "build the workspace together with cargo { buildMode = BuildMode.Workspace }."
+                    "${cdylibs.sorted().joinToString(", ")}. Cargo before 1.100 rebuilds them and " +
+                    "everything depending on them on every build. Use Cargo 1.100 or newer, remove " +
+                    "cdylib from their [lib] crate-type, or build the workspace together with " +
+                    "cargo { buildMode = BuildMode.Workspace }."
             )
         }
         val nativeStaticLibsFile = nativeStaticLibsFile.orNull?.asFile
