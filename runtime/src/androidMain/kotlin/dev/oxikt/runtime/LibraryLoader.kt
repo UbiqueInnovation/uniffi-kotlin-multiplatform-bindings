@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 import com.sun.jna.Library
 import com.sun.jna.Native
