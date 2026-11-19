@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased](https://github.com/UbiqueInnovation/oxikt/compare/v1.3.5...HEAD)
+## [Unreleased](https://github.com/UbiqueInnovation/oxikt/compare/v1.4.0...HEAD)
+
+## [1.4.0](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.4.0) - 2026-11-19
 
 ### Changed
 
