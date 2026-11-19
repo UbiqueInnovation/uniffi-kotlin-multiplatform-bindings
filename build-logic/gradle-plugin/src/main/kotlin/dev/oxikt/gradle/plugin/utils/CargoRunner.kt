@@ -1,4 +1,4 @@
-package ch.ubique.uniffi.plugin.utils
+package dev.oxikt.gradle.plugin.utils
 
 import org.gradle.api.GradleException
 import org.gradle.api.logging.Logger
@@ -98,7 +98,7 @@ class CargoRunner(
         val rustup = RustLocator.findRustExecutable("rustup").path
         val lockDirectory = File(
             System.getProperty("java.io.tmpdir"),
-            "ch.ubique.uniffi-${System.getProperty("user.name").replace(Regex("[^A-Za-z0-9._-]"), "_")}",
+            "dev.oxikt-${System.getProperty("user.name").replace(Regex("[^A-Za-z0-9._-]"), "_")}",
         ).also { it.mkdirs() }
         val lockFile = lockDirectory.resolve("rustup.lock")
 

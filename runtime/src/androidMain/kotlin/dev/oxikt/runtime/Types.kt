@@ -1,6 +1,6 @@
 @file:Suppress("CanBePrimaryConstructorProperty", "unused")
 
-package uniffi.runtime
+package dev.oxikt.runtime
 
 import com.sun.jna.Callback
 import com.sun.jna.Structure

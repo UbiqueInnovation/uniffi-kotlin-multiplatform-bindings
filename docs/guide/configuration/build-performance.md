@@ -63,7 +63,7 @@ plugins get Cargo builds of their own:
 ```kotlin
 // build.gradle.kts of the root project
 plugins {
-    id("ch.ubique.uniffi.plugin") version "1.3.0" apply false
+    id("dev.oxikt.gradle.plugin") version "1.4.0" apply false
 }
 ```
 
@@ -94,7 +94,7 @@ Each module runs `cargo rustc` for its own crate, with exactly the crate types i
 so the crate doesn't have to declare them. Building a module only builds what that module needs.
 
 ```kotlin
-import ch.ubique.uniffi.plugin.dsl.BuildMode
+import dev.oxikt.gradle.plugin.dsl.BuildMode
 
 cargo {
     buildMode = BuildMode.Individual
@@ -123,9 +123,9 @@ Use the same mode in all modules of a workspace, for example from the root proje
 ```kotlin
 // build.gradle.kts of the root project
 subprojects {
-    plugins.withId("ch.ubique.uniffi.plugin") {
-        extensions.configure<ch.ubique.uniffi.plugin.dsl.CargoExtension> {
-            buildMode = ch.ubique.uniffi.plugin.dsl.BuildMode.Individual
+    plugins.withId("dev.oxikt.gradle.plugin") {
+        extensions.configure<dev.oxikt.gradle.plugin.dsl.CargoExtension> {
+            buildMode = dev.oxikt.gradle.plugin.dsl.BuildMode.Individual
         }
     }
 }

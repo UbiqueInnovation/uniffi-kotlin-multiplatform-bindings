@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
     override fun read(buf: ByteBuffer): ByteArray {

@@ -1,8 +1,8 @@
-package ch.ubique.uniffi.plugin.tasks
+package dev.oxikt.gradle.plugin.tasks
 
-import ch.ubique.uniffi.plugin.dsl.BuildMode
-import ch.ubique.uniffi.plugin.model.BuildTarget
-import ch.ubique.uniffi.plugin.model.CrateType
+import dev.oxikt.gradle.plugin.dsl.BuildMode
+import dev.oxikt.gradle.plugin.model.BuildTarget
+import dev.oxikt.gradle.plugin.model.CrateType
 import java.nio.file.Path
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.createDirectories
@@ -35,8 +35,8 @@ class CargoBuildTaskTest {
         root.resolve("Cargo.toml").writeText("[package]\nname = \"sample\"\nversion = \"0.1.0\"\n")
         root.resolve("src").createDirectories().resolve("lib.rs").writeText("pub fn sample() {}\n")
         root.resolve("build.gradle").writeText("""
-            plugins { id 'ch.ubique.uniffi.plugin' apply false }
-            tasks.register('testCargoBuild', ch.ubique.uniffi.plugin.tasks.CargoBuildTask) {
+            plugins { id 'dev.oxikt.gradle.plugin' apply false }
+            tasks.register('testCargoBuild', dev.oxikt.gradle.plugin.tasks.CargoBuildTask) {
                 packageDirectory.set(layout.projectDirectory)
                 cargoTargetDirectory.set(layout.projectDirectory.dir('target'))
                 dynamicLibraryFile.set(layout.projectDirectory.file('target/debug/library.so'))
@@ -46,7 +46,7 @@ class CargoBuildTaskTest {
                 release.set(false)
                 useCross.set(false)
                 additionalEnvironment.set([:])
-                buildMode.set(ch.ubique.uniffi.plugin.dsl.BuildMode.Individual)
+                buildMode.set(dev.oxikt.gradle.plugin.dsl.BuildMode.Individual)
             }
             tasks.register('testBindings') {
                 dependsOn tasks.named('testCargoBuild')
@@ -75,7 +75,7 @@ class CargoBuildTaskTest {
 
     @Test
     fun `an individual build passes exactly the crate types its targets need`() {
-        val crateType = "ch.ubique.uniffi.plugin.model.CrateType"
+        val crateType = "dev.oxikt.gradle.plugin.model.CrateType"
         // Declared crate types don't matter: the crate is the root of its own build.
         assertEquals(
             listOf("rustc", "--lib", "--package", "sample", "--crate-type", "cdylib"),
@@ -93,7 +93,7 @@ class CargoBuildTaskTest {
     @Test
     fun `an individual build writes the native static libs rustc reports`() {
         val root = runCargoBuild(
-            "crateTypes.set([ch.ubique.uniffi.plugin.model.CrateType.SystemStaticLibrary]); " +
+            "crateTypes.set([dev.oxikt.gradle.plugin.model.CrateType.SystemStaticLibrary]); " +
                 "nativeStaticLibsFile.set(layout.projectDirectory.file('target/debug/sample.native-static-libs'))"
         ).root
         assertEquals(
@@ -132,10 +132,10 @@ class CargoBuildTaskTest {
         root.resolve("a").createDirectories()
         root.resolve("b").createDirectories()
         root.resolve("build.gradle").writeText("""
-            plugins { id 'ch.ubique.uniffi.plugin' apply false }
-            def service = gradle.sharedServices.registerIfAbsent('cargoWorkspace', ch.ubique.uniffi.plugin.services.CargoWorkspaceService) {}
+            plugins { id 'dev.oxikt.gradle.plugin' apply false }
+            def service = gradle.sharedServices.registerIfAbsent('cargoWorkspace', dev.oxikt.gradle.plugin.services.CargoWorkspaceService) {}
             subprojects {
-                tasks.register('testCargoBuild', ch.ubique.uniffi.plugin.tasks.CargoBuildTask) {
+                tasks.register('testCargoBuild', dev.oxikt.gradle.plugin.tasks.CargoBuildTask) {
                     packageDirectory.set(layout.projectDirectory)
                     workspaceDirectory.set(rootProject.layout.projectDirectory)
                     workspaceService.set(service)
@@ -146,7 +146,7 @@ class CargoBuildTaskTest {
                     release.set(false)
                     useCross.set(false)
                     additionalEnvironment.set([:])
-                    buildMode.set(ch.ubique.uniffi.plugin.dsl.BuildMode.Workspace)
+                    buildMode.set(dev.oxikt.gradle.plugin.dsl.BuildMode.Workspace)
                     workspacePackageNames.set(['a', 'b'])
                     features.set(['b/second', 'a/first'])
                 }
@@ -248,8 +248,8 @@ class CargoBuildTaskTest {
         assertTrue(cargo.toFile().setExecutable(true))
         root.resolve("settings.gradle").writeText("rootProject.name = 'cargo-features-test'\n")
         root.resolve("build.gradle").writeText("""
-            plugins { id 'ch.ubique.uniffi.plugin' apply false }
-            tasks.register('testCargoBuild', ch.ubique.uniffi.plugin.tasks.CargoBuildTask) {
+            plugins { id 'dev.oxikt.gradle.plugin' apply false }
+            tasks.register('testCargoBuild', dev.oxikt.gradle.plugin.tasks.CargoBuildTask) {
                 packageDirectory.set(layout.projectDirectory)
                 cargoTargetDirectory.set(layout.projectDirectory.dir('target'))
                 dynamicLibraryFile.set(layout.projectDirectory.file('target/debug/library.so'))
@@ -259,7 +259,7 @@ class CargoBuildTaskTest {
                 release.set(false)
                 useCross.set(false)
                 additionalEnvironment.set([:])
-                buildMode.set(ch.ubique.uniffi.plugin.dsl.BuildMode.Individual)
+                buildMode.set(dev.oxikt.gradle.plugin.dsl.BuildMode.Individual)
                 $configuration
             }
         """.trimIndent())

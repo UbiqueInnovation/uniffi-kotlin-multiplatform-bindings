@@ -1,4 +1,4 @@
-package ch.ubique.uniffi.plugin.utils
+package dev.oxikt.gradle.plugin.utils
 
 import java.io.Serializable
 import java.nio.charset.StandardCharsets

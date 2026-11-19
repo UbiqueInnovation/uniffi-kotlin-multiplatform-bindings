@@ -12,13 +12,13 @@ templates, Kotlin for four source sets (`commonMain`, `jvmMain`, `androidMain`, 
 C headers for Kotlin/Native's cinterop. `commonMain` declares the public API, mostly as `expect`
 declarations. Each platform source set provides the `actual` implementations and the FFI plumbing:
 JNA on JVM and Android, cinterop on Native. Code that doesn't depend on the crate lives in a
-separately published runtime library (`runtime/`, `ch.ubique.uniffi:runtime`).
+separately published runtime library (`runtime/`, `dev.oxikt:runtime`).
 
 ## Repository layout
 
 | Path | What |
 | --- | --- |
-| `build-logic/gradle-plugin/` | The Gradle plugin `ch.ubique.uniffi.plugin`. |
+| `build-logic/gradle-plugin/` | The Gradle plugin `dev.oxikt.gradle.plugin`. |
 | `build-logic/conventions/` | Convention plugins used by the tests in this repository. |
 | `bindgen/` | The binding generator `uniffi-bindgen-kotlin-multiplatform`, a Rust crate. |
 | `runtime/` | The runtime library: hand-written Kotlin plus a tiny Rust crate. |

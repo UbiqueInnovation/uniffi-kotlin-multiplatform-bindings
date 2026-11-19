@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalTime::class)
 
-package uniffi.runtime
+package dev.oxikt.runtime
 
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant

@@ -1,6 +1,6 @@
-package ch.ubique.uniffi.plugin.services
+package dev.oxikt.gradle.plugin.services
 
-import ch.ubique.uniffi.plugin.model.BuildTarget.RustTarget
+import dev.oxikt.gradle.plugin.model.BuildTarget.RustTarget
 import org.gradle.api.services.BuildServiceParameters
 import org.gradle.testfixtures.ProjectBuilder
 import kotlin.test.Test

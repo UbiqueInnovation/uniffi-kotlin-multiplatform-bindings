@@ -1,4 +1,4 @@
-package ch.ubique.uniffi.plugin.model
+package dev.oxikt.gradle.plugin.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

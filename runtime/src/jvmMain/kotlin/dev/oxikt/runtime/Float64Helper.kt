@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 object FfiConverterDouble: FfiConverter<Double, Double> {
     override fun lift(value: Double): Double {

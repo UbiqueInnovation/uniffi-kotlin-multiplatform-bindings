@@ -1,6 +1,6 @@
-package ch.ubique.uniffi.plugin.utils
+package dev.oxikt.gradle.plugin.utils
 
-import ch.ubique.uniffi.plugin.model.RustHost
+import dev.oxikt.gradle.plugin.model.RustHost
 import java.io.File
 
 object NdkUtil {

@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 import okio.utf8Size
 

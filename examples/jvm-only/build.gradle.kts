@@ -1,6 +1,6 @@
 plugins {
     kotlin("multiplatform")
-	id("ch.ubique.uniffi.plugin")
+	id("dev.oxikt.gradle.plugin")
 }
 
 uniffi {

@@ -222,7 +222,7 @@ impl Config {
         let crate_name = module_path.split("::").next().unwrap_or(module_path);
         match self.external_packages.get(crate_name) {
             Some(name) => name.clone(),
-            None => format!("uniffi.{namespace}"),
+            None => format!("dev.oxikt.{namespace}"),
         }
     }
 

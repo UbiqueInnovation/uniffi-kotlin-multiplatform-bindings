@@ -1,6 +1,6 @@
 # Gradle plugin
 
-Source: `build-logic/gradle-plugin/src/main/kotlin/ch/ubique/uniffi/plugin/`.
+Source: `build-logic/gradle-plugin/src/main/kotlin/dev/oxikt/gradle/plugin/`.
 
 | File | Role |
 | --- | --- |

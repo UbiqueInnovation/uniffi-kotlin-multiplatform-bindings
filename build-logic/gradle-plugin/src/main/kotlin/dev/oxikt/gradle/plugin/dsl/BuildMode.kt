@@ -1,4 +1,4 @@
-package ch.ubique.uniffi.plugin.dsl
+package dev.oxikt.gradle.plugin.dsl
 
 /** How the plugin runs Cargo, see [CargoExtension.buildMode]. */
 enum class BuildMode {

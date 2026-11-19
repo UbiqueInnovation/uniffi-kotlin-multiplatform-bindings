@@ -1,7 +1,7 @@
-package ch.ubique.uniffi.plugin.utils
+package dev.oxikt.gradle.plugin.utils
 
-import ch.ubique.uniffi.plugin.model.CargoMetadata
-import ch.ubique.uniffi.plugin.model.CrateType
+import dev.oxikt.gradle.plugin.model.CargoMetadata
+import dev.oxikt.gradle.plugin.model.CrateType
 import java.io.File
 
 fun CargoMetadata.targetPackage(packageDirectory: File): CargoMetadata.Package {

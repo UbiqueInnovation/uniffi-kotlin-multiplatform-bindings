@@ -1,7 +1,7 @@
-package ch.ubique.uniffi.plugin.dsl
+package dev.oxikt.gradle.plugin.dsl
 
-import ch.ubique.uniffi.plugin.model.BuildTarget
-import ch.ubique.uniffi.plugin.model.CargoBuildConfig
+import dev.oxikt.gradle.plugin.model.BuildTarget
+import dev.oxikt.gradle.plugin.model.CargoBuildConfig
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty

@@ -105,7 +105,7 @@ puts a `throws` clause into the class file, so Java callers can catch the except
 ## Panics and unexpected errors
 
 A Rust panic does not crash the process. It surfaces in Kotlin as `InternalException` with the panic
-message. The class lives in `uniffi.runtime`, and the bindings' package has a typealias for it. The same exception is thrown for other failures that are not part of the
+message. The class lives in `dev.oxikt.runtime`, and the bindings' package has a typealias for it. The same exception is thrown for other failures that are not part of the
 declared error type.
 
 ## Fixtures

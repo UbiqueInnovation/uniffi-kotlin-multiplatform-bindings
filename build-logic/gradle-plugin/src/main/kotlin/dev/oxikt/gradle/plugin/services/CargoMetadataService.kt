@@ -1,6 +1,6 @@
-package ch.ubique.uniffi.plugin.services
+package dev.oxikt.gradle.plugin.services
 
-import ch.ubique.uniffi.plugin.utils.RustLocator
+import dev.oxikt.gradle.plugin.utils.RustLocator
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ValueSource
 import org.gradle.api.provider.ValueSourceParameters

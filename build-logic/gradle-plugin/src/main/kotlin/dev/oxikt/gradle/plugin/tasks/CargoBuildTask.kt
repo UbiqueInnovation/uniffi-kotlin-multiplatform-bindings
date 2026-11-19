@@ -1,12 +1,12 @@
-package ch.ubique.uniffi.plugin.tasks
+package dev.oxikt.gradle.plugin.tasks
 
-import ch.ubique.uniffi.plugin.dsl.BuildMode
-import ch.ubique.uniffi.plugin.model.BuildTarget
-import ch.ubique.uniffi.plugin.model.CrateType
-import ch.ubique.uniffi.plugin.services.CargoWorkspaceService
-import ch.ubique.uniffi.plugin.utils.CargoRunner
-import ch.ubique.uniffi.plugin.utils.PRINT_NATIVE_STATIC_LIBS
-import ch.ubique.uniffi.plugin.utils.nativeStaticLibs
+import dev.oxikt.gradle.plugin.dsl.BuildMode
+import dev.oxikt.gradle.plugin.model.BuildTarget
+import dev.oxikt.gradle.plugin.model.CrateType
+import dev.oxikt.gradle.plugin.services.CargoWorkspaceService
+import dev.oxikt.gradle.plugin.utils.CargoRunner
+import dev.oxikt.gradle.plugin.utils.PRINT_NATIVE_STATIC_LIBS
+import dev.oxikt.gradle.plugin.utils.nativeStaticLibs
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.Directory
@@ -183,7 +183,7 @@ abstract class CargoBuildTask : DefaultTask() {
      * Where a [BuildMode.Individual] build of a static library writes the linker options for its
      * native dependencies, as rustc's `--print native-static-libs` reports them. Usually
      * `<library name>.native-static-libs` next to the library, like for
-     * [prebuilt libraries][ch.ubique.uniffi.plugin.dsl.CargoExtension.prebuiltLibraries]. A
+     * [prebuilt libraries][dev.oxikt.gradle.plugin.dsl.CargoExtension.prebuiltLibraries]. A
      * workspace build can't pass rustc arguments, so the def file task probes them instead.
      */
     @get:OutputFile

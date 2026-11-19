@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 import android.os.Build
 import androidx.annotation.RequiresApi

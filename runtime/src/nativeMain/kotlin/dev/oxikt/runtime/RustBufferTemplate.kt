@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalForeignApi::class)
 
-package uniffi.runtime
+package dev.oxikt.runtime
 
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CValue
@@ -127,7 +127,7 @@ object RustBufferHelper {
     fun allocValue(size: ULong = 0UL): RustBufferByValue = uniffiRustCall() { status ->
 
         // Note: need to convert the size to a `Long` value to make this work with JVM.
-        UniffiLib.INSTANCE.ffi_uniffi_runtime_rustbuffer_alloc(size.toLong(), status)
+        UniffiLib.INSTANCE.ffi_oxikt_runtime_rustbuffer_alloc(size.toLong(), status)
     }.also {
         if(it.data == null) {
             throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=${size})")
@@ -135,6 +135,6 @@ object RustBufferHelper {
     }
 
     fun free(buf: RustBufferByValue): Unit = uniffiRustCall() { status ->
-        UniffiLib.INSTANCE.ffi_uniffi_runtime_rustbuffer_free(buf, status)
+        UniffiLib.INSTANCE.ffi_oxikt_runtime_rustbuffer_free(buf, status)
     }
 }

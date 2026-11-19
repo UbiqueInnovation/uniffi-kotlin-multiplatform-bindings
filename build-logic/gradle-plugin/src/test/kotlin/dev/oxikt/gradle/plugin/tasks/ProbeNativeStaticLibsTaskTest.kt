@@ -1,4 +1,4 @@
-package ch.ubique.uniffi.plugin.tasks
+package dev.oxikt.gradle.plugin.tasks
 
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
@@ -34,8 +34,8 @@ class ProbeNativeStaticLibsTaskTest {
         library.writeText("workspace\n")
         root.resolve("settings.gradle").writeText("rootProject.name = 'probe-test'\n")
         root.resolve("build.gradle").writeText("""
-            plugins { id 'ch.ubique.uniffi.plugin' apply false }
-            tasks.register('probe', ch.ubique.uniffi.plugin.tasks.ProbeNativeStaticLibsTask) {
+            plugins { id 'dev.oxikt.gradle.plugin' apply false }
+            tasks.register('probe', dev.oxikt.gradle.plugin.tasks.ProbeNativeStaticLibsTask) {
                 cargoMetadata.set('{}')
                 lockFile.from('Cargo.lock')
                 libraryFileName.set('libsample.a')

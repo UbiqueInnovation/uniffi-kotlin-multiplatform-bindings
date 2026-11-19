@@ -1,5 +1,5 @@
-import ch.ubique.uniffi.plugin.extensions.useRustUpLinker
-import ch.ubique.uniffi.plugin.model.RustHost
+import dev.oxikt.gradle.plugin.extensions.useRustUpLinker
+import dev.oxikt.gradle.plugin.model.RustHost
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -7,7 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.atomicfu)
     `maven-publish`
     alias(libs.plugins.maven.publish)
-    id("ch.ubique.uniffi.plugin")
+    id("dev.oxikt.gradle.plugin")
 }
 
 cargo {
@@ -49,7 +49,7 @@ kotlin {
             macosArm64(),
         ).forEach { iosTarget ->
             iosTarget.binaries.framework {
-                baseName = "uniffi-runtime"
+                baseName = "oxikt-runtime"
                 isStatic = true
             }
 
@@ -60,7 +60,7 @@ kotlin {
     }
 
     android {
-        namespace = "uniffi.runtime"
+        namespace = "dev.oxikt.runtime"
         compileSdk = 37
         minSdk = 21
 

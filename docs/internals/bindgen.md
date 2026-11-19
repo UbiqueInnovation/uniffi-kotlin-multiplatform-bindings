@@ -21,7 +21,7 @@ Source: `bindgen/`. The crate `uniffi_bindgen_kotlin_multiplatform` builds the b
 2. `update_component_configs`: apply the `--package-name` override, if given, to the selected
    crate (`--crate`, or the crate derived from the library file name). It must happen here, before
    the package map below is built, so that other crates importing this one see the new package.
-   Then default `package_name` to `uniffi.<namespace>` and `cdylib_name`
+   Then default `package_name` to `dev.oxikt.<namespace>` and `cdylib_name`
    to the library's name, then build a crate → package map over all components and add it to every
    component's `external_packages`. You will see `Adding external package mapping for crate …` in
    the build log. That is this step.

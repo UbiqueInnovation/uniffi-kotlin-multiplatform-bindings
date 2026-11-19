@@ -1,4 +1,4 @@
-package ch.ubique.uniffi.plugin.tasks
+package dev.oxikt.gradle.plugin.tasks
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
@@ -18,7 +18,7 @@ abstract class GenerateDefFileTask : DefaultTask() {
     /**
      * The static library cinterop links against.
      *
-     * This is the [ch.ubique.uniffi.plugin.tasks.CargoBuildTask] output rather than a name,
+     * This is the [dev.oxikt.gradle.plugin.tasks.CargoBuildTask] output rather than a name,
      * so it does three things at once: it names the library, it locates it (both end up in
      * the def file), and it makes this task - and through the def file, cinterop - depend on
      * the cargo build.

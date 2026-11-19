@@ -1,9 +1,9 @@
-package ch.ubique.uniffi.plugin.tasks
+package dev.oxikt.gradle.plugin.tasks
 
-import ch.ubique.uniffi.plugin.model.CrateType
-import ch.ubique.uniffi.plugin.utils.CargoRunner
-import ch.ubique.uniffi.plugin.utils.PRINT_NATIVE_STATIC_LIBS
-import ch.ubique.uniffi.plugin.utils.nativeStaticLibs
+import dev.oxikt.gradle.plugin.model.CrateType
+import dev.oxikt.gradle.plugin.utils.CargoRunner
+import dev.oxikt.gradle.plugin.utils.PRINT_NATIVE_STATIC_LIBS
+import dev.oxikt.gradle.plugin.utils.nativeStaticLibs
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -28,7 +28,7 @@ import javax.inject.Inject
 
 /**
  * Asks rustc for the linker options of the static library's native dependencies, for a crate built
- * in [workspace mode][ch.ubique.uniffi.plugin.dsl.BuildMode.Workspace]. The workspace build can't
+ * in [workspace mode][dev.oxikt.gradle.plugin.dsl.BuildMode.Workspace]. The workspace build can't
  * pass rustc arguments, so this builds the crate on its own with
  * `cargo rustc --crate-type staticlib -- --print native-static-libs`.
  *

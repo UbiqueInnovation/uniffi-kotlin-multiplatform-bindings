@@ -1,6 +1,6 @@
 @file:Suppress("CanBePrimaryConstructorProperty", "UnusedReceiverParameter")
 
-package uniffi.runtime
+package dev.oxikt.runtime
 
 import com.sun.jna.Structure
 import com.sun.jna.Callback

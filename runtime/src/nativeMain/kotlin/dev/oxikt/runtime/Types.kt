@@ -1,7 +1,7 @@
 @file:Suppress("unused")
 @file:OptIn(ExperimentalForeignApi::class)
 
-package uniffi.runtime
+package dev.oxikt.runtime
 
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CValue

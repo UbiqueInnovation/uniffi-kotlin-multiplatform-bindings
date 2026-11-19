@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 object FfiConverterFloat: FfiConverter<Float, Float> {
     override fun lift(value: Float): Float {

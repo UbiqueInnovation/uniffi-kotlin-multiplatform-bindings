@@ -1,4 +1,4 @@
-package ch.ubique.uniffi.plugin.utils
+package dev.oxikt.gradle.plugin.utils
 
 /** The rustc arguments that make it report the linker options for a static library's native dependencies. */
 val PRINT_NATIVE_STATIC_LIBS: List<String> = listOf("--print", "native-static-libs")

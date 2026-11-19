@@ -32,14 +32,14 @@ external one.
 the `module_path`, which is a full module path since UniFFI 0.31) and looks it up in
 `external_packages`. That map is filled automatically in `update_component_configs` from all
 crates in the generation run. Entries from `uniffi.toml` take precedence. The fallback
-`uniffi.<namespace>` is only reachable in UDL mode.
+`dev.oxikt.<namespace>` is only reachable in UDL mode.
 
 ### What is emitted
 
 | Output | For an external type `Foo` from package `other` |
 | --- | --- |
 | `commonMain` | `import other.Foo` |
-| `jvmMain` / `androidMain` / `nativeMain` | `import other.Foo`, `import other.FfiConverterTypeFoo`, the error handler if it's an error, and `typealias RustBufferFoo = uniffi.runtime.RustBuffer` (plus `…ByValue`) |
+| `jvmMain` / `androidMain` / `nativeMain` | `import other.Foo`, `import other.FfiConverterTypeFoo`, the error handler if it's an error, and `typealias RustBufferFoo = dev.oxikt.runtime.RustBuffer` (plus `…ByValue`) |
 | header | `typedef RustBuffer RustBufferFoo;` |
 
 The aliases exist because UniFFI gives FFI signatures that carry another crate's type a distinct

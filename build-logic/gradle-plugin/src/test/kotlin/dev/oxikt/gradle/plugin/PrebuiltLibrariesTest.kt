@@ -1,12 +1,12 @@
-package ch.ubique.uniffi.plugin
+package dev.oxikt.gradle.plugin
 
-import ch.ubique.uniffi.plugin.dsl.CargoExtension
-import ch.ubique.uniffi.plugin.dsl.UniffiExtension
-import ch.ubique.uniffi.plugin.model.BuildTarget
-import ch.ubique.uniffi.plugin.tasks.BuildBindingsTask
-import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
-import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
-import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
+import dev.oxikt.gradle.plugin.dsl.CargoExtension
+import dev.oxikt.gradle.plugin.dsl.UniffiExtension
+import dev.oxikt.gradle.plugin.model.BuildTarget
+import dev.oxikt.gradle.plugin.tasks.BuildBindingsTask
+import dev.oxikt.gradle.plugin.tasks.CargoBuildTask
+import dev.oxikt.gradle.plugin.tasks.GenerateDefFileTask
+import dev.oxikt.gradle.plugin.tasks.MergeLibrariesTask
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 import kotlin.test.Test
@@ -37,7 +37,7 @@ class PrebuiltLibrariesTest {
 
         val project = ProjectBuilder.builder().withProjectDir(root.toFile()).build()
         project.pluginManager.apply("org.jetbrains.kotlin.multiplatform")
-        project.pluginManager.apply("ch.ubique.uniffi.plugin")
+        project.pluginManager.apply("dev.oxikt.gradle.plugin")
         project.extensions.getByType(UniffiExtension::class.java).generateFromLibrary()
         project.extensions.getByType(CargoExtension::class.java)
             .prebuiltLibraries.set(project.layout.projectDirectory.dir("prebuilt"))

@@ -1,9 +1,9 @@
-package ch.ubique.uniffi.plugin.model
+package dev.oxikt.gradle.plugin.model
 
-import ch.ubique.uniffi.plugin.model.CrateType.DynamicLibrary
-import ch.ubique.uniffi.plugin.model.CrateType.StaticLibrary
-import ch.ubique.uniffi.plugin.model.CrateType.SystemDynamicLibrary
-import ch.ubique.uniffi.plugin.model.CrateType.SystemStaticLibrary
+import dev.oxikt.gradle.plugin.model.CrateType.DynamicLibrary
+import dev.oxikt.gradle.plugin.model.CrateType.StaticLibrary
+import dev.oxikt.gradle.plugin.model.CrateType.SystemDynamicLibrary
+import dev.oxikt.gradle.plugin.model.CrateType.SystemStaticLibrary
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind

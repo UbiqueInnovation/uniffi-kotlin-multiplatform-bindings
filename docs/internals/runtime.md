@@ -1,9 +1,9 @@
 # Runtime
 
-Source: `runtime/`. Published as `ch.ubique.uniffi:runtime`, with the same version as the plugin.
+Source: `runtime/`. Published as `dev.oxikt:runtime`, with the same version as the plugin.
 
 The runtime holds everything the generated code needs that doesn't depend on a particular crate.
-Generated files start with `import uniffi.runtime.*`.
+Generated files start with `import dev.oxikt.runtime.*`.
 
 ## Why a separate library
 
@@ -25,7 +25,7 @@ This is the basis of [multi-module support](external-and-remote-types.md#multi-m
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `commonMain`                           | `UniffiHandleMap`, `InternalException`, `expect` declarations for `Pointer`                                                                                                                                                                                                      |
 | `jvmMain`, `androidMain`, `nativeMain` | `FfiConverter`, `ByteBuffer`, `RustBuffer` and `RustBufferHelper`, `ForeignBytes` / `withForeignBytes`, `uniffiRustCall`, converters for every primitive type, `String`, `ByteArray`, `Instant`, `Duration`, the async helpers, `FfiConverterCallbackInterface`, `UniffiCleaner` |
-| `src/commonMain/rust/lib.rs`           | a Rust crate `uniffi_runtime` that exports nothing but `setup_scaffolding!()`                                                                                                                                                                                                    |
+| `src/commonMain/rust/lib.rs`           | a Rust crate `oxikt_runtime` that exports nothing but `setup_scaffolding!()`                                                                                                                                                                                                     |
 
 The three platform source sets are **separate hand-written copies**. JVM and Android are nearly
 identical. Native differs where JNA and cinterop differ: structures, pointers, callbacks
@@ -34,7 +34,7 @@ identical. Native differs where JNA and cinterop differ: structures, pointers, c
 ## The runtime's own Rust library
 
 The runtime is a UniFFI crate itself, with an empty interface. `setup_scaffolding!()` still exports
-the standard FFI functions, in particular `ffi_uniffi_runtime_rustbuffer_alloc` and `_free`. The
+the standard FFI functions, in particular `ffi_oxikt_runtime_rustbuffer_alloc` and `_free`. The
 module applies this repository's plugin with `bindgenFromPath(..., features = listOf("runtime"))`,
 and `addRuntime = false`. The `runtime` feature makes the bindgen emit only the `UniffiLib`
 declarations for this crate (see [Bindgen](bindgen.md#the-runtime-feature)). The Rust library
@@ -42,7 +42,7 @@ is packaged like any other: JVM resources, Android `jniLibs`, cinterop. Its cint
 also carries the shared `common.h`, which every generated crate reuses (see
 [Bindgen](bindgen.md#headers)).
 
-`RustBufferHelper.allocValue` calls `ffi_uniffi_runtime_rustbuffer_alloc`. **Every `RustBuffer`
+`RustBufferHelper.allocValue` calls `ffi_oxikt_runtime_rustbuffer_alloc`. **Every `RustBuffer`
 that Kotlin lowers is allocated by the runtime's library**, and freed by whichever crate receives
 it. This only works because all of them use the same allocator, which is true for Rust's default
 system allocator. A crate that installs its own `#[global_allocator]` breaks it. There is no

@@ -1,7 +1,7 @@
-package ch.ubique.uniffi.plugin
+package dev.oxikt.gradle.plugin
 
-import ch.ubique.uniffi.plugin.model.BuildTarget
-import ch.ubique.uniffi.plugin.utils.BindgenSource
+import dev.oxikt.gradle.plugin.model.BuildTarget
+import dev.oxikt.gradle.plugin.utils.BindgenSource
 
 internal object Constants {
     val BINDGEN_SOURCE: BindgenSource = BindgenSource.Git(

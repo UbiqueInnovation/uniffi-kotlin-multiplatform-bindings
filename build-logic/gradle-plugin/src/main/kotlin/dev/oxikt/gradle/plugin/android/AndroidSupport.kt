@@ -1,9 +1,9 @@
-package ch.ubique.uniffi.plugin.android
+package dev.oxikt.gradle.plugin.android
 
-import ch.ubique.uniffi.plugin.model.BuildTarget
-import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
-import ch.ubique.uniffi.plugin.utils.NdkUtil
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
+import dev.oxikt.gradle.plugin.model.BuildTarget
+import dev.oxikt.gradle.plugin.tasks.MergeLibrariesTask
+import dev.oxikt.gradle.plugin.utils.NdkUtil
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
@@ -14,7 +14,7 @@ import org.gradle.api.tasks.TaskProvider
  * AGP is a `compileOnly` dependency of this plugin - it is expected to come from the
  * consumer's buildscript classpath, and a consumer that does not build for android will
  * not have it at all. A class is only loaded when it is first used, so keeping the AGP
- * types out of [ch.ubique.uniffi.plugin.UniffiPlugin] and confining them to this class
+ * types out of [dev.oxikt.gradle.plugin.UniffiPlugin] and confining them to this class
  * means they can only ever be loaded once something instantiates it, which callers do
  * exclusively from inside `pluginManager.withPlugin(ANDROID_PLUGIN) { }` or behind
  * [BuildTarget.RustTarget.isAndroid].

@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 import kotlinx.atomicfu.AtomicLong
 import kotlinx.atomicfu.atomic

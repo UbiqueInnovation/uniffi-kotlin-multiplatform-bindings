@@ -1,4 +1,4 @@
-package ch.ubique.uniffi.plugin.utils
+package dev.oxikt.gradle.plugin.utils
 
 import org.gradle.api.GradleException
 import java.io.File

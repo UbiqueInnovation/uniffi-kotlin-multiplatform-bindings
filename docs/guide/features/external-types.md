@@ -26,7 +26,7 @@ uniffi {
 
 The generator then writes Kotlin for every UniFFI crate linked into your library, each in its own
 package. The other crate's package name comes from its own `uniffi.toml` if it has one, and is
-`uniffi.<namespace>` otherwise.
+`dev.oxikt.<namespace>` otherwise.
 
 !!! warning
     Only one module on a classpath may generate a given crate's bindings. If two modules both

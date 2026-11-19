@@ -1,7 +1,7 @@
-package ch.ubique.uniffi.plugin.tasks
+package dev.oxikt.gradle.plugin.tasks
 
-import ch.ubique.uniffi.plugin.model.CargoMetadata
-import ch.ubique.uniffi.plugin.utils.targetPackage
+import dev.oxikt.gradle.plugin.model.CargoMetadata
+import dev.oxikt.gradle.plugin.utils.targetPackage
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty

@@ -64,9 +64,9 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        create("ch.ubique.uniffi.plugin") {
-            id = "ch.ubique.uniffi.plugin"
-            implementationClass = "ch.ubique.uniffi.plugin.UniffiPlugin"
+        create("dev.oxikt.gradle.plugin") {
+            id = "dev.oxikt.gradle.plugin"
+            implementationClass = "dev.oxikt.gradle.plugin.UniffiPlugin"
         }
     }
 }
@@ -104,7 +104,7 @@ private fun getBindgenGitTag(): String =
     runCatching { property("githubRefName").toString() }.getOrNull() ?: "v${version}"
 
 buildConfig {
-    packageName = "ch.ubique.uniffi.plugin"
+    packageName = "dev.oxikt.gradle.plugin"
 
     forClass("PluginVersions") {
         buildConfigField("String", "RUNTIME_VERSION", "\"${version}\"")

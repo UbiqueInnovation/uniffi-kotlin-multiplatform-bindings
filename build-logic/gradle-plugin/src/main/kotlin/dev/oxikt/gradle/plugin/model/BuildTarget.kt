@@ -1,4 +1,4 @@
-package ch.ubique.uniffi.plugin.model
+package dev.oxikt.gradle.plugin.model
 
 enum class BuildTarget(
     /**

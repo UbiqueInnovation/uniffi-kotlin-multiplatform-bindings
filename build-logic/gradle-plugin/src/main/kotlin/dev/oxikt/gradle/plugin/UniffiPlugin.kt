@@ -1,29 +1,29 @@
-package ch.ubique.uniffi.plugin
+package dev.oxikt.gradle.plugin
 
-import ch.ubique.uniffi.plugin.dsl.BindingsGenerationFromLibrary
-import ch.ubique.uniffi.plugin.dsl.BindingsGenerationFromUdl
-import ch.ubique.uniffi.plugin.dsl.BuildMode
-import ch.ubique.uniffi.plugin.dsl.CargoExtension
-import ch.ubique.uniffi.plugin.dsl.UniffiExtension
-import ch.ubique.uniffi.plugin.android.AndroidSupport
-import ch.ubique.uniffi.plugin.model.BuildTarget
-import ch.ubique.uniffi.plugin.model.CargoInfo
-import ch.ubique.uniffi.plugin.model.CargoMetadata
-import ch.ubique.uniffi.plugin.model.CrateType
-import ch.ubique.uniffi.plugin.services.CargoMetadataService
-import ch.ubique.uniffi.plugin.services.CargoWorkspaceService
-import ch.ubique.uniffi.plugin.tasks.BuildBindingsTask
-import ch.ubique.uniffi.plugin.tasks.CargoBuildAliasTask
-import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
-import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
-import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
-import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
-import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
-import ch.ubique.uniffi.plugin.tasks.ProbeNativeStaticLibsTask
-import ch.ubique.uniffi.plugin.utils.BindgenSource
-import ch.ubique.uniffi.plugin.utils.cdylibWorkspaceDependencies
-import ch.ubique.uniffi.plugin.utils.dependencyNames
-import ch.ubique.uniffi.plugin.utils.targetPackage
+import dev.oxikt.gradle.plugin.dsl.BindingsGenerationFromLibrary
+import dev.oxikt.gradle.plugin.dsl.BindingsGenerationFromUdl
+import dev.oxikt.gradle.plugin.dsl.BuildMode
+import dev.oxikt.gradle.plugin.dsl.CargoExtension
+import dev.oxikt.gradle.plugin.dsl.UniffiExtension
+import dev.oxikt.gradle.plugin.android.AndroidSupport
+import dev.oxikt.gradle.plugin.model.BuildTarget
+import dev.oxikt.gradle.plugin.model.CargoInfo
+import dev.oxikt.gradle.plugin.model.CargoMetadata
+import dev.oxikt.gradle.plugin.model.CrateType
+import dev.oxikt.gradle.plugin.services.CargoMetadataService
+import dev.oxikt.gradle.plugin.services.CargoWorkspaceService
+import dev.oxikt.gradle.plugin.tasks.BuildBindingsTask
+import dev.oxikt.gradle.plugin.tasks.CargoBuildAliasTask
+import dev.oxikt.gradle.plugin.tasks.CargoBuildTask
+import dev.oxikt.gradle.plugin.tasks.GenerateDefFileTask
+import dev.oxikt.gradle.plugin.tasks.GenerateDummyDefFileTask
+import dev.oxikt.gradle.plugin.tasks.InstallBindgenTask
+import dev.oxikt.gradle.plugin.tasks.MergeLibrariesTask
+import dev.oxikt.gradle.plugin.tasks.ProbeNativeStaticLibsTask
+import dev.oxikt.gradle.plugin.utils.BindgenSource
+import dev.oxikt.gradle.plugin.utils.cdylibWorkspaceDependencies
+import dev.oxikt.gradle.plugin.utils.dependencyNames
+import dev.oxikt.gradle.plugin.utils.targetPackage
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -86,7 +86,7 @@ class UniffiPlugin : Plugin<Project> {
 
         /** The runtime's cinterop klib among the outputs of that task */
         private const val RUNTIME_CINTEROP_METADATA_PATTERN: String =
-            "**/ch.ubique.uniffi_runtime-cinterop-$CINTEROP_NAME-*.klib"
+            "**/dev.oxikt_runtime-cinterop-$CINTEROP_NAME-*.klib"
     }
 
     private lateinit var uniffiExtension: UniffiExtension
@@ -699,7 +699,7 @@ class UniffiPlugin : Plugin<Project> {
         configurations.named(commonMain.implementationConfigurationName) { configuration ->
             configuration.dependencies.addIf(
                 condition = uniffiExtension.addRuntime,
-                dependencies.create("ch.ubique.uniffi:runtime:${Constants.RUNTIME_VERSION}")
+                dependencies.create("dev.oxikt:runtime:${Constants.RUNTIME_VERSION}")
             )
 
             configuration.dependencies.addIf(

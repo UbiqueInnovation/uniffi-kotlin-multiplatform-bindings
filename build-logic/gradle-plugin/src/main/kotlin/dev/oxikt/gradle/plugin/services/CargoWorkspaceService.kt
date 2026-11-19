@@ -1,6 +1,6 @@
-package ch.ubique.uniffi.plugin.services
+package dev.oxikt.gradle.plugin.services
 
-import ch.ubique.uniffi.plugin.model.BuildTarget
+import dev.oxikt.gradle.plugin.model.BuildTarget
 import org.gradle.api.provider.Provider
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * Gives the projects of a build one view of each workspace build, see
- * [ch.ubique.uniffi.plugin.dsl.BuildMode.Workspace]: the packages to build and the features to
+ * [dev.oxikt.gradle.plugin.dsl.BuildMode.Workspace]: the packages to build and the features to
  * enable for each Rust target, and a single Cargo run that the others reuse.
  */
 abstract class CargoWorkspaceService : BuildService<BuildServiceParameters.None> {

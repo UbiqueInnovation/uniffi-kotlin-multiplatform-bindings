@@ -22,7 +22,7 @@ The project itself is built and tested with Rust `1.97.1`, Gradle `9.7.0`, Kotli
     Your crates must use Rust's default allocator. Don't set a `#[global_allocator]` (for example
     `mimalloc` or `jemalloc`) in any crate that is built with this plugin, or in its dependencies.
 
-    Buffers that Kotlin sends to Rust are allocated by the UniFFI runtime's library, and freed by
+    Buffers that Kotlin sends to Rust are allocated by the OxiKT runtime's library, and freed by
     your crate. That only works when both use the same allocator, which is the system allocator
     by default. With a custom allocator, freeing such a buffer corrupts memory or crashes the
     process. See [Runtime](../internals/runtime.md#the-runtimes-own-rust-library) for details.

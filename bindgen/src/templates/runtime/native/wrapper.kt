@@ -14,10 +14,10 @@
 
 package {{ config.package_name() }}
 
-// Helper code that doesn't depend on this crate comes from the `uniffi.runtime` package.
+// Helper code that doesn't depend on this crate comes from the `dev.oxikt.runtime` package.
 // It must match the version of the generator that produced this file.
 
-import uniffi.runtime.*
+import dev.oxikt.runtime.*
 
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.COpaquePointerVar

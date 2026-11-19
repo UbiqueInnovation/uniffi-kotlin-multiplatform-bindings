@@ -1,9 +1,9 @@
-import ch.ubique.uniffi.plugin.extensions.useRustUpLinker
-import ch.ubique.uniffi.plugin.model.RustHost
+import dev.oxikt.gradle.plugin.extensions.useRustUpLinker
+import dev.oxikt.gradle.plugin.model.RustHost
 
 plugins {
     kotlin("multiplatform")
-	id("ch.ubique.uniffi.plugin")
+	id("dev.oxikt.gradle.plugin")
 }
 
 uniffi {

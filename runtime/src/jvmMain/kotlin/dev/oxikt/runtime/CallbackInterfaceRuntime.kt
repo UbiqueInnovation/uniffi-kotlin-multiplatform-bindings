@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 abstract class FfiConverterCallbackInterface<CallbackInterface: Any>:
     FfiConverter<CallbackInterface, Long> {

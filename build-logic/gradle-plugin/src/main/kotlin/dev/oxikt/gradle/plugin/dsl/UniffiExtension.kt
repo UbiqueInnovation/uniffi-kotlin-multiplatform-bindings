@@ -1,7 +1,7 @@
-package ch.ubique.uniffi.plugin.dsl
+package dev.oxikt.gradle.plugin.dsl
 
-import ch.ubique.uniffi.plugin.Constants
-import ch.ubique.uniffi.plugin.utils.BindgenSource
+import dev.oxikt.gradle.plugin.Constants
+import dev.oxikt.gradle.plugin.utils.BindgenSource
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.file.Directory
@@ -151,7 +151,7 @@ abstract class UniffiExtension @Inject internal constructor(private val objects:
 sealed class BindingsGeneration {
     /**
      * The Kotlin package of the generated bindings. Overrides `package_name` from the crate's
-     * `uniffi.toml`, which itself defaults to `"uniffi.$namespace"`.
+     * `uniffi.toml`, which itself defaults to `"dev.oxikt.$namespace"`.
      */
     abstract val packageName: Property<String>
 }

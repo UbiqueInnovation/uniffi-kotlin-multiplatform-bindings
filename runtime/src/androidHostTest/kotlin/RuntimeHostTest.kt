@@ -1,7 +1,7 @@
+import dev.oxikt.runtime.getPointerNativeValue
+import dev.oxikt.runtime.toPointer
 import io.kotest.matchers.shouldBe
 import org.junit.Test
-import uniffi.runtime.getPointerNativeValue
-import uniffi.runtime.toPointer
 
 class RuntimeHostTest {
     @Test

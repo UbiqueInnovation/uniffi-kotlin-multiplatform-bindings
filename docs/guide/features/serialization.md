@@ -14,7 +14,7 @@ The module also needs the serialization compiler plugin and a format:
 plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization") version "2.4.0"
-    id("ch.ubique.uniffi.plugin")
+    id("dev.oxikt.gradle.plugin")
 }
 
 kotlin.sourceSets.commonMain.dependencies {

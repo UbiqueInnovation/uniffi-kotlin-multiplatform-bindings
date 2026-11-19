@@ -4,6 +4,18 @@
 
 ### Changed
 
+- The project is now called OxiKT and published under `dev.oxikt`, with the documentation at
+  https://docs.oxikt.dev/. **Breaking:** replace the plugin ID `ch.ubique.uniffi.plugin` with
+  `dev.oxikt.gradle.plugin`, imports from the `ch.ubique.uniffi.plugin` package with
+  `dev.oxikt.gradle.plugin`, and the runtime `ch.ubique.uniffi:runtime` with `dev.oxikt:runtime`.
+  Repository content filters need `includeGroupAndSubgroups("dev.oxikt")` instead of
+  `ch.ubique.uniffi`. See the [migration guide](https://docs.oxikt.dev/guide/migrating/).
+- The runtime's classes moved from the `uniffi.runtime` package to `dev.oxikt.runtime`, and
+  bindings without a configured package name go into `dev.oxikt.<namespace>` instead of
+  `uniffi.<namespace>`. **Breaking:** update the imports, or keep the old package with
+  `package_name = "uniffi.<namespace>"` in the crate's `uniffi.toml`.
+- The runtime's native library is now called `oxikt_runtime` instead of `uniffi_runtime`.
+  **Breaking** for packaging rules and library overrides that name it.
 - `cargo { buildMode }` replaces `buildWorkspaceLibraries`, and defaults to `BuildMode.Workspace`.
   The modules of a Cargo workspace then share one `cargo build` per Rust target and profile instead
   of running Cargo once each. It builds the crates of the modules that build that target, with the

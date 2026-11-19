@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 // The cleaner interface for Object finalization code to run.
 // This is the entry point to any implementation that we're using.

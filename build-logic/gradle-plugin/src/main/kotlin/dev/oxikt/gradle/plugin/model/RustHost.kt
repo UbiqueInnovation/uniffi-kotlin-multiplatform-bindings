@@ -1,4 +1,4 @@
-package ch.ubique.uniffi.plugin.model
+package dev.oxikt.gradle.plugin.model
 
 import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 

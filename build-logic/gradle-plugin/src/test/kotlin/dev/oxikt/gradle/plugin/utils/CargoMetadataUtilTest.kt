@@ -1,6 +1,6 @@
-package ch.ubique.uniffi.plugin.utils
+package dev.oxikt.gradle.plugin.utils
 
-import ch.ubique.uniffi.plugin.model.CargoMetadata
+import dev.oxikt.gradle.plugin.model.CargoMetadata
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

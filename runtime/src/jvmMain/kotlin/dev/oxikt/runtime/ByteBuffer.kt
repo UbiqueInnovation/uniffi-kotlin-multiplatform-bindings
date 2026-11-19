@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 @JvmInline
 value class ByteBuffer(private val inner: java.nio.ByteBuffer) {

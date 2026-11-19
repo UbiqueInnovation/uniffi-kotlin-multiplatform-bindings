@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 object FfiConverterLong: FfiConverter<Long, Long> {
     override fun lift(value: Long): Long {

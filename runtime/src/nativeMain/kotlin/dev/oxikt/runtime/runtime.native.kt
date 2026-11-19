@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalForeignApi::class)
 
-package uniffi.runtime
+package dev.oxikt.runtime
 
 import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.CPointer

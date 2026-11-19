@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 interface FfiConverter<KotlinType, FfiType> {
     // Convert an FFI type to a Kotlin type

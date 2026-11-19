@@ -1,4 +1,4 @@
-import ch.ubique.uniffi.plugin.model.RustHost
+import dev.oxikt.gradle.plugin.model.RustHost
 
 plugins {
     id("uniffi-tests-from-library")

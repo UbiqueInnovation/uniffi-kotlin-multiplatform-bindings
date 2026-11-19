@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 object FfiConverterByte: FfiConverter<Byte, Byte> {
     override fun lift(value: Byte): Byte {

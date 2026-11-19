@@ -1,9 +1,9 @@
-package ch.ubique.uniffi.plugin.tasks
+package dev.oxikt.gradle.plugin.tasks
 
-import ch.ubique.uniffi.plugin.utils.BindgenSource
-import ch.ubique.uniffi.plugin.utils.CargoRunner
-import ch.ubique.uniffi.plugin.utils.RustLocator
-import ch.ubique.uniffi.plugin.utils.withCargoTargetLock
+import dev.oxikt.gradle.plugin.utils.BindgenSource
+import dev.oxikt.gradle.plugin.utils.CargoRunner
+import dev.oxikt.gradle.plugin.utils.RustLocator
+import dev.oxikt.gradle.plugin.utils.withCargoTargetLock
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty

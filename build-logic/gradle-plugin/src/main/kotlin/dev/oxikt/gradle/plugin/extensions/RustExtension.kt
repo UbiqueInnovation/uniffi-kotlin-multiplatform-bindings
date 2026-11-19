@@ -1,7 +1,7 @@
-package ch.ubique.uniffi.plugin.extensions
+package dev.oxikt.gradle.plugin.extensions
 
-import ch.ubique.uniffi.plugin.model.BuildTarget
-import ch.ubique.uniffi.plugin.utils.RustLocator
+import dev.oxikt.gradle.plugin.model.BuildTarget
+import dev.oxikt.gradle.plugin.utils.RustLocator
 import org.gradle.api.Project
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCompilation
 import java.io.File

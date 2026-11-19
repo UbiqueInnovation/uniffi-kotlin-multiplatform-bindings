@@ -1,4 +1,4 @@
-package uniffi.runtime
+package dev.oxikt.runtime
 
 
 const val UNIFFI_CALL_SUCCESS = 0.toByte()
