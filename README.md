@@ -1,4 +1,9 @@
-# OxiKT (/ˈɒksɪk/)
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.png" />
+    <img alt="OxiKT" src="docs/assets/logo.png" width="250" />
+  </picture>
+</p>
 
 <p align="center">
   <a href="https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/actions/workflows/run-tests.yml">
@@ -12,7 +17,8 @@
   </a>
 </p>
 
-Kotlin Multiplatform binding generator for Rust libraries using Mozilla's [UniFFI](https://github.com/mozilla/uniffi-rs).
+OxiKT (/ˈɒksɪk/) is a Kotlin Multiplatform binding generator for Rust libraries using Mozilla's
+[UniFFI](https://github.com/mozilla/uniffi-rs).
 
 **Documentation: https://docs.oxikt.dev/**, with a
 [user guide](https://docs.oxikt.dev/guide/getting-started/)
