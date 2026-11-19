@@ -26,7 +26,7 @@ uniffi {
 
 The generator then writes Kotlin for every UniFFI crate linked into your library, each in its own
 package. The other crate's package name comes from its own `uniffi.toml` if it has one, and is
-`uniffi.<namespace>` otherwise.
+`dev.oxikt.<namespace>` otherwise.
 
 !!! warning
     Only one module on a classpath may generate a given crate's bindings. If two modules both
@@ -58,4 +58,4 @@ In UDL, a type from a third-party crate that you describe yourself needs the `[R
 
 ## Fixtures
 
-- [`tests/uniffi/ext-types`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/ext-types)
+- [`tests/uniffi/ext-types`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/ext-types)

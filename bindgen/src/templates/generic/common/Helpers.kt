@@ -1,1 +1,1 @@
-typealias InternalException = uniffi.runtime.InternalException
+typealias InternalException = dev.oxikt.runtime.InternalException

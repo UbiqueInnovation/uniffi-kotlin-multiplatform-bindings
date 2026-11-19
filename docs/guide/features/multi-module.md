@@ -8,7 +8,7 @@ This is the main thing that sets this project apart from other UniFFI Kotlin gen
 you publish a set of composable Kotlin libraries, and lets consumers pick only the ones they need.
 
 The reference setup is
-[`tests/uniffi/multi-module`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/multi-module):
+[`tests/uniffi/multi-module`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/multi-module):
 
 ```
 rust-common   shared types: TestRecord, TestObject
@@ -135,7 +135,7 @@ the Linux and Windows linkers to allow this. Apple's linker accepts it by defaul
   functions of `rust-common` itself, but not to functions of `mod-a`. Each library holds its own
   copy of the trait's callback table, and only `rust-common`'s copy is initialised from Kotlin. The
   call aborts the process. Rust implementations of such traits are not affected. This is tracked in
-  [#35](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/35).
+  [#35](https://github.com/UbiqueInnovation/oxikt/issues/35).
 - **Build all modules against the same version of the shared crate.** Each module embeds its own
   compiled copy of `rust-common`. If `mod-a` and `mod-b` are built against different versions of
   it, they disagree about the layout of shared types, and nothing checks for that at runtime.

@@ -1,7 +1,7 @@
+import dev.oxikt.runtime.getPointerNativeValue
+import dev.oxikt.runtime.toPointer
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import uniffi.runtime.getPointerNativeValue
-import uniffi.runtime.toPointer
 
 class AndroidDeviceTest {
     @Test

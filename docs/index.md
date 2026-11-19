@@ -1,4 +1,4 @@
-# UniFFI Kotlin Multiplatform Bindings
+# OxiKT
 
 A Gradle plugin and binding generator that turns a Rust library into a Kotlin Multiplatform
 library, using Mozilla's [UniFFI](https://github.com/mozilla/uniffi-rs).
@@ -45,11 +45,13 @@ UniFFI you need to know to change them.
 
 This project started as a fork of
 [UniFFI Kotlin Multiplatform Bindings by Trixnity](https://gitlab.com/trixnity/uniffi-kotlin-multiplatform-bindings),
-and has been largely rewritten since.
+and has been largely rewritten since. Up to version 1.3.5, it was called UniFFI Kotlin
+Multiplatform Bindings as well, and published under `ch.ubique.uniffi`. See
+[Migrating](guide/migrating.md#from-13x-oxikt) for how to upgrade.
 
 [Gobley](https://github.com/gobley/gobley) is another project with the same goal. See
 [Comparison with other projects](guide/comparison.md#gobley) for how the two differ.
 
 This project is used in production, for example in the [Kapun SDK](https://github.com/KapunSDK/kapun-sdk).
 Please report problems in the
-[issue tracker](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues).
+[issue tracker](https://github.com/UbiqueInnovation/oxikt/issues).

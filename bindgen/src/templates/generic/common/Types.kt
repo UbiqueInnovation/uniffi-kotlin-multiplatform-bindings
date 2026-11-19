@@ -10,7 +10,7 @@
 // The easiest way to ensure this method is called is to use the `.use`
 // helper method to execute a block and destroy the object at the end.
 //
-// N.B. this is declared here rather than taken from `uniffi.runtime` on purpose:
+// N.B. this is declared here rather than taken from `dev.oxikt.runtime` on purpose:
 // it is a supertype of every generated object, so sourcing it from the runtime
 // would make the runtime part of this module's public ABI and force consumers of
 // these bindings to depend on it too.

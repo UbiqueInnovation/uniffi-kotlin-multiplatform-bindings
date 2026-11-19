@@ -1,0 +1,164 @@
+package dev.oxikt.gradle.plugin.dsl
+
+import dev.oxikt.gradle.plugin.model.BuildTarget
+import dev.oxikt.gradle.plugin.model.CargoBuildConfig
+import org.gradle.api.NamedDomainObjectContainer
+import org.gradle.api.Project
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
+
+abstract class CargoExtension(project: Project) {
+    /**
+     * Where the rust code is located
+     */
+    val packageDirectory: DirectoryProperty =
+        project.objects.directoryProperty()
+            .convention(project.layout.projectDirectory)
+
+    /**
+     * Cargo's shared target directory. When unset, the directory reported by `cargo metadata`
+     * is used. Set this when several Gradle builds should reuse the same Cargo compilation
+     * cache, for example:
+     *
+     * ```kotlin
+     * cargo {
+     *     targetDirectory = rootProject.layout.projectDirectory.dir("cargo-build")
+     * }
+     * ```
+     */
+    val targetDirectory: DirectoryProperty = project.objects.directoryProperty()
+
+    /**
+     * Libraries built outside of Gradle, used instead of building them with Cargo. Laid out like
+     * Cargo's target directory, `<target triple>/<profile>/<library file>`. Kotlin/Native targets
+     * also need the linker options for the library's native dependencies in
+     * `<library name>.native-static-libs` next to it, as written by rustc's
+     * `--print native-static-libs=<file>`.
+     *
+     * ```kotlin
+     * cargo {
+     *     prebuiltLibraries = rootProject.layout.projectDirectory.dir("prebuilt")
+     * }
+     * ```
+     */
+    val prebuiltLibraries: DirectoryProperty = project.objects.directoryProperty()
+
+    /**
+     * How Cargo is run for this project, see [BuildMode]. Defaults to [BuildMode.Workspace].
+     *
+     * Cargo resolves features per invocation, so workspace libraries that depend on each other
+     * see different feature sets of their shared dependencies depending on which package is
+     * built. In [BuildMode.Workspace], all projects of the workspace share one Cargo invocation per
+     * Rust target and profile, which enables the [features] of all of them. Each library must
+     * declare the crate types its targets need, or the build fails. [BuildMode.Individual] builds
+     * only this project's crate, with the crate types it needs.
+     *
+     * Use the same mode in every project of the workspace, e.g. from a `subprojects` block:
+     *
+     * ```kotlin
+     * cargo {
+     *     buildMode = BuildMode.Individual
+     * }
+     * ```
+     */
+    val buildMode: Property<BuildMode> =
+        project.objects.property(BuildMode::class.java).convention(BuildMode.Workspace)
+
+    /** Optional compiler wrapper, such as `sccache`. */
+    val rustcWrapper: Property<String> = project.objects.property(String::class.java).apply {
+        convention(project.providers.environmentVariable("RUSTC_WRAPPER"))
+    }
+
+    /** Optional workspace compiler wrapper, such as `sccache`. */
+    val rustcWorkspaceWrapper: Property<String> =
+        project.objects.property(String::class.java).apply {
+            convention(project.providers.environmentVariable("RUSTC_WORKSPACE_WRAPPER"))
+        }
+
+    /**
+     * Cargo features to enable for every build of the crate, passed to Cargo as `--features`.
+     * `<dependency>/<feature>` enables a feature of one of the crate's dependencies. In
+     * [BuildMode.Workspace], bare names are qualified with the crate's package, and the features
+     * of all projects of the workspace are enabled together.
+     *
+     * Features for some targets only go into [compilations] instead, for example:
+     *
+     * ```kotlin
+     * cargo {
+     *     features.add("logging")
+     *     compilations.iosArm64 { features.add("ios-only") }
+     * }
+     * ```
+     */
+    val features: SetProperty<String> = project.objects.setProperty(String::class.java)
+
+    /**
+     * Android ABIs to compile for debug builds.
+     *
+     * An empty list keeps the existing host-based defaults. Release builds always compile all
+     * supported ABIs unless a future release-specific option is added.
+     */
+    val androidDebugAbis: ListProperty<String> =
+        project.objects.listProperty(String::class.java)
+
+    /**
+     * The Android NDK version to build the android targets with, e.g. `"28.1.13356709"`.
+     *
+     * `com.android.kotlin.multiplatform.library` has no `ndkVersion` of its own (it was
+     * a property of the removed `com.android.build.gradle.BaseExtension`), and
+     * `sdkComponents.ndkDirectory` fails with "NDK is not installed" unless AGP's
+     * default version happens to be installed. When this is left unset the plugin
+     * falls back to the newest NDK under `<sdk>/ndk`, then to `$ANDROID_NDK_ROOT`.
+     */
+    val ndkVersion: Property<String> = project.objects.property(String::class.java)
+
+    val compilations: NamedDomainObjectContainer<CargoBuildConfig> =
+        project.objects.domainObjectContainer(CargoBuildConfig::class.java).apply {
+            BuildTarget.RustTarget.entries.forEach {
+                maybeCreate(it.name)
+            }
+        }
+
+    fun NamedDomainObjectContainer<CargoBuildConfig>.iosArm64(action: CargoBuildConfig.() -> Unit) {
+        named("Aarch64AppleIos", action)
+    }
+
+    fun NamedDomainObjectContainer<CargoBuildConfig>.iosX64(action: CargoBuildConfig.() -> Unit) {
+        named("X64AppleIos", action)
+    }
+
+    fun NamedDomainObjectContainer<CargoBuildConfig>.macosArm64(action: CargoBuildConfig.() -> Unit) {
+        named("Aarch64AppleDarwin", action)
+    }
+
+    fun NamedDomainObjectContainer<CargoBuildConfig>.macosX64(action: CargoBuildConfig.() -> Unit) {
+        named("X64AppleDarwin", action)
+    }
+
+
+    fun NamedDomainObjectContainer<CargoBuildConfig>.linuxArm64(action: CargoBuildConfig.() -> Unit) {
+        named("Aarch64LinuxGnu", action)
+    }
+
+    fun NamedDomainObjectContainer<CargoBuildConfig>.linuxX64(action: CargoBuildConfig.() -> Unit) {
+        named("X64LinuxGnu", action)
+    }
+
+    fun NamedDomainObjectContainer<CargoBuildConfig>.windowsX64(action: CargoBuildConfig.() -> Unit) {
+        named("X64WindowsGnu", action)
+    }
+
+    fun NamedDomainObjectContainer<CargoBuildConfig>.androidArm64(action: CargoBuildConfig.() -> Unit) {
+        named("Aarch64Android", action)
+    }
+
+    fun NamedDomainObjectContainer<CargoBuildConfig>.androidArmV7(action: CargoBuildConfig.() -> Unit) {
+        named("ArmV7Android", action)
+    }
+
+    fun NamedDomainObjectContainer<CargoBuildConfig>.androidX64(action: CargoBuildConfig.() -> Unit) {
+        named("X64Android", action)
+    }
+}

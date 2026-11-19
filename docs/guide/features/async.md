@@ -66,4 +66,4 @@ finishes, the coroutine is cancelled.
 
 ## Fixtures
 
-- [`tests/uniffi/futures`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/futures)
+- [`tests/uniffi/futures`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/futures)

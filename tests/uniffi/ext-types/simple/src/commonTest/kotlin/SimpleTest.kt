@@ -1,7 +1,7 @@
+import dev.oxikt.external_lib.MyStruct
 import io.kotest.matchers.shouldBe
 import simple.addOne
 import simple.addOneToMyStruct
-import uniffi.external_lib.MyStruct
 import kotlin.test.Test
 
 class SimpleTest {

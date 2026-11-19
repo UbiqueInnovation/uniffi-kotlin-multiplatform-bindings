@@ -3,5 +3,5 @@ plugins {
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.android.kotlin.multiplatform.library) apply false
     alias(libs.plugins.spm4kmp) apply false
-    id("ch.ubique.uniffi.plugin") apply false
+    id("dev.oxikt.gradle.plugin") apply false
 }

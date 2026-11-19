@@ -7,27 +7,7 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
-  publish-plugin:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v6
-        with:
-          java-version: "17"
-          distribution: "zulu"
-
-      - name: Grant permission to execute
-        run: chmod +x gradlew
-
-      - name: Upload
-        run: |
-          echo "${{secrets.MAVEN_SIGNING_KEY_ARMOR_ASC}}" > ./signingkey.asc
-          gpg --quiet --output $GITHUB_WORKSPACE/signingkey.gpg --dearmor ./signingkey.asc
-          ./gradlew :build-logic:gradle-plugin:publishAndReleaseToMavenCentral -Psigning.secretKeyRingFile=$GITHUB_WORKSPACE/signingkey.gpg -Psigning.password='${{secrets.MAVEN_SIGNING_KEY_PASSPHRASE}}' -Psigning.keyId=${{secrets.MAVEN_SIGNING_KEY_ID}} -PmavenCentralUsername=${{secrets.MAVEN_CENTRAL_USERNAME}} -PmavenCentralPassword=${{secrets.MAVEN_CENTRAL_PASSWORD}} -PgithubRefName=${{ github.ref_name }} --no-configuration-cache
-
-  publish-runtime:
+  publish:
     runs-on: macos-15-xlarge
     env:
       JAVA_TOOL_OPTIONS: "--enable-native-access=ALL-UNNAMED"
@@ -54,7 +34,7 @@ jobs:
           # install mingw-w64 targets
           brew install mingw-w64
 
-      - name: Upload
+      - name: Build and sign
         env:
           IPHONEOS_DEPLOYMENT_TARGET: "16.4"
           CC_x86_64_unknown_linux_gnu: x86_64-linux-gnu-gcc
@@ -69,4 +49,29 @@ jobs:
         run: |
           echo "${{secrets.MAVEN_SIGNING_KEY_ARMOR_ASC}}" > ./signingkey.asc
           gpg --quiet --output $GITHUB_WORKSPACE/signingkey.gpg --dearmor ./signingkey.asc
-          ./gradlew :runtime:publishAndReleaseToMavenCentral -Psigning.secretKeyRingFile=$GITHUB_WORKSPACE/signingkey.gpg -Psigning.password='${{secrets.MAVEN_SIGNING_KEY_PASSPHRASE}}' -Psigning.keyId=${{secrets.MAVEN_SIGNING_KEY_ID}} -PmavenCentralUsername=${{secrets.MAVEN_CENTRAL_USERNAME}} -PmavenCentralPassword=${{secrets.MAVEN_CENTRAL_PASSWORD}} -PgithubRefName=${{ github.ref_name }} -PreleaseBuild=true --no-configuration-cache
+          ./gradlew :build-logic:gradle-plugin:publishAllPublicationsToStagingRepository :runtime:publishAllPublicationsToStagingRepository -PstagingRepository=$RUNNER_TEMP/staging -Psigning.secretKeyRingFile=$GITHUB_WORKSPACE/signingkey.gpg -Psigning.password='${{secrets.MAVEN_SIGNING_KEY_PASSPHRASE}}' -Psigning.keyId=${{secrets.MAVEN_SIGNING_KEY_ID}} -PgithubRefName=${{ github.ref_name }} -PreleaseBuild=true --no-configuration-cache
+
+      # Uploads the plugin and the runtime as one deployment, so Central publishes both or neither.
+      - name: Upload to Maven Central
+        timeout-minutes: 30
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: |
+          (cd "$RUNNER_TEMP/staging" && zip -qr "$RUNNER_TEMP/bundle.zip" . -x '*maven-metadata*')
+          token=$(printf '%s:%s' "$MAVEN_CENTRAL_USERNAME" "$MAVEN_CENTRAL_PASSWORD" | base64 | tr -d '\n')
+          echo "::add-mask::$token"
+          api=https://central.sonatype.com/api/v1/publisher
+          id=$(curl --fail-with-body -sS -H "Authorization: Bearer $token" -F "bundle=@$RUNNER_TEMP/bundle.zip" "$api/upload?name=oxikt-${GITHUB_REF_NAME#v}&publishingType=AUTOMATIC")
+          echo "Deployment $id"
+          # Validation passed once the state is PUBLISHING; Central then publishes on its own.
+          while true; do
+            sleep 15
+            status=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $token" "$api/status?id=$id")
+            state=$(echo "$status" | jq -r .deploymentState)
+            echo "$state"
+            case "$state" in
+              PUBLISHING|PUBLISHED) break ;;
+              FAILED) echo "$status"; exit 1 ;;
+            esac
+          done

@@ -38,5 +38,5 @@ callback interfaces, and the namespace itself. In UDL, use `///` comments in the
 
 ## Fixtures
 
-- [`tests/uniffi/docstring`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/docstring) (UDL)
-- [`tests/uniffi/docstring-proc-macro`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/docstring-proc-macro)
+- [`tests/uniffi/docstring`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/docstring) (UDL)
+- [`tests/uniffi/docstring-proc-macro`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/docstring-proc-macro)

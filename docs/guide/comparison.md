@@ -34,7 +34,7 @@ the Android Kotlin Multiplatform library plugin (Gobley: AGP 8).
 Gobley supports more targets: tvOS, watchOS, Android Native, macOS x64 and Windows MSVC for the JVM,
 and it generates stubs for JS and Wasm. See [Targets](targets.md) for the targets this project
 supports. Other targets can be added as well. If you need one, please
-[open an issue](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues).
+[open an issue](https://github.com/UbiqueInnovation/oxikt/issues).
 
 ### Which one to use
 

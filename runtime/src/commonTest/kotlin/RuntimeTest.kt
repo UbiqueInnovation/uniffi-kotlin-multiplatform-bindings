@@ -1,9 +1,8 @@
+import dev.oxikt.runtime.*
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlin.test.Test
-
-import uniffi.runtime.*
 
 class RuntimeTest {
     @Test

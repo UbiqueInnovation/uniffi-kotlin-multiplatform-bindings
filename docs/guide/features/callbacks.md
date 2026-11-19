@@ -123,6 +123,6 @@ The Kotlin object is kept alive as long as Rust holds a reference to it. When Ru
 
 ## Fixtures
 
-- [`tests/uniffi/callbacks`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/callbacks)
-- [`tests/uniffi/coverall`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/coverall)
-- [`tests/uniffi/futures`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/futures)
+- [`tests/uniffi/callbacks`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/callbacks)
+- [`tests/uniffi/coverall`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/coverall)
+- [`tests/uniffi/futures`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/futures)

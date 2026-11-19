@@ -4,7 +4,7 @@ The generated code needs a few libraries. By default the plugin adds them for yo
 
 | Source set | Dependency | Version |
 | --- | --- | --- |
-| `commonMain` | `ch.ubique.uniffi:runtime` | same as the plugin |
+| `commonMain` | `dev.oxikt:runtime` | same as the plugin |
 | `commonMain` | `com.squareup.okio:okio` | `3.18.1` |
 | `commonMain` | `org.jetbrains.kotlinx:atomicfu` | `0.33.0` |
 | `commonMain` | `org.jetbrains.kotlinx:kotlinx-coroutines-core` | `1.11.0` |
@@ -14,7 +14,7 @@ The generated code needs a few libraries. By default the plugin adds them for yo
 
 ## The runtime
 
-`ch.ubique.uniffi:runtime` contains the code that is the same for every crate: buffer handling,
+`dev.oxikt:runtime` contains the code that is the same for every crate: buffer handling,
 type converters, the async helpers, and so on. It is published to Maven Central with the same
 version as the plugin. Sharing one runtime is what lets [multiple modules](../features/multi-module.md)
 exchange objects.
@@ -27,7 +27,7 @@ uniffi {
 }
 
 kotlin.sourceSets.commonMain.dependencies {
-    implementation("ch.ubique.uniffi:runtime:1.3.0")
+    implementation("dev.oxikt:runtime:1.4.0")
 }
 ```
 
@@ -53,4 +53,4 @@ The runtime ships consumer rules for R8. They keep JNA itself, and every member 
 extend or implement JNA types, which covers the generated library interface, structures and
 callbacks. A minified Android app doesn't need extra rules. If you disable `addRuntime`, copy the
 rules from
-[`runtime/consumer-rules.pro`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/blob/main/runtime/consumer-rules.pro).
+[`runtime/consumer-rules.pro`](https://github.com/UbiqueInnovation/oxikt/blob/main/runtime/consumer-rules.pro).

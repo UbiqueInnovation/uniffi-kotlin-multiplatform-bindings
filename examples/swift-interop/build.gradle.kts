@@ -1,14 +1,14 @@
-import ch.ubique.uniffi.plugin.extensions.useRustUpLinker
-import ch.ubique.uniffi.plugin.model.RustHost
-import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
-import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
+import dev.oxikt.gradle.plugin.extensions.useRustUpLinker
+import dev.oxikt.gradle.plugin.model.RustHost
+import dev.oxikt.gradle.plugin.tasks.GenerateDefFileTask
+import dev.oxikt.gradle.plugin.tasks.GenerateDummyDefFileTask
 import io.github.frankois944.spmForKmp.swiftPackageConfig
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     kotlin("multiplatform")
     alias(libs.plugins.spm4kmp)
-    id("ch.ubique.uniffi.plugin")
+    id("dev.oxikt.gradle.plugin")
 }
 
 uniffi {

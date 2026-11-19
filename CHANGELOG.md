@@ -1,9 +1,21 @@
 # Changelog
 
-## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.3.5...HEAD)
+## [Unreleased](https://github.com/UbiqueInnovation/oxikt/compare/v1.3.5...HEAD)
 
 ### Changed
 
+- The project is now called OxiKT and published under `dev.oxikt`, with the documentation at
+  https://docs.oxikt.dev/. **Breaking:** replace the plugin ID `ch.ubique.uniffi.plugin` with
+  `dev.oxikt.gradle.plugin`, imports from the `ch.ubique.uniffi.plugin` package with
+  `dev.oxikt.gradle.plugin`, and the runtime `ch.ubique.uniffi:runtime` with `dev.oxikt:runtime`.
+  Repository content filters need `includeGroupAndSubgroups("dev.oxikt")` instead of
+  `ch.ubique.uniffi`. See the [migration guide](https://docs.oxikt.dev/guide/migrating/).
+- The runtime's classes moved from the `uniffi.runtime` package to `dev.oxikt.runtime`, and
+  bindings without a configured package name go into `dev.oxikt.<namespace>` instead of
+  `uniffi.<namespace>`. **Breaking:** update the imports, or keep the old package with
+  `package_name = "uniffi.<namespace>"` in the crate's `uniffi.toml`.
+- The runtime's native library is now called `oxikt_runtime` instead of `uniffi_runtime`.
+  **Breaking** for packaging rules and library overrides that name it.
 - `cargo { buildMode }` replaces `buildWorkspaceLibraries`, and defaults to `BuildMode.Workspace`.
   The modules of a Cargo workspace then share one `cargo build` per Rust target and profile instead
   of running Cargo once each. It builds the crates of the modules that build that target, with the
@@ -35,7 +47,7 @@
 - In workspace mode, the Kotlin/Native def file probe no longer drops `<dependency>/<feature>` when
   the dependency is a workspace member.
 
-## [1.3.5](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.5) - 2026-11-06
+## [1.3.5](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.3.5) - 2026-11-06
 
 ### Added
 
@@ -44,13 +56,13 @@
   CI jobs. Kotlin/Native targets read the linker options from a `.native-static-libs` file next to
   each static library.
 
-## [1.3.4](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.4) - 2026-11-05
+## [1.3.4](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.3.4) - 2026-11-05
 
 ### Fixed
 
 - Published POMs name the license `MPL-2.0` instead of `License`.
 
-## [1.3.3](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.3) - 2026-11-03
+## [1.3.3](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.3.3) - 2026-11-03
 
 ### Added
 
@@ -69,12 +81,12 @@
   `[lib] crate-type` lacks a required crate type, and warn when that override makes Cargo
   rebuild dependents.
 - Builds no longer fail when the Gradle project lives inside the crate directory
-  ([#42](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/42)).
+  ([#42](https://github.com/UbiqueInnovation/oxikt/issues/42)).
   `cargoBuild` and `buildBindings` took the whole crate directory as input, which then included
   other tasks' outputs. `buildBindings` now only tracks `uniffi.toml` next to the library or UDL
   file, and `cargoBuild` leaves change detection to Cargo.
 
-## [1.3.2](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.2) - 2026-10-09
+## [1.3.2](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.3.2) - 2026-10-09
 
 ### Changed
 
@@ -92,17 +104,17 @@
   and star-importing both packages made these references ambiguous.
 - The placeholder `foo()` from the runtime.
 
-## [1.3.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.1) - 2026-10-07
+## [1.3.1](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.3.1) - 2026-10-07
 
 ### Fixed
 
 - `compileNativeMainKotlinMetadata` no longer fails with unresolved references to the crate's FFI
   functions when the runtime comes from a repository
-  ([#29](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/29)).
+  ([#29](https://github.com/UbiqueInnovation/oxikt/issues/29)).
   The plugin now passes the runtime's cinterop to the commonizer of shared native source sets,
   which KGP only does for projects in the same build.
 
-## [1.3.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.0) - 2026-10-02
+## [1.3.0](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.3.0) - 2026-10-02
 
 ### Added
 
@@ -130,7 +142,7 @@
   did not compile.
 - Linking an Apple framework or native binary with Kotlin 2.4.20 no longer fails with
   `IrClassSymbolImpl is already bound` for `cinterop/RustBuffer`
-  ([#29](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/29)).
+  ([#29](https://github.com/UbiqueInnovation/oxikt/issues/29)).
   The runtime now ships the shared FFI types (`RustBuffer`, `UniffiRustCallStatus`, future
   callbacks, ...) in the same `common.h` as the generated bindings, so cinterop reuses the
   runtime's declarations instead of declaring them a second time in every crate's klib.
@@ -142,7 +154,7 @@
   the unused `namespace` property was renamed to `packageName` and now overrides `package_name`
   from `uniffi.toml`. **Breaking:** replace `namespace = ...` with `packageName = ...`.
 
-## [1.2.3](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.3) - 2026-09-25
+## [1.2.3](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.2.3) - 2026-09-25
 
 ### Fixed
 
@@ -150,7 +162,7 @@
   see all of Cargo's inputs (for example local path dependencies outside the package) and skipped
   needed Rust rebuilds. Tasks consuming the library stay up to date when Cargo changes nothing.
 
-## [1.2.2](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.2) - 2026-09-18
+## [1.2.2](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.2.2) - 2026-09-18
 
 ### Added
 
@@ -179,14 +191,14 @@
 - Removed compiler warnings from the generated Kotlin. The `kotlinx.serialization` opt-in is only
   emitted when `generate_serializable_records` is enabled.
 
-## [1.2.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.1) - 2026-08-21
+## [1.2.1](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.2.1) - 2026-08-21
 
 ### Fixed
 
 - Correctly import exceptions from external crates
 - Add `--lib` argument to rustc invocations to disambiguate conflics when a rust package has bin targets
 
-## [1.2.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.2.0) - 2026-08-21
+## [1.2.0](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.2.0) - 2026-08-21
 
 ### Added
 
@@ -216,7 +228,7 @@
 
 - Workaround for `spmForKmp` as it is no longer needed since version 1.9.5.
 
-## [1.1.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.1.1) - 2026-08-14
+## [1.1.1](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.1.1) - 2026-08-14
 
 ### Added
 
@@ -229,7 +241,7 @@
   reference of the object type could not catch the exception. The Kotlin/Native actuals stay unannotated, they inherit
   the filter from the interface and repeating it trips [KT-88548](https://youtrack.jetbrains.com/issue/KT-88548).
 
-## [1.1.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.1.0) - 2026-08-07
+## [1.1.0](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.1.0) - 2026-08-07
 
 ### Added
 
@@ -259,7 +271,7 @@
 - `kotlinx-datetime` from the dependencies added to `commonMain`. The generated bindings use `kotlin.time.Instant`
   and `kotlin.time.Duration` from the standard library.
 
-## [1.0.15](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.15) - 2026-07-27
+## [1.0.15](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.0.15) - 2026-07-27
 
 ### Added
 
@@ -270,51 +282,51 @@
 - Update to Kotlin `2.4.0`.
 - Runtime and generated projects now share the same bindgen crate (`bindgen-bootstrap` was merged into `bindgen`).
 
-## [1.0.14](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.14) - 2026-06-16
+## [1.0.14](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.0.14) - 2026-06-16
 
 ### Changed
 
 - Don't bundle AGP with the plugin.
 - Pin `smawk` version.
 
-## [1.0.13](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.13) - 2026-06-16
+## [1.0.13](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.0.13) - 2026-06-16
 
 ### Fixed
 
 - Omit the `Serializable` attribute if `generate_serializable_records` is disabled for all types.
 
-## [1.0.12](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.12) - 2026-06-10
+## [1.0.12](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.0.12) - 2026-06-10
 
 ### Fixed
 
 - Stream cargo output while building. This prevents occasional deadlogs around the output buffer.
 
-## [1.0.11](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.11) - 2026-06-05
+## [1.0.11](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.0.11) - 2026-06-05
 
 ### Changed
 
 - Skip serializer generation when disabled in the config.
 
-## [1.0.10](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.10) - 2026-05-08
+## [1.0.10](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.0.10) - 2026-05-08
 
 ### Changed
 
 - Use the UDL file for FFI generation as well.
 - Skip building the library when using UDL.
 
-## [1.0.8](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.8) - 2026-05-05
+## [1.0.8](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.0.8) - 2026-05-05
 
 ### Changed
 
 - Set an explicit `minSdk` for the runtime.
 
-## [1.0.7](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.7) - 2026-04-23
+## [1.0.7](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.0.7) - 2026-04-23
 
 ### Fixed
 
 - Fall back to `~/.cargo/bin/` in the plugin and bindgen when cargo/rustup are not on the `PATH`.
 
-## [1.0.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.0.0) - 2026-04-03
+## [1.0.0](https://github.com/UbiqueInnovation/oxikt/releases/tag/v1.0.0) - 2026-04-03
 
 ### Added
 
@@ -324,38 +336,38 @@
 
 - Updated the documentation to reflect the latest changes
 
-## [0.4.3](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v0.4.3) - 2025-10-20
+## [0.4.3](https://github.com/UbiqueInnovation/oxikt/releases/tag/v0.4.3) - 2025-10-20
 
 ### Fixed
 
 - Fix deserialization bug related to the one in `0.4.1`.
 
-## [0.4.2](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v0.4.2) - 2025-10-13
+## [0.4.2](https://github.com/UbiqueInnovation/oxikt/releases/tag/v0.4.2) - 2025-10-13
 
 ### Fixed
 
 - Fix `EnumTemplate` binding generation.
 
-## [0.4.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v0.4.1) - 2025-10-10
+## [0.4.1](https://github.com/UbiqueInnovation/oxikt/releases/tag/v0.4.1) - 2025-10-10
 
 ### Fixed
 
 - Fix struct deserialization bug
 
-## [0.4.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v0.4.0) - 2025-09-29
+## [0.4.0](https://github.com/UbiqueInnovation/oxikt/releases/tag/v0.4.0) - 2025-09-29
 
 ### Changed
 
 - Update to Kotlin `2.2.10`.
 - Use `kotlin.time` instead of `kotlinx.datetime`.
 
-## [0.3.5](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v0.3.5) - 2025-09-29
+## [0.3.5](https://github.com/UbiqueInnovation/oxikt/releases/tag/v0.3.5) - 2025-09-29
 
 ### Changed
 
 - Allow disabling automatic dependency insertion.
 
-## [0.3.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v0.3.0) - 2025-07-11
+## [0.3.0](https://github.com/UbiqueInnovation/oxikt/releases/tag/v0.3.0) - 2025-07-11
 
 ### Changed
 
@@ -370,31 +382,31 @@ After `v0.7.0` was tagged, versioning was accidentally reset and subsequent rele
 
 This file follows actual git tag chronology.
 
-## [0.7.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v0.7.0) - 2025-04-04
+## [0.7.0](https://github.com/UbiqueInnovation/oxikt/releases/tag/v0.7.0) - 2025-04-04
 
 ### Added
 
 - Add `useCross` option to use `cargo cross` instead of `cargo` for cross-compilation.
 
-## [0.6.14](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v0.6.14) - 2025-02-20
+## [0.6.14](https://github.com/UbiqueInnovation/oxikt/releases/tag/v0.6.14) - 2025-02-20
 
 ### Fixed
 
 - Minor fixes to generated code.
 
-## [0.6.2](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v0.6.2) - 2025-02-17
+## [0.6.2](https://github.com/UbiqueInnovation/oxikt/releases/tag/v0.6.2) - 2025-02-17
 
 ### Changed
 
 - `import_pointer_from` is now an array
 
-## [0.6.1](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v0.6.1) - 2025-02-14
+## [0.6.1](https://github.com/UbiqueInnovation/oxikt/releases/tag/v0.6.1) - 2025-02-14
 
 ### Fixed
 
 - Allow implicit `null`s in optional parameters.
 
-## [0.6.0](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v0.6.0) - 2025-02-14
+## [0.6.0](https://github.com/UbiqueInnovation/oxikt/releases/tag/v0.6.0) - 2025-02-14
 
 ### Added
 

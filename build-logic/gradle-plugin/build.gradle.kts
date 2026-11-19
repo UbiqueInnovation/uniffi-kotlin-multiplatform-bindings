@@ -64,9 +64,9 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        create("ch.ubique.uniffi.plugin") {
-            id = "ch.ubique.uniffi.plugin"
-            implementationClass = "ch.ubique.uniffi.plugin.UniffiPlugin"
+        create("dev.oxikt.gradle.plugin") {
+            id = "dev.oxikt.gradle.plugin"
+            implementationClass = "dev.oxikt.gradle.plugin.UniffiPlugin"
         }
     }
 }
@@ -93,6 +93,15 @@ mavenPublishing {
     }
 }
 
+// The publish workflow stages the plugin and the runtime here, and uploads both as one Maven
+// Central deployment.
+providers.gradleProperty("stagingRepository").orNull?.let { stagingRepository ->
+    publishing.repositories.maven {
+        name = "staging"
+        url = uri(stagingRepository)
+    }
+}
+
 private fun getProjectVersion(): String {
     val versionFromGradleProperties = property("VERSION").toString()
     val versionFromWorkflow = runCatching { property("githubRefName").toString().removePrefix("v") }.getOrNull()
@@ -104,7 +113,7 @@ private fun getBindgenGitTag(): String =
     runCatching { property("githubRefName").toString() }.getOrNull() ?: "v${version}"
 
 buildConfig {
-    packageName = "ch.ubique.uniffi.plugin"
+    packageName = "dev.oxikt.gradle.plugin"
 
     forClass("PluginVersions") {
         buildConfigField("String", "RUNTIME_VERSION", "\"${version}\"")

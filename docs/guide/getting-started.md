@@ -1,7 +1,7 @@
 # Getting started
 
 This page builds a minimal Kotlin Multiplatform library with one Rust function. It mirrors
-[`examples/quickstart`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/examples/quickstart),
+[`examples/quickstart`](https://github.com/UbiqueInnovation/oxikt/tree/main/examples/quickstart),
 which you can also use as a starting point.
 
 This guide follows the convention used throughout this repository: the crate's `Cargo.toml` sits
@@ -67,7 +67,7 @@ Apply the Kotlin Multiplatform plugin and this plugin, then tell it how to gener
 // build.gradle.kts
 plugins {
     kotlin("multiplatform") version "2.4.0"
-    id("ch.ubique.uniffi.plugin") version "1.3.0"
+    id("dev.oxikt.gradle.plugin") version "1.4.0"
 }
 
 uniffi {
@@ -98,7 +98,7 @@ The plugin is published to Maven Central, so make sure `mavenCentral()` is in yo
 the binary, and generates bindings from it. This works for both proc-macro and UDL crates, see
 [Proc-macros and UDL](proc-macros-vs-udl.md).
 
-You don't need to add any dependencies yourself. The plugin adds the UniFFI runtime and the
+You don't need to add any dependencies yourself. The plugin adds the OxiKT runtime and the
 libraries the generated code uses, see [Dependencies](configuration/dependencies.md).
 
 ## 3. Enable cinterop commonization
@@ -116,7 +116,7 @@ commonizer has run. Without this flag, the plugin fails the build with a message
 
 ## 4. Choose a package name
 
-By default the bindings go into the package `uniffi.<namespace>`, where the namespace is the
+By default the bindings go into the package `dev.oxikt.<namespace>`, where the namespace is the
 crate's library name. To choose your own, add a `uniffi.toml` next to `Cargo.toml`:
 
 ```toml

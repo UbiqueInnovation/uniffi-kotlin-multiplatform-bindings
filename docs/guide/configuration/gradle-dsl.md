@@ -24,7 +24,7 @@ uniffi {
 | `generateFromUdl { udlFile = ... }` | —       | Generate bindings from a UDL file. `udlFile` is required.                                                                                           |
 | `packageName` (in either block)     | —       | Kotlin package of the bindings. Overrides `package_name` from `uniffi.toml`, for this module's crate only. Since `1.3.0`.                                         |
 | `formatCode`                        | `false` | Run `ktlint --format` over the generated bindings. `ktlint` must be on `PATH`. Problems it can't fix are reported as a warning.                     |
-| `addRuntime`                        | `true`  | Add `ch.ubique.uniffi:runtime` to `commonMain`. See [Dependencies](dependencies.md).                                                                |
+| `addRuntime`                        | `true`  | Add `dev.oxikt:runtime` to `commonMain`. See [Dependencies](dependencies.md).                                                                |
 | `addDependencies`                   | `true`  | Add the libraries the generated code needs. See [Dependencies](dependencies.md).                                                                    |
 | `generateBindingsForExternalCrates` | `false` | Also generate bindings for other UniFFI crates linked into the library. See [External types](../features/external-types.md).                        |
 

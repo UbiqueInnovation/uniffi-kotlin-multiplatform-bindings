@@ -1,12 +1,12 @@
 [package]
-name = "uniffi-runtime"
+name = "oxikt-runtime"
 version = "0.1.0"
 edition = "2021"
 rust-version.workspace = true
 publish = false
 
 [lib]
-name = "uniffi_runtime"
+name = "oxikt_runtime"
 crate-type = ["cdylib", "staticlib"]
 path = "src/commonMain/rust/lib.rs"
 
