@@ -2,6 +2,33 @@
 
 ## [Unreleased](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/compare/v1.3.5...HEAD)
 
+### Changed
+
+- `cargo { buildMode }` replaces `buildWorkspaceLibraries`, and defaults to `BuildMode.Workspace`.
+  The modules of a Cargo workspace then share one `cargo build` per Rust target and profile instead
+  of running Cargo once each. It builds the crates of the modules that build that target, with the
+  features of all of them, so they no longer have to repeat each other's features. Each crate must
+  declare the crate types its targets need in `[lib] crate-type`, or the build fails. Declare the
+  plugin in the root project with `apply false`, so that all modules share these builds. **Breaking:**
+  remove `buildWorkspaceLibraries = true`, and replace `buildWorkspaceLibraries = false` with
+  `buildMode = BuildMode.Individual`. Modules now in workspace mode must declare the crate types the
+  build asks for, or opt out with `BuildMode.Individual`.
+- `BuildMode.Individual` builds each crate with `cargo rustc` and exactly the crate types its
+  targets need, whatever it declares. It warns if the crate depends on a workspace crate declaring
+  a `cdylib`, which Cargo before 1.100 rebuilds on every build.
+- In individual mode, the build of a static library writes the linker options of its native
+  dependencies to `<library name>.native-static-libs` next to it, and Kotlin/Native targets read
+  them from there instead of building the crate a second time.
+
+### Fixed
+
+- In workspace mode, Kotlin/Native builds no longer recompile the workspace crates a module
+  depends on in every build. The linker options probe runs in its own task, on the first build and
+  when `Cargo.lock` or a workspace manifest changes, and no longer replaces the library of the
+  workspace build, so cinterop gets the library built with the workspace's features.
+- In workspace mode, the Kotlin/Native def file probe no longer drops `<dependency>/<feature>` when
+  the dependency is a workspace member.
+
 ## [1.3.5](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/releases/tag/v1.3.5) - 2026-11-06
 
 ### Added

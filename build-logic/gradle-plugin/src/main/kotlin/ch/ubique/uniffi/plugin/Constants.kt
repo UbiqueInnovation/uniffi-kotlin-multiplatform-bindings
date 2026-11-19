@@ -45,6 +45,10 @@ internal object Tasks {
     fun generateDefFile(
         buildTarget: BuildTarget
     ): String = "generateDefFileFor${buildTarget.name}"
+
+    fun probeNativeStaticLibs(
+        buildTarget: BuildTarget
+    ): String = "probeNativeStaticLibsFor${buildTarget.name}"
 }
 
 internal object Strings {

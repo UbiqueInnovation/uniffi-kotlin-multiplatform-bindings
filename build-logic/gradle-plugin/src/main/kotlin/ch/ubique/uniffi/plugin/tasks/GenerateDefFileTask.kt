@@ -1,32 +1,20 @@
 package ch.ubique.uniffi.plugin.tasks
 
-import ch.ubique.uniffi.plugin.model.CrateType
-import ch.ubique.uniffi.plugin.utils.CargoRunner
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import org.gradle.process.ExecOperations
 import org.gradle.work.DisableCachingByDefault
-import javax.inject.Inject
-import kotlin.String
 
 @DisableCachingByDefault(because = "Generating the def file is cheaper than fetching it from the build cache")
 abstract class GenerateDefFileTask : DefaultTask() {
-    @get:Inject
-    abstract val execOperations: ExecOperations
-
     /**
      * The static library cinterop links against.
      *
@@ -41,56 +29,22 @@ abstract class GenerateDefFileTask : DefaultTask() {
 
     /**
      * The linker options for the library's native dependencies, as rustc's
-     * `--print native-static-libs` reports them. When set, they're read from here instead of
-     * being probed with Cargo, which would build the library again.
+     * `--print native-static-libs` reports them: next to a prebuilt library, written by an
+     * individual Cargo build, or by a [ProbeNativeStaticLibsTask] for a workspace build.
      */
     @get:InputFile
-    @get:Optional
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val nativeStaticLibsFile: RegularFileProperty
 
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
 
-    @get:Internal
-    abstract val packageDirectory: DirectoryProperty
-
-    /** Cargo's shared target directory, also used by the linker-options probe below. */
-    @get:Internal
-    abstract val cargoTargetDirectory: DirectoryProperty
-
     @get:Input
     abstract val targetString: Property<String>
-
-    /** The crate types already requested by the shared Cargo build for this target. */
-    @get:Input
-    @get:Optional
-    abstract val crateTypes: SetProperty<CrateType>
-
-    /** The features the shared Cargo build enables for this package and target. */
-    @get:Input
-    abstract val features: SetProperty<String>
 
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.ABSOLUTE)
     abstract val headersDir: DirectoryProperty
-
-    @get:Input
-    abstract val useCross: Property<Boolean>
-
-    /** Optional rustc wrapper, for example `sccache`. */
-    @get:Input
-    @get:Optional
-    abstract val rustcWrapper: Property<String>
-
-    /** Optional workspace rustc wrapper, for example `sccache`. */
-    @get:Input
-    @get:Optional
-    abstract val rustcWorkspaceWrapper: Property<String>
-
-    /** Additional environment variables passed to the Cargo linker-options probe. */
-    @get:Input
-    abstract val additionalEnvironment: MapProperty<String, String>
 
     @TaskAction
     fun generateDefFile() {
@@ -115,11 +69,7 @@ abstract class GenerateDefFileTask : DefaultTask() {
 			""".trimIndent()
         )
 
-        val nativeStaticLibs = if (nativeStaticLibsFile.isPresent) {
-            nativeStaticLibsFile.get().asFile.readText().trim().ifEmpty { null }
-        } else {
-            getLinkerOpts()
-        }
+        val nativeStaticLibs = nativeStaticLibsFile.get().asFile.readText().trim().ifEmpty { null }
         val opts = listOfNotNull(nativeStaticLibs, duplicateSymbolOpt())
         if (opts.isNotEmpty()) {
             output.appendText("\nlinkerOpts = ${opts.joinToString(" ")}")
@@ -136,44 +86,5 @@ abstract class GenerateDefFileTask : DefaultTask() {
             // Apple's ld64 already resolves duplicates this way.
             else -> null
         }
-    }
-
-    private fun getLinkerOpts(): String? {
-        val output = CargoRunner(execOperations, logger, useCross = useCross.get()) {
-            argument("rustc")
-            argument("--lib")
-            argument("--target")
-            argument(targetString.get())
-            argument("--crate-type")
-            argument(
-                crateTypes.getOrElse(setOf(CrateType.SystemStaticLibrary))
-                    .sortedBy { it.toString() }
-                    .joinToString(",")
-            )
-            if (features.get().isNotEmpty()) {
-                argument("--features")
-                argument(features.get().sorted().joinToString(","))
-            }
-            argument("--")
-            argument("--print")
-            argument("native-static-libs")
-
-            workdir(packageDirectory.asFile.get())
-
-            env("CARGO_TARGET_DIR", cargoTargetDirectory.get().asFile.absolutePath)
-            rustcWrapper.orNull?.let { env("RUSTC_WRAPPER", it) }
-            rustcWorkspaceWrapper.orNull?.let { env("RUSTC_WORKSPACE_WRAPPER", it) }
-            additionalEnvironment.get().forEach { (key, value) ->
-                env(key, value)
-            }
-
-            redirectErrorStream(true)
-        }.run()
-
-        val linkerFlag = output.split('\n')
-            .map { it.trim().substringAfter("note: native-static-libs: ", "") }
-            .firstOrNull(String::isNotEmpty)
-
-        return linkerFlag
     }
 }

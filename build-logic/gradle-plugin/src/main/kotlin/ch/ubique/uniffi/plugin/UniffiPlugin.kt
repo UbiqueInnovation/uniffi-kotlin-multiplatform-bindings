@@ -2,6 +2,7 @@ package ch.ubique.uniffi.plugin
 
 import ch.ubique.uniffi.plugin.dsl.BindingsGenerationFromLibrary
 import ch.ubique.uniffi.plugin.dsl.BindingsGenerationFromUdl
+import ch.ubique.uniffi.plugin.dsl.BuildMode
 import ch.ubique.uniffi.plugin.dsl.CargoExtension
 import ch.ubique.uniffi.plugin.dsl.UniffiExtension
 import ch.ubique.uniffi.plugin.android.AndroidSupport
@@ -10,6 +11,7 @@ import ch.ubique.uniffi.plugin.model.CargoInfo
 import ch.ubique.uniffi.plugin.model.CargoMetadata
 import ch.ubique.uniffi.plugin.model.CrateType
 import ch.ubique.uniffi.plugin.services.CargoMetadataService
+import ch.ubique.uniffi.plugin.services.CargoWorkspaceService
 import ch.ubique.uniffi.plugin.tasks.BuildBindingsTask
 import ch.ubique.uniffi.plugin.tasks.CargoBuildAliasTask
 import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
@@ -17,9 +19,11 @@ import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
 import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
 import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
 import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
+import ch.ubique.uniffi.plugin.tasks.ProbeNativeStaticLibsTask
 import ch.ubique.uniffi.plugin.utils.BindgenSource
+import ch.ubique.uniffi.plugin.utils.cdylibWorkspaceDependencies
+import ch.ubique.uniffi.plugin.utils.dependencyNames
 import ch.ubique.uniffi.plugin.utils.targetPackage
-import ch.ubique.uniffi.plugin.utils.workspaceForeignLibraryPackages
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -73,6 +77,9 @@ class UniffiPlugin : Plugin<Project> {
         /** Where the generated def files are written, relative to the project */
         private const val CINTEROP_DEF_PATH: String = "$PREFIX/cinterop"
 
+        /** Where the probed linker options of workspace builds are written, relative to the project */
+        private const val NATIVE_STATIC_LIBS_PATH: String = "$PREFIX/native-static-libs"
+
         /** KGP task that extracts the cinterop metadata of published dependencies of `nativeMain` */
         private const val TRANSFORM_NATIVE_MAIN_CINTEROP_METADATA: String =
             "transformNativeMainCInteropDependenciesMetadata"
@@ -85,6 +92,11 @@ class UniffiPlugin : Plugin<Project> {
     private lateinit var uniffiExtension: UniffiExtension
 
     private lateinit var cargoExtension: CargoExtension
+
+    /** Whether this project's library is built together with the workspace libraries. */
+    private lateinit var buildsWithWorkspace: Provider<Boolean>
+
+    private lateinit var workspaceService: Provider<CargoWorkspaceService>
 
     override fun apply(project: Project) {
         // Create the DSL extensions
@@ -107,14 +119,27 @@ class UniffiPlugin : Plugin<Project> {
             cargoMetadata.targetPackage(packageDirectory.asFile)
         }
         val cargoInfo = CargoInfo(
+            metadataJson = metadataJsonProvider,
             packageName = targetPackage.map { it.name },
             libraryName = targetPackage.map { it.targets.first().name },
             declaredCrateTypes = targetPackage.map { it.targets.first().crateTypes },
-            workspaceLibraryPackages = metadata.map { it.workspaceForeignLibraryPackages() },
+            dependencyNames = targetPackage.map { it.dependencyNames() },
+            cdylibDependencies = metadata.zip(targetPackage) { cargoMetadata, pkg ->
+                cargoMetadata.cdylibWorkspaceDependencies(pkg)
+            },
+            workspaceRoot = project.layout.dir(metadata.map { File(it.workspaceRoot) }),
             targetDirectory = cargoExtension.targetDirectory.orElse(
                 project.layout.dir(metadata.map { File(it.targetDirectory) })
             ),
         )
+
+        buildsWithWorkspace = cargoExtension.buildMode.map { it == BuildMode.Workspace }
+
+        workspaceService = project.gradle.sharedServices.registerIfAbsent(
+            // Each class loader that loads the plugin needs its own registration.
+            "uniffiCargoWorkspace-${System.identityHashCode(CargoWorkspaceService::class.java)}",
+            CargoWorkspaceService::class.java,
+        ) {}
 
         // Set up the bindings tasks
         val installBindgenTask = project.registerInstallBindgenTask()
@@ -386,44 +411,99 @@ class UniffiPlugin : Plugin<Project> {
         release: Boolean,
         cargoInfo: CargoInfo,
         crateType: CrateType,
-    ): TaskProvider<CargoBuildTask> = tasks.maybeRegister(
-        Tasks.cargoBuild(rustTarget, release),
-        CargoBuildTask::class.java,
-    ) { task ->
-        task.packageDirectory.set(cargoExtension.packageDirectory)
-        task.rustTarget.set(rustTarget)
-        task.release.set(release)
-        task.packageName.set(cargoInfo.packageName)
-        task.libraryName.set(cargoInfo.libraryName)
-        task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
-        task.crateTypes.add(crateType)
-        task.declaredCrateTypes.set(cargoInfo.declaredCrateTypes)
-        task.workspacePackageNames.set(
-            cargoExtension.buildWorkspaceLibraries.flatMap { enabled ->
-                if (enabled) cargoInfo.workspaceLibraryPackages else project.provider { emptyList() }
-            }
-        )
-        task.rustcWrapper.set(cargoExtension.rustcWrapper)
-        task.rustcWorkspaceWrapper.set(cargoExtension.rustcWorkspaceWrapper)
-
-        val config = cargoExtension.compilations.getByName(rustTarget.name)
-        val useCross = config.useCross
-        task.useCross.set(useCross)
-        task.features.addAll(cargoExtension.features)
-        task.features.addAll(config.features)
-
-        // An android rust target can only be requested once the android plugin created the
-        // android build target, so touching AndroidSupport - and with it AGP - is safe here.
-        if (rustTarget.isAndroid) {
-            task.additionalEnvironment.set(
-                AndroidSupport(project).ndkEnvironment(
-                    rustTarget = rustTarget,
-                    useCross = useCross,
-                    ndkVersion = cargoExtension.ndkVersion,
-                )
+    ): TaskProvider<CargoBuildTask> {
+        val name = Tasks.cargoBuild(rustTarget, release)
+        if (name !in tasks.names) {
+            // Only the targets this project builds: a crate built for one target only, or another
+            // project's features, must not end up in the workspace builds of the other targets.
+            workspaceService.get().addProject(
+                workspaceRoot = cargoInfo.workspaceRoot.map { it.asFile.path },
+                rustTarget = rustTarget,
+                packageName = buildsWithWorkspace.flatMap { enabled ->
+                    if (enabled) cargoInfo.packageName else provider { null }
+                },
+                features = cargoFeatures(rustTarget).zip(cargoInfo.packageName) { features, packageName ->
+                    features.filter(String::isNotBlank)
+                        .mapTo(sortedSetOf()) { if ('/' in it) it else "$packageName/$it" }
+                },
             )
         }
+        return tasks.maybeRegister(name, CargoBuildTask::class.java) { task ->
+            task.packageDirectory.set(cargoExtension.packageDirectory)
+            task.rustTarget.set(rustTarget)
+            task.release.set(release)
+            task.packageName.set(cargoInfo.packageName)
+            task.libraryName.set(cargoInfo.libraryName)
+            task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
+            task.buildMode.set(cargoExtension.buildMode)
+            task.crateTypes.add(crateType)
+            if (crateType == CrateType.SystemStaticLibrary) {
+                // Individual builds report the linker options of the library's native dependencies,
+                // where prebuilt libraries have them too. Workspace builds can't, so the def file
+                // task probes them.
+                task.nativeStaticLibsFile.set(
+                    buildsWithWorkspace.flatMap { enabled ->
+                        if (enabled) {
+                            provider<RegularFile> { null }
+                        } else {
+                            task.cargoOutputDirectory.zip(cargoInfo.libraryName) { directory, name ->
+                                directory.file("$name.native-static-libs")
+                            }
+                        }
+                    }
+                )
+            }
+            task.declaredCrateTypes.set(cargoInfo.declaredCrateTypes)
+            task.cdylibDependencies.set(cargoInfo.cdylibDependencies)
+            task.dependencyNames.set(cargoInfo.dependencyNames)
+            task.workspaceDirectory.set(cargoInfo.workspaceRoot)
+            task.workspaceService.set(workspaceService)
+            task.usesService(workspaceService)
+            // Plain providers, not workspaceService.map: the configuration cache must store the
+            // values, as only the service that configured the build knows them.
+            val workspaceRoot = cargoInfo.workspaceRoot.map { it.asFile.path }
+            task.workspacePackageNames.set(
+                buildsWithWorkspace.flatMap { enabled ->
+                    provider {
+                        if (enabled) workspaceService.get().packages(workspaceRoot.get(), rustTarget) else emptySet()
+                    }
+                }
+            )
+            task.features.set(
+                buildsWithWorkspace.flatMap { enabled ->
+                    if (enabled) {
+                        provider { workspaceService.get().features(workspaceRoot.get(), rustTarget) }
+                    } else {
+                        cargoFeatures(rustTarget)
+                    }
+                }
+            )
+            task.rustcWrapper.set(cargoExtension.rustcWrapper)
+            task.rustcWorkspaceWrapper.set(cargoExtension.rustcWorkspaceWrapper)
+
+            val config = cargoExtension.compilations.getByName(rustTarget.name)
+            val useCross = config.useCross
+            task.useCross.set(useCross)
+
+            // An android rust target can only be requested once the android plugin created the
+            // android build target, so touching AndroidSupport - and with it AGP - is safe here.
+            if (rustTarget.isAndroid) {
+                task.additionalEnvironment.set(
+                    AndroidSupport(project).ndkEnvironment(
+                        rustTarget = rustTarget,
+                        useCross = useCross,
+                        ndkVersion = cargoExtension.ndkVersion,
+                    )
+                )
+            }
+        }
     }
+
+    /** The features this project enables for [rustTarget], as configured. */
+    private fun cargoFeatures(rustTarget: BuildTarget.RustTarget): Provider<Set<String>> =
+        cargoExtension.features.zip(cargoExtension.compilations.getByName(rustTarget.name).features) { all, target ->
+            all + target
+        }
 
     /**
      * The library for [rustTarget] in [CargoExtension.prebuiltLibraries] if that is set, otherwise
@@ -523,37 +603,79 @@ class UniffiPlugin : Plugin<Project> {
         headersDir: Provider<Directory>,
     ): TaskProvider<GenerateDefFileTask> {
         val rustTarget = buildTarget.checkedNativeTarget
-        val config = cargoExtension.compilations.getByName(rustTarget.name)
         val cargoBuild = registerCargoBuildTask(
             rustTarget = rustTarget,
             release = isRelease,
             cargoInfo = cargoInfo,
             crateType = CrateType.SystemStaticLibrary,
         )
+        val probe = registerProbeNativeStaticLibsTask(buildTarget, cargoInfo, cargoBuild)
 
         return tasks.maybeRegister(
             Tasks.generateDefFile(buildTarget),
             GenerateDefFileTask::class.java,
         ) { task ->
             task.staticLibrary.set(library(cargoInfo, rustTarget, isRelease, dynamic = false, cargoBuild))
-            task.nativeStaticLibsFile.set(prebuiltFile(cargoInfo, rustTarget, isRelease) { "$it.native-static-libs" })
+            // Selected with flatMap, like the library, so that only the selected task runs.
+            task.nativeStaticLibsFile.set(
+                cargoExtension.prebuiltLibraries.map { true }.orElse(false).zip(buildsWithWorkspace) { prebuilt, workspace ->
+                    prebuilt to workspace
+                }.flatMap { (prebuilt, workspace) ->
+                    when {
+                        prebuilt -> prebuiltFile(cargoInfo, rustTarget, isRelease) { "$it.native-static-libs" }
+                        workspace -> probe.flatMap { it.nativeStaticLibsFile }
+                        else -> cargoBuild.flatMap { it.nativeStaticLibsFile }
+                    }
+                }
+            )
             task.outputFile.set(
                 project.layout.buildDirectory.file("$CINTEROP_DEF_PATH/uniffi-${buildTarget.name}.def")
             )
+            task.targetString.set(rustTarget.rustTriple)
+            // Carries the dependency on the bindings.
+            task.headersDir.set(headersDir)
+        }
+    }
+
+    /**
+     * Registers the [ProbeNativeStaticLibsTask] for a [BuildMode.Workspace] build of the
+     * [buildTarget]. It only runs when the def file needs it.
+     */
+    private fun Project.registerProbeNativeStaticLibsTask(
+        buildTarget: BuildTarget,
+        cargoInfo: CargoInfo,
+        cargoBuild: TaskProvider<CargoBuildTask>,
+    ): TaskProvider<ProbeNativeStaticLibsTask> {
+        val rustTarget = buildTarget.checkedNativeTarget
+        return tasks.maybeRegister(
+            Tasks.probeNativeStaticLibs(buildTarget),
+            ProbeNativeStaticLibsTask::class.java,
+        ) { task ->
+            task.cargoMetadata.set(cargoInfo.metadataJson)
+            task.lockFile.from(cargoInfo.workspaceRoot.map { it.file("Cargo.lock") })
             task.packageDirectory.set(cargoExtension.packageDirectory)
             task.cargoTargetDirectory.set(cargoInfo.targetDirectory)
             task.targetString.set(rustTarget.rustTriple)
-            // The probe must use the same crate-type set as the shared Cargo build. Otherwise it
-            // can overwrite the static library produced by that build and invalidate it again.
-            task.crateTypes.set(cargoBuild.flatMap { it.crateTypes })
-            // Same for the features that apply to this package, the only one the probe builds.
+            task.libraryFileName.set(
+                cargoInfo.libraryName.map { name ->
+                    rustTarget.staticLibraryName(name)
+                        ?: throw GradleException("Could not determine library file name for $rustTarget")
+                }
+            )
+            // The probe builds only this package, so it gets the features that apply to it.
             task.features.set(cargoBuild.flatMap { it.packageFeatures })
-            // Carries the dependency on the bindings.
-            task.headersDir.set(headersDir)
-            task.useCross.set(config.useCross)
+            task.useCross.set(cargoExtension.compilations.getByName(rustTarget.name).useCross)
             task.rustcWrapper.set(cargoExtension.rustcWrapper)
             task.rustcWorkspaceWrapper.set(cargoExtension.rustcWorkspaceWrapper)
             task.additionalEnvironment.set(cargoBuild.flatMap { it.additionalEnvironment })
+            task.nativeStaticLibsFile.set(
+                project.layout.buildDirectory.file(
+                    cargoInfo.libraryName.map { "$NATIVE_STATIC_LIBS_PATH/${rustTarget.rustTriple}/$it.native-static-libs" }
+                )
+            )
+            // Not an input, or the probe would run on every change. The workspace build must still
+            // be done when the probe moves its library aside, or it would put back an old one.
+            task.mustRunAfter(cargoBuild)
         }
     }
 

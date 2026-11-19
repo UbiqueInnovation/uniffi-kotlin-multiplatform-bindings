@@ -24,10 +24,14 @@ data class CargoMetadata(
         @Serializable
         data class Dependency(
             @SerialName("name") val name: String,
+            /** The name the dependency has in the `Cargo.toml`, if it differs from [name]. */
+            @SerialName("rename") val rename: String? = null,
             @SerialName("kind") val kind: String?,
             @SerialName("optional") val optional: Boolean,
             @SerialName("uses_default_features") val usesDefaultFeatures: Boolean,
             @SerialName("features") val features: List<String>,
+            /** The directory of a path dependency. */
+            @SerialName("path") val path: String? = null,
         )
 
         @Serializable

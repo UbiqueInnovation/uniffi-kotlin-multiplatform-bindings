@@ -46,20 +46,25 @@ abstract class CargoExtension(project: Project) {
     val prebuiltLibraries: DirectoryProperty = project.objects.directoryProperty()
 
     /**
-     * Build every library of the Cargo workspace that declares a `cdylib` or `staticlib` in
-     * each Cargo invocation, instead of only this package.
+     * How Cargo is run for this project, see [BuildMode]. Defaults to [BuildMode.Workspace].
      *
      * Cargo resolves features per invocation, so workspace libraries that depend on each other
      * see different feature sets of their shared dependencies depending on which package is
-     * built. A library declaring a `cdylib` keeps a single build per target, so it is rebuilt
-     * whenever the previous invocation built another package. Building the same set of packages
-     * every time resolves features once for all of them: the first invocation builds, the
-     * following ones find everything fresh.
+     * built. In [BuildMode.Workspace], all projects of the workspace share one Cargo invocation per
+     * Rust target and profile, which enables the [features] of all of them. Each library must
+     * declare the crate types its targets need, or the build fails. [BuildMode.Individual] builds
+     * only this project's crate, with the crate types it needs.
      *
-     * Enable it in every project of the workspace, e.g. from a `subprojects` block.
+     * Use the same mode in every project of the workspace, e.g. from a `subprojects` block:
+     *
+     * ```kotlin
+     * cargo {
+     *     buildMode = BuildMode.Individual
+     * }
+     * ```
      */
-    val buildWorkspaceLibraries: Property<Boolean> =
-        project.objects.property(Boolean::class.java).convention(false)
+    val buildMode: Property<BuildMode> =
+        project.objects.property(BuildMode::class.java).convention(BuildMode.Workspace)
 
     /** Optional compiler wrapper, such as `sccache`. */
     val rustcWrapper: Property<String> = project.objects.property(String::class.java).apply {
@@ -74,8 +79,9 @@ abstract class CargoExtension(project: Project) {
 
     /**
      * Cargo features to enable for every build of the crate, passed to Cargo as `--features`.
-     * A name qualified with a package, `<package>/<feature>`, enables that dependency's feature,
-     * or in a workspace build that member's.
+     * `<dependency>/<feature>` enables a feature of one of the crate's dependencies. In
+     * [BuildMode.Workspace], bare names are qualified with the crate's package, and the features
+     * of all projects of the workspace are enabled together.
      *
      * Features for some targets only go into [compilations] instead, for example:
      *

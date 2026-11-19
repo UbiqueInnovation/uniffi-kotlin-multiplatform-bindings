@@ -1,15 +1,19 @@
 package ch.ubique.uniffi.plugin.tasks
 
+import ch.ubique.uniffi.plugin.dsl.BuildMode
 import ch.ubique.uniffi.plugin.model.BuildTarget
 import ch.ubique.uniffi.plugin.model.CrateType
+import java.nio.file.Path
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.gradle.api.GradleException
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.testfixtures.ProjectBuilder
@@ -42,6 +46,7 @@ class CargoBuildTaskTest {
                 release.set(false)
                 useCross.set(false)
                 additionalEnvironment.set([:])
+                buildMode.set(ch.ubique.uniffi.plugin.dsl.BuildMode.Individual)
             }
             tasks.register('testBindings') {
                 dependsOn tasks.named('testCargoBuild')
@@ -69,83 +74,176 @@ class CargoBuildTaskTest {
     }
 
     @Test
-    fun `crate type override is only passed when the declared crate types lack it`() {
-        val project = ProjectBuilder.builder()
-            .withProjectDir(createTempDirectory("uniffi-cargo-crate-types").toFile())
-            .build()
-        fun override(requested: Set<CrateType>, declared: Set<CrateType>?): String? {
-            val task = project.tasks.register(
-                "cargoBuild${project.tasks.size}",
-                CargoBuildTask::class.java,
-            ).get()
-            task.crateTypes.set(requested)
-            declared?.let { task.declaredCrateTypes.set(it) }
-            return task.crateTypeOverride.orNull
-        }
-
-        val all = setOf(CrateType.SystemDynamicLibrary, CrateType.SystemStaticLibrary, CrateType.Library)
-        assertNull(override(setOf(CrateType.SystemDynamicLibrary), all))
-        assertNull(override(setOf(CrateType.SystemStaticLibrary), all))
-        assertNull(override(emptySet(), setOf(CrateType.Library)))
-        assertEquals("cdylib", override(setOf(CrateType.SystemDynamicLibrary), setOf(CrateType.Library)))
-        assertEquals("cdylib", override(setOf(CrateType.SystemDynamicLibrary), null))
+    fun `an individual build passes exactly the crate types its targets need`() {
+        val crateType = "ch.ubique.uniffi.plugin.model.CrateType"
+        // Declared crate types don't matter: the crate is the root of its own build.
         assertEquals(
-            "cdylib,staticlib",
-            override(
-                setOf(CrateType.SystemStaticLibrary, CrateType.SystemDynamicLibrary),
-                setOf(CrateType.SystemDynamicLibrary),
+            listOf("rustc", "--lib", "--package", "sample", "--crate-type", "cdylib"),
+            cargoArguments(
+                "crateTypes.set([$crateType.SystemDynamicLibrary]); " +
+                    "declaredCrateTypes.set([$crateType.Library, $crateType.SystemDynamicLibrary, $crateType.SystemStaticLibrary])"
             ),
         )
+        assertEquals(
+            listOf("rustc", "--lib", "--package", "sample", "--crate-type", "cdylib,staticlib"),
+            cargoArguments("crateTypes.set([$crateType.SystemStaticLibrary, $crateType.SystemDynamicLibrary])"),
+        )
+    }
+
+    @Test
+    fun `an individual build writes the native static libs rustc reports`() {
+        val root = runCargoBuild(
+            "crateTypes.set([ch.ubique.uniffi.plugin.model.CrateType.SystemStaticLibrary]); " +
+                "nativeStaticLibsFile.set(layout.projectDirectory.file('target/debug/sample.native-static-libs'))"
+        ).root
+        assertEquals(
+            listOf("--crate-type", "staticlib", "--", "--print", "native-static-libs"),
+            root.resolve("target/arguments").toFile().readLines().takeLast(5),
+        )
+        assertEquals("-lSystem -lc", root.resolve("target/debug/sample.native-static-libs").toFile().readText())
+    }
+
+    @Test
+    fun `an individual build warns when a workspace dependency declares a cdylib`() {
+        val output = runCargoBuild("cdylibDependencies.set(['util', 'common'])").output
+        assertContains(output, "declaring crate-type cdylib: common, util")
     }
 
     @Test
     fun `features are passed to cargo`() {
-        assertEquals("first,second", cargoFeatures("['second', 'first']"))
+        assertEquals(
+            "first,second",
+            cargoArguments("features.set(['second', 'first'])").dropWhile { it != "--features" }.getOrNull(1),
+        )
     }
 
     @Test
-    fun `features are qualified with the package when workspace libraries are built together`() {
+    fun `projects building the workspace share one cargo run`() {
+        val root = createTempDirectory("uniffi-cargo-workspace")
+        val fakeBin = root.resolve("fake-bin").createDirectories()
+        val cargo = fakeBin.resolve("cargo")
+        cargo.writeText("""#!/bin/sh
+            mkdir -p "${'$'}CARGO_TARGET_DIR"
+            echo invoked >> "${'$'}CARGO_TARGET_DIR/invocations"
+            { pwd -P; printf '%s\n' "${'$'}@"; } > "${'$'}CARGO_TARGET_DIR/arguments"
+        """.trimIndent() + "\n")
+        assertTrue(cargo.toFile().setExecutable(true))
+        root.resolve("settings.gradle").writeText("rootProject.name = 'cargo-workspace-test'\ninclude 'a', 'b'\n")
+        root.resolve("a").createDirectories()
+        root.resolve("b").createDirectories()
+        root.resolve("build.gradle").writeText("""
+            plugins { id 'ch.ubique.uniffi.plugin' apply false }
+            def service = gradle.sharedServices.registerIfAbsent('cargoWorkspace', ch.ubique.uniffi.plugin.services.CargoWorkspaceService) {}
+            subprojects {
+                tasks.register('testCargoBuild', ch.ubique.uniffi.plugin.tasks.CargoBuildTask) {
+                    packageDirectory.set(layout.projectDirectory)
+                    workspaceDirectory.set(rootProject.layout.projectDirectory)
+                    workspaceService.set(service)
+                    usesService(service)
+                    cargoTargetDirectory.set(rootProject.layout.projectDirectory.dir('target'))
+                    packageName.set(project.name)
+                    libraryName.set(project.name)
+                    release.set(false)
+                    useCross.set(false)
+                    additionalEnvironment.set([:])
+                    buildMode.set(ch.ubique.uniffi.plugin.dsl.BuildMode.Workspace)
+                    workspacePackageNames.set(['a', 'b'])
+                    features.set(['b/second', 'a/first'])
+                }
+            }
+        """.trimIndent())
+
+        val result = GradleRunner.create()
+            .withProjectDir(root.toFile())
+            .withPluginClasspath()
+            .withEnvironment(System.getenv() + ("PATH" to "${fakeBin}:${System.getenv("PATH")}"))
+            .withArguments("testCargoBuild", "--parallel")
+            .build()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":a:testCargoBuild")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":b:testCargoBuild")?.outcome)
+        assertEquals(1, root.resolve("target/invocations").toFile().readLines().size)
+        val arguments = root.resolve("target/arguments").toFile().readLines()
+        assertEquals(root.toRealPath().toString(), arguments.first())
         assertEquals(
-            "other/feature,sample/first",
-            cargoFeatures("['first', '', 'other/feature']", workspacePackages = "['other']"),
+            listOf("build", "--lib", "--package", "a", "--package", "b", "--features", "a/first,b/second"),
+            arguments.drop(1),
         )
+    }
+
+    @Test
+    fun `a workspace build fails when a package lacks a required crate type`() {
+        val task = ProjectBuilder.builder().build().tasks.register("cargoBuild", CargoBuildTask::class.java).get()
+        task.packageName.set("sample")
+        task.buildMode.set(BuildMode.Workspace)
+        task.crateTypes.set(setOf(CrateType.SystemDynamicLibrary))
+        task.declaredCrateTypes.set(setOf(CrateType.Library, CrateType.SystemStaticLibrary))
+        task.workspacePackageNames.set(setOf("sample", "other"))
+
+        val error = assertFailsWith<GradleException> { task.build() }
+        assertContains(error.message.orEmpty(), "need crate-type cdylib, missing from [lib] crate-type")
     }
 
     @Test
     fun `a package built on its own only gets the features that apply to it`() {
         val project = ProjectBuilder.builder().build()
-        fun packageFeatures(workspacePackages: Set<String>?): List<String> {
+        fun packageFeatures(features: Set<String>, workspacePackages: Set<String>?): List<String> {
             val task = project.tasks.register("cargoBuild${project.tasks.size}", CargoBuildTask::class.java).get()
             task.packageName.set("sample")
-            task.features.set(setOf("first", "", "sample/own", "dependency/feature", "other/feature"))
-            workspacePackages?.let { task.workspacePackageNames.set(it) }
+            task.dependencyNames.set(setOf("dependency", "member-dependency"))
+            task.features.set(features)
+            task.buildMode.set(BuildMode.Individual)
+            workspacePackages?.let {
+                task.buildMode.set(BuildMode.Workspace)
+                task.workspacePackageNames.set(it)
+            }
             return task.packageFeatures.get()
         }
 
-        // Without a workspace build, qualified names are left to Cargo.
+        // In individual mode, the features are passed as configured and Cargo checks them.
         assertEquals(
             listOf("dependency/feature", "first", "other/feature", "sample/own"),
-            packageFeatures(null),
+            packageFeatures(setOf("first", "", "sample/own", "dependency/feature", "other/feature"), null),
         )
-        // Features of the other workspace members don't apply to this package.
+        // A workspace build has the features of all projects. Only those of this package and of
+        // its dependencies apply, including a workspace member it depends on.
         assertEquals(
-            listOf("dependency/feature", "first", "sample/own"),
-            packageFeatures(setOf("sample", "other")),
+            listOf("dependency/feature", "dependency?/weak", "member-dependency/feature", "sample/own"),
+            packageFeatures(
+                setOf(
+                    "sample/own",
+                    "dependency/feature",
+                    "dependency?/weak",
+                    "member-dependency/feature",
+                    "other/feature",
+                    "unrelated/feature",
+                ),
+                workspacePackages = setOf("sample", "other", "member-dependency"),
+            ),
         )
     }
 
     /**
-     * Runs a [CargoBuildTask] against a fake cargo and returns the value of the `--features`
-     * argument it received, if any. [features] and [workspacePackages] are Groovy list literals;
-     * [workspacePackages] is left unset when null.
+     * Runs an individual [CargoBuildTask] for the package `sample` against a fake cargo and returns
+     * the arguments it received. [configuration] is Groovy code configuring the task.
      */
-    private fun cargoFeatures(features: String, workspacePackages: String? = null): String? {
-        val root = createTempDirectory("uniffi-cargo-features")
+    private fun cargoArguments(configuration: String): List<String> =
+        runCargoBuild(configuration).root.resolve("target/arguments").toFile().readLines()
+
+    private class CargoBuild(val root: Path, val output: String)
+
+    /**
+     * Runs an individual [CargoBuildTask] for the package `sample` against a fake cargo, which
+     * reports native static libs like rustc.
+     */
+    private fun runCargoBuild(configuration: String): CargoBuild {
+        val root = createTempDirectory("uniffi-cargo-arguments")
         val fakeBin = root.resolve("fake-bin").createDirectories()
         val cargo = fakeBin.resolve("cargo")
         cargo.writeText("""#!/bin/sh
             mkdir -p "${'$'}CARGO_TARGET_DIR"
             printf '%s\n' "${'$'}@" > "${'$'}CARGO_TARGET_DIR/arguments"
+            echo 'note: native-static-libs: -lSystem -lc' >&2
         """.trimIndent() + "\n")
         assertTrue(cargo.toFile().setExecutable(true))
         root.resolve("settings.gradle").writeText("rootProject.name = 'cargo-features-test'\n")
@@ -161,21 +259,19 @@ class CargoBuildTaskTest {
                 release.set(false)
                 useCross.set(false)
                 additionalEnvironment.set([:])
-                features.set($features)
-                ${workspacePackages?.let { "workspacePackageNames.set($it)" }.orEmpty()}
+                buildMode.set(ch.ubique.uniffi.plugin.dsl.BuildMode.Individual)
+                $configuration
             }
         """.trimIndent())
 
-        GradleRunner.create()
+        val result = GradleRunner.create()
             .withProjectDir(root.toFile())
             .withPluginClasspath()
             .withEnvironment(System.getenv() + ("PATH" to "${fakeBin}:${System.getenv("PATH")}"))
             .withArguments("testCargoBuild")
             .build()
 
-        return root.resolve("target/arguments").toFile().readLines()
-            .dropWhile { it != "--features" }
-            .getOrNull(1)
+        return CargoBuild(root, result.output)
     }
 
     @Test
