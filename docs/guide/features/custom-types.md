@@ -62,6 +62,6 @@ values of fields with a custom type are converted with the `lift` expression too
 
 ## Fixtures
 
-- [`examples/custom-types`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/examples/custom-types)
-- [`tests/uniffi/defaults`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/defaults)
-- [`tests/uniffi/ext-types/custom-types`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/ext-types/custom-types)
+- [`examples/custom-types`](https://github.com/UbiqueInnovation/oxikt/tree/main/examples/custom-types)
+- [`tests/uniffi/defaults`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/defaults)
+- [`tests/uniffi/ext-types/custom-types`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/ext-types/custom-types)

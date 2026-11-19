@@ -177,8 +177,8 @@ implements `Disposable`, and its `destroy()` releases the objects it holds.
 
 ## Fixtures
 
-- [`tests/uniffi/enum-types`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/enum-types)
-- [`tests/uniffi/struct-default-values`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/struct-default-values)
-- [`tests/uniffi/defaults`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/defaults)
-- [`tests/uniffi/mutable-records`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/mutable-records)
-- [`tests/uniffi/trait-methods`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/trait-methods)
+- [`tests/uniffi/enum-types`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/enum-types)
+- [`tests/uniffi/struct-default-values`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/struct-default-values)
+- [`tests/uniffi/defaults`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/defaults)
+- [`tests/uniffi/mutable-records`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/mutable-records)
+- [`tests/uniffi/trait-methods`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/trait-methods)

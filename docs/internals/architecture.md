@@ -8,7 +8,7 @@ graph LR
     bindgen["<b>Bindgen</b><br/>bindgen/"]
     runtime["<b>Runtime</b><br/>runtime/"]
     plugin -->|"cargo install, then runs it"| bindgen
-    bindgen -->|"generated code imports uniffi.runtime.*"| runtime
+    bindgen -->|"generated code imports dev.oxikt.runtime.*"| runtime
     plugin -->|"adds as commonMain dependency"| runtime
 ```
 
@@ -16,7 +16,7 @@ graph LR
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Gradle plugin | Installs the bindgen, builds the Rust crate per target, runs the bindgen, and wires generated sources, headers and libraries into the Kotlin source sets.                                                                                                                                                                                                                                                                 |
 | Bindgen       | A `uniffi_bindgen::BindingGenerator` plus askama templates. Writes Kotlin for four source sets and C headers.                                                                                                                                                                                                                                                                                                             |
-| Runtime       | Kotlin shared by every crate, plus a small Rust library of its own. That library allocates every `RustBuffer` Kotlin passes to Rust, so a buffer can go to any crate. This is what makes multi-module builds work. In addition, the common code lives here too: `FfiConverter`, `RustBuffer`, `UniffiHandleMap`, the cleaner, the async helpers, converters for primitive types. Published as `ch.ubique.uniffi:runtime`. |
+| Runtime       | Kotlin shared by every crate, plus a small Rust library of its own. That library allocates every `RustBuffer` Kotlin passes to Rust, so a buffer can go to any crate. This is what makes multi-module builds work. In addition, the common code lives here too: `FfiConverter`, `RustBuffer`, `UniffiHandleMap`, the cleaner, the async helpers, converters for primitive types. Published as `dev.oxikt:runtime`. |
 
 The plugin and the runtime are released together with the same version. The bindgen is installed
 from source by `cargo install`, see [Gradle plugin](gradle-plugin.md#installing-the-bindgen).

@@ -162,8 +162,8 @@ Any call that reaches the Rust side through such an instance fails.
 
 ## Fixtures
 
-- [`tests/uniffi/simple-fns`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/simple-fns)
-- [`tests/uniffi/simple-iface`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/simple-iface)
-- [`tests/uniffi/proc-macro`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/proc-macro)
-- [`tests/uniffi/defaults`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/defaults)
-- [`tests/uniffi/coverall`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/coverall)
+- [`tests/uniffi/simple-fns`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/simple-fns)
+- [`tests/uniffi/simple-iface`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/simple-iface)
+- [`tests/uniffi/proc-macro`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/proc-macro)
+- [`tests/uniffi/defaults`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/defaults)
+- [`tests/uniffi/coverall`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/coverall)

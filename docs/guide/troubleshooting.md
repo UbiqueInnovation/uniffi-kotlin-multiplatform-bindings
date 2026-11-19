@@ -69,7 +69,7 @@ one of your crates, or a dependency, sets a `#[global_allocator]`. That isn't su
 
 **The process aborts (exit code 134) when Rust calls a Kotlin callback**: most likely a Kotlin
 implementation of a trait from another module's crate was passed across modules. See
-[Multi-module projects](features/multi-module.md#limitations) and [#35](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/35).
+[Multi-module projects](features/multi-module.md#limitations) and [#35](https://github.com/UbiqueInnovation/oxikt/issues/35).
 
 ## Swift interop with spmForKmp
 
@@ -82,7 +82,7 @@ conflicted with this plugin's cinterop.
 plugins {
     kotlin("multiplatform")
     id("io.github.frankois944.spmForKmp") version "1.9.5"
-    id("ch.ubique.uniffi.plugin")
+    id("dev.oxikt.gradle.plugin")
 }
 
 kotlin {
@@ -99,8 +99,8 @@ If you're stuck on spmForKmp older than `1.9.5`, add this workaround to the buil
 cinterop back at its own def file after spmForKmp has reconfigured it:
 
 ```kotlin
-import ch.ubique.uniffi.plugin.tasks.GenerateDefFileTask
-import ch.ubique.uniffi.plugin.tasks.GenerateDummyDefFileTask
+import dev.oxikt.gradle.plugin.tasks.GenerateDefFileTask
+import dev.oxikt.gradle.plugin.tasks.GenerateDummyDefFileTask
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 afterEvaluate {
@@ -137,19 +137,5 @@ fun uniffiDefFileFor(targetName: String): Provider<RegularFile> {
 }
 ```
 
-See [`examples/swift-interop`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/examples/swift-interop)
+See [`examples/swift-interop`](https://github.com/UbiqueInnovation/oxikt/tree/main/examples/swift-interop)
 for a module that calls both Rust and Swift.
-
-## Migrating
-
-**From 1.0.x**: Android moved to the Android Kotlin Multiplatform library plugin and AGP 9, see
-[Targets](targets.md#android). The `macosX64` Kotlin/Native target was removed. `kotlinx-datetime`
-is no longer added, and the bindings use `kotlin.time.Instant` and `kotlin.time.Duration`.
-
-**From 1.1.x (UniFFI 0.28)**: version 1.2.0 moved to UniFFI 0.32. Update your crate's `uniffi`
-dependency to `0.32.0`. The marker for fake objects is now `NoHandle` (was `NoPointer`). See
-UniFFI's own changelog for the Rust-side changes, for example `use_remote_type!` replacing
-`use_udl_record!` and friends.
-
-The full list of changes is in the
-[changelog](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/blob/main/CHANGELOG.md).

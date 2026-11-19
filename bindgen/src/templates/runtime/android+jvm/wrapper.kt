@@ -12,7 +12,7 @@
 )
 package {{ config.package_name() }}
 
-import uniffi.runtime.*
+import dev.oxikt.runtime.*
 import com.sun.jna.Native
 import com.sun.jna.Library
 

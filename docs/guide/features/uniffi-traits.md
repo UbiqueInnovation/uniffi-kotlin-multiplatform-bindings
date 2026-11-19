@@ -62,4 +62,4 @@ explicit discriminants if there are any.
 
 ## Fixtures
 
-- [`tests/uniffi/trait-methods`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/trait-methods)
+- [`tests/uniffi/trait-methods`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/trait-methods)

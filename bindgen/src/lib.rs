@@ -66,7 +66,7 @@ impl BindingGenerator for KotlinBindingGenerator {
         for c in &mut *components {
             c.config
                 .package_name
-                .get_or_insert_with(|| format!("uniffi.{}", c.ci.namespace()));
+                .get_or_insert_with(|| format!("dev.oxikt.{}", c.ci.namespace()));
             c.config.cdylib_name.get_or_insert_with(|| {
                 settings
                     .cdylib

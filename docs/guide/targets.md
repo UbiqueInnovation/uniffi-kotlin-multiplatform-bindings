@@ -58,7 +58,7 @@ AR_x86_64_unknown_linux_gnu=x86_64-linux-gnu-ar
 CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
 ```
 
-See [`.github/workflows/publish.yml`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/blob/main/.github/workflows/publish.yml)
+See [`.github/workflows/publish.yml`](https://github.com/UbiqueInnovation/oxikt/blob/main/.github/workflows/publish.yml)
 for the full set. Alternatively, a target can be built with
 [`cross`](https://github.com/cross-rs/cross):
 
@@ -69,7 +69,7 @@ cargo {
 ```
 
 For a JVM-only project, see
-[`examples/jvm-only`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/examples/jvm-only).
+[`examples/jvm-only`](https://github.com/UbiqueInnovation/oxikt/tree/main/examples/jvm-only).
 
 ## Android
 
@@ -80,7 +80,7 @@ to the Kotlin Multiplatform plugin and configure Android inside `kotlin { }`:
 plugins {
     kotlin("multiplatform")
     id("com.android.kotlin.multiplatform.library") version "9.3.1"
-    id("ch.ubique.uniffi.plugin") version "1.3.0"
+    id("dev.oxikt.gradle.plugin") version "1.4.0"
 }
 
 kotlin {
@@ -144,7 +144,7 @@ Apple targets can only be built on macOS. If the same build script also runs on 
 CI, guard them:
 
 ```kotlin
-import ch.ubique.uniffi.plugin.model.RustHost
+import dev.oxikt.gradle.plugin.model.RustHost
 
 kotlin {
     if (RustHost.Platform.MacOS.isCurrent) {
@@ -162,7 +162,7 @@ and fails to link the Rust objects. `useRustUpLinker()` makes a compilation link
 that ships with your active Rust toolchain instead:
 
 ```kotlin
-import ch.ubique.uniffi.plugin.extensions.useRustUpLinker
+import dev.oxikt.gradle.plugin.extensions.useRustUpLinker
 
 kotlin {
     mingwX64 {

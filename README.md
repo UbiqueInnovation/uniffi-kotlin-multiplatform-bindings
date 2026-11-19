@@ -1,22 +1,32 @@
-# UniFFI Kotlin Multiplatform Bindings
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.png" />
+    <img alt="OxiKT" src="docs/assets/logo.png" width="250" />
+  </picture>
+</p>
 
 <p align="center">
-  <a href="https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/actions/workflows/run-tests.yml">
-    <img alt="Run all tests" src="https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/actions/workflows/run-tests.yml/badge.svg?branch=main" />
+  <a href="https://github.com/UbiqueInnovation/oxikt/actions/workflows/run-tests.yml">
+    <img alt="Run all tests" src="https://github.com/UbiqueInnovation/oxikt/actions/workflows/run-tests.yml/badge.svg?branch=main" />
   </a>
-  <a href="https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/actions/workflows/publish.yml">
-    <img alt="Publish to Maven Central" src="https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/actions/workflows/publish.yml/badge.svg" />
+  <a href="https://github.com/UbiqueInnovation/oxikt/actions/workflows/publish.yml">
+    <img alt="Publish to Maven Central" src="https://github.com/UbiqueInnovation/oxikt/actions/workflows/publish.yml/badge.svg" />
   </a>
-  <a href="https://central.sonatype.com/artifact/ch.ubique.uniffi/runtime">
-    <img alt="Maven Central Version" src="https://img.shields.io/maven-central/v/ch.ubique.uniffi/runtime" />
+  <a href="https://central.sonatype.com/artifact/dev.oxikt/runtime">
+    <img alt="Maven Central Version" src="https://img.shields.io/maven-central/v/dev.oxikt/runtime" />
   </a>
 </p>
 
-Kotlin Multiplatform binding generator for Rust libraries using Mozilla's [UniFFI](https://github.com/mozilla/uniffi-rs).
+OxiKT (/ˈɒksɪk/) is a Kotlin Multiplatform binding generator for Rust libraries using Mozilla's
+[UniFFI](https://github.com/mozilla/uniffi-rs).
 
-**Documentation: https://ubiqueinnovation.github.io/uniffi-kotlin-multiplatform-bindings/**, with a
-[user guide](https://ubiqueinnovation.github.io/uniffi-kotlin-multiplatform-bindings/guide/getting-started/)
-and a description of the [internals](https://ubiqueinnovation.github.io/uniffi-kotlin-multiplatform-bindings/internals/).
+**Documentation: https://docs.oxikt.dev/**, with a
+[user guide](https://docs.oxikt.dev/guide/getting-started/)
+and a description of the [internals](https://docs.oxikt.dev/internals/).
+
+Up to version 1.3.5, OxiKT was called UniFFI Kotlin Multiplatform Bindings and published under
+`ch.ubique.uniffi`. See the [migration guide](https://docs.oxikt.dev/guide/migrating/) for how to
+upgrade.
 
 ## Quickstart
 
@@ -53,7 +63,7 @@ Next, add the gradle plugin to your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("ch.ubique.uniffi.plugin") version "1.3.0"
+    id("dev.oxikt.gradle.plugin") version "1.4.0"
 }
 ```
 
@@ -109,7 +119,7 @@ Android support is built on the Android Kotlin Multiplatform library plugin, so 
 plugins {
     kotlin("multiplatform")
     id("com.android.kotlin.multiplatform.library") version "9.3.1"
-    id("ch.ubique.uniffi.plugin") version "1.3.0"
+    id("dev.oxikt.gradle.plugin") version "1.4.0"
 }
 
 kotlin {
@@ -146,9 +156,9 @@ cargo {
 
 ## Status
 
-This project provides a Gradle plugin and a binding generator for Rust libraries using UniFFI. This project is production-ready, but might be still a bit rough around the edges. If you encounter any issues, please report them in the [issue tracker](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues). Currently `uniffi-rs` version `0.32.0` is supported. See the [HEIDI SDK](https://github.com/heidiverse/heidi-sdk) for an example of this project in production.
+This project provides a Gradle plugin and a binding generator for Rust libraries using UniFFI. This project is production-ready, but might be still a bit rough around the edges. If you encounter any issues, please report them in the [issue tracker](https://github.com/UbiqueInnovation/oxikt/issues). Currently `uniffi-rs` version `0.32.0` is supported. See the [HEIDI SDK](https://github.com/heidiverse/heidi-sdk) for an example of this project in production.
 
-If you're coming from [Uniffi Kotlin Multiplatform Bindings by Trixnity](https://gitlab.com/trixnity/uniffi-kotlin-multiplatform-bindings), then by now a lot has changed. The `ch.ubique.uniffi.plugin` replaces the Cargo plugin (`io.gitlab.trixnity.cargo.kotlin.multiplatform`), UniFFI plugin (`io.gitlab.trixnity.uniffi.kotlin.multiplatform`), and Rust plugin (`io.gitlab.trixnity.rust.kotlin.multiplatform`). The new plugin provides a unified DSL for all configuration much faster configuration and build logic execution. If you're looking for and upgrade to the trixnity plugin, check out the `v0.7.0` release, which was the last release before the rewrite.
+If you're coming from [Uniffi Kotlin Multiplatform Bindings by Trixnity](https://gitlab.com/trixnity/uniffi-kotlin-multiplatform-bindings), then by now a lot has changed. The `dev.oxikt.gradle.plugin` replaces the Cargo plugin (`io.gitlab.trixnity.cargo.kotlin.multiplatform`), UniFFI plugin (`io.gitlab.trixnity.uniffi.kotlin.multiplatform`), and Rust plugin (`io.gitlab.trixnity.rust.kotlin.multiplatform`). The new plugin provides a unified DSL for all configuration much faster configuration and build logic execution. If you're looking for and upgrade to the trixnity plugin, check out the `v0.7.0` release, which was the last release before the rewrite.
 
 Alternatively, [Gobley](https://github.com/gobley/gobley) is another fork which is more similar to the original trixnity plugin, and might support newer versions of `uniffi-rs`. What sets this project apart is the [Multi Module Support](#multi-module-support) feature, which allows you to write modular and composable rust code and bindings.
 
@@ -156,7 +166,7 @@ Alternatively, [Gobley](https://github.com/gobley/gobley) is another fork which 
 
 ### Multi Module Support
 
-Multi Module Support allows you to write modular and composable rust code and bindings. This means you can create a set of modules, each with their own rust code and bindings, and then freely share objects between them without additional memory overhead. There is no special configuration required to use this feature, just create multiple modules, apply the plugin to each of them, and make sure to add the `Uniffi Runtime` as a dependency to each module. For more information on how to use this feature, check out the [multi-module test](tests/uniffi/multi-module/).
+Multi Module Support allows you to write modular and composable rust code and bindings. This means you can create a set of modules, each with their own rust code and bindings, and then freely share objects between them without additional memory overhead. There is no special configuration required to use this feature, just create multiple modules, apply the plugin to each of them, and make sure to add the OxiKT runtime as a dependency to each module. For more information on how to use this feature, check out the [multi-module test](tests/uniffi/multi-module/).
 
 ### External Types
 
@@ -254,7 +264,7 @@ In addition, `net.java.dev.jna:jna` `5.19.1` is added to the `jvmMain`, `android
 
 ### Manual runtime management
 
-To make the multi-module support work, the `Uniffi Runtime` is required as a dependency. By default, the plugin will automatically add the `Uniffi Runtime` as a dependency to your project, but you can disable this if you want to manage the runtime yourself:
+To make the multi-module support work, the OxiKT runtime (`dev.oxikt:runtime`) is required as a dependency. By default, the plugin will automatically add the runtime as a dependency to your project, but you can disable this if you want to manage the runtime yourself:
 
 ```kotlin
 uniffi {
