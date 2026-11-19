@@ -31,6 +31,12 @@
 - In individual mode, the build of a static library writes the linker options of its native
   dependencies to `<library name>.native-static-libs` next to it, and Kotlin/Native targets read
   them from there instead of building the crate a second time.
+- On the JVM, the bindings load the library bundled on the classpath by its absolute path instead
+  of by its name. JNA looks a name up in the library search paths before the classpath, and on
+  macOS and Windows these include the working directory, so a library with the same name placed
+  there was loaded instead of the bundled one. `uniffi.component.<namespace>.libraryOverride` still
+  takes precedence. On Android, or without a bundled library for the platform, the library is
+  looked up by name as before.
 
 ### Fixed
 

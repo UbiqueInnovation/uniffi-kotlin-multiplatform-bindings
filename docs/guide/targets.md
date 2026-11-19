@@ -44,9 +44,10 @@ kotlin {
 ```
 
 The dynamic libraries are copied into the `jvmMain` resources under JNA's platform prefix (for
-example `darwin-aarch64/libfoo.dylib`), so JNA finds them on the classpath at runtime. To load a
-different library file instead, set the system property
-`uniffi.component.<namespace>.libraryOverride` to its name or path.
+example `darwin-aarch64/libfoo.dylib`). At runtime the bindings load the library from the classpath
+by its absolute path, so a library with the same name in the working directory or on the library
+search path is not loaded in its place. To load a different library file instead, set the system
+property `uniffi.component.<namespace>.libraryOverride` to its name or path.
 
 For a release build, Cargo needs a C toolchain and linker for each foreign platform. On macOS,
 the CI uses [`messense/macos-cross-toolchains`](https://github.com/messense/homebrew-macos-cross-toolchains)

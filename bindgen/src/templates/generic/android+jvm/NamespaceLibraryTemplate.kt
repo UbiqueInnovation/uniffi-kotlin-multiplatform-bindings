@@ -63,28 +63,13 @@ internal typealias {{ ffi_struct.name()|ffi_struct_name }}UniffiByValue = {{ ffi
 {%- endmatch %}
 {%- endfor %}
 
-@Synchronized
-private fun findLibraryName(componentName: String): String {
-    val libOverride = System.getProperty("uniffi.component.$componentName.libraryOverride")
-    if (libOverride != null) {
-        return libOverride
-    }
-    return "{{ config.cdylib_name() }}"
-}
-
-private inline fun <reified Lib : Library> loadIndirect(
-    componentName: String
-): Lib {
-    return Native.load<Lib>(findLibraryName(componentName), Lib::class.java)
-}
-
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
 internal interface UniffiLib : Library {
     companion object {
         internal val INSTANCE: UniffiLib by lazy {
-            loadIndirect<UniffiLib>(componentName = "{{ ci.namespace() }}")
+            uniffiLoadLibrary("{{ ci.namespace() }}", "{{ config.cdylib_name() }}", UniffiLib::class.java)
             .also { lib: UniffiLib ->
                 uniffiCheckContractApiVersion(lib)
                 {%- if !config.omit_checksums() %}
