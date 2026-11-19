@@ -46,7 +46,7 @@ as return values or callback arguments.
 
 ## Fixtures
 
-- [`tests/uniffi/coverall`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/coverall)
-- [`tests/uniffi/chronological`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/chronological)
-- [`tests/uniffi/type-limits`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/type-limits)
-- [`tests/uniffi/borrowed-bytes`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/borrowed-bytes)
+- [`tests/uniffi/coverall`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/coverall)
+- [`tests/uniffi/chronological`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/chronological)
+- [`tests/uniffi/type-limits`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/type-limits)
+- [`tests/uniffi/borrowed-bytes`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/borrowed-bytes)

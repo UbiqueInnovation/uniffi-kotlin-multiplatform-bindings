@@ -53,4 +53,4 @@ The runtime ships consumer rules for R8. They keep JNA itself, and every member 
 extend or implement JNA types, which covers the generated library interface, structures and
 callbacks. A minified Android app doesn't need extra rules. If you disable `addRuntime`, copy the
 rules from
-[`runtime/consumer-rules.pro`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/blob/main/runtime/consumer-rules.pro).
+[`runtime/consumer-rules.pro`](https://github.com/UbiqueInnovation/oxikt/blob/main/runtime/consumer-rules.pro).

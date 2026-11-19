@@ -54,4 +54,4 @@ Multiplatform Bindings as well, and published under `ch.ubique.uniffi`. See
 
 This project is used in production, for example in the [Kapun SDK](https://github.com/KapunSDK/kapun-sdk).
 Please report problems in the
-[issue tracker](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues).
+[issue tracker](https://github.com/UbiqueInnovation/oxikt/issues).

@@ -138,7 +138,7 @@ matches headers by content, so a crate's klib reuses the runtime's `RustBuffer`,
 `UniffiRustCallStatus` and builtins instead of declaring its own. Otherwise every klib declares
 `cinterop.RustBuffer` again, and linking with Kotlin 2.4.20 fails with
 `IrClassSymbolImpl is already bound`
-([#29](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/29)).
+([#29](https://github.com/UbiqueInnovation/oxikt/issues/29)).
 **Keep `common.h` independent of the crate.**
 
 JVM and Android don't use the headers. They declare the same structures as JNA classes in

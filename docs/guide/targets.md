@@ -58,7 +58,7 @@ AR_x86_64_unknown_linux_gnu=x86_64-linux-gnu-ar
 CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
 ```
 
-See [`.github/workflows/publish.yml`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/blob/main/.github/workflows/publish.yml)
+See [`.github/workflows/publish.yml`](https://github.com/UbiqueInnovation/oxikt/blob/main/.github/workflows/publish.yml)
 for the full set. Alternatively, a target can be built with
 [`cross`](https://github.com/cross-rs/cross):
 
@@ -69,7 +69,7 @@ cargo {
 ```
 
 For a JVM-only project, see
-[`examples/jvm-only`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/examples/jvm-only).
+[`examples/jvm-only`](https://github.com/UbiqueInnovation/oxikt/tree/main/examples/jvm-only).
 
 ## Android
 

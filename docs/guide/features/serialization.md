@@ -58,4 +58,4 @@ skip_serializer_for = ["Session", "Cursor"]
 
 ## Fixtures
 
-- [`tests/uniffi/serialization`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/serialization)
+- [`tests/uniffi/serialization`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/serialization)

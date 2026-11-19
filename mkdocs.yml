@@ -1,7 +1,7 @@
 site_name: OxiKT
 site_description: Kotlin Multiplatform bindings for Rust libraries using Mozilla's UniFFI.
 site_url: https://docs.oxikt.dev/
-repo_url: https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings
+repo_url: https://github.com/UbiqueInnovation/oxikt
 edit_uri: blob/main/docs/
 docs_dir: docs
 exclude_docs: |

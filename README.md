@@ -6,11 +6,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/actions/workflows/run-tests.yml">
-    <img alt="Run all tests" src="https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/actions/workflows/run-tests.yml/badge.svg?branch=main" />
+  <a href="https://github.com/UbiqueInnovation/oxikt/actions/workflows/run-tests.yml">
+    <img alt="Run all tests" src="https://github.com/UbiqueInnovation/oxikt/actions/workflows/run-tests.yml/badge.svg?branch=main" />
   </a>
-  <a href="https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/actions/workflows/publish.yml">
-    <img alt="Publish to Maven Central" src="https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/actions/workflows/publish.yml/badge.svg" />
+  <a href="https://github.com/UbiqueInnovation/oxikt/actions/workflows/publish.yml">
+    <img alt="Publish to Maven Central" src="https://github.com/UbiqueInnovation/oxikt/actions/workflows/publish.yml/badge.svg" />
   </a>
   <a href="https://central.sonatype.com/artifact/dev.oxikt/runtime">
     <img alt="Maven Central Version" src="https://img.shields.io/maven-central/v/dev.oxikt/runtime" />
@@ -156,7 +156,7 @@ cargo {
 
 ## Status
 
-This project provides a Gradle plugin and a binding generator for Rust libraries using UniFFI. This project is production-ready, but might be still a bit rough around the edges. If you encounter any issues, please report them in the [issue tracker](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues). Currently `uniffi-rs` version `0.32.0` is supported. See the [HEIDI SDK](https://github.com/heidiverse/heidi-sdk) for an example of this project in production.
+This project provides a Gradle plugin and a binding generator for Rust libraries using UniFFI. This project is production-ready, but might be still a bit rough around the edges. If you encounter any issues, please report them in the [issue tracker](https://github.com/UbiqueInnovation/oxikt/issues). Currently `uniffi-rs` version `0.32.0` is supported. See the [HEIDI SDK](https://github.com/heidiverse/heidi-sdk) for an example of this project in production.
 
 If you're coming from [Uniffi Kotlin Multiplatform Bindings by Trixnity](https://gitlab.com/trixnity/uniffi-kotlin-multiplatform-bindings), then by now a lot has changed. The `dev.oxikt.gradle.plugin` replaces the Cargo plugin (`io.gitlab.trixnity.cargo.kotlin.multiplatform`), UniFFI plugin (`io.gitlab.trixnity.uniffi.kotlin.multiplatform`), and Rust plugin (`io.gitlab.trixnity.rust.kotlin.multiplatform`). The new plugin provides a unified DSL for all configuration much faster configuration and build logic execution. If you're looking for and upgrade to the trixnity plugin, check out the `v0.7.0` release, which was the last release before the rewrite.
 

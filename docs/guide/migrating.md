@@ -1,7 +1,7 @@
 # Migrating
 
 The full list of changes is in the
-[changelog](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/blob/main/CHANGELOG.md).
+[changelog](https://github.com/UbiqueInnovation/oxikt/blob/main/CHANGELOG.md).
 
 ## From 1.3.x: OxiKT
 

@@ -58,4 +58,4 @@ In UDL, a type from a third-party crate that you describe yourself needs the `[R
 
 ## Fixtures
 
-- [`tests/uniffi/ext-types`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/ext-types)
+- [`tests/uniffi/ext-types`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/ext-types)

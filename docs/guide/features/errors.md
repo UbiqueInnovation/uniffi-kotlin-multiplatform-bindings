@@ -110,6 +110,6 @@ declared error type.
 
 ## Fixtures
 
-- [`tests/uniffi/error-types`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/error-types)
-- [`tests/uniffi/interface-throws`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/interface-throws)
-- [`tests/uniffi/coverall`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/tests/uniffi/coverall)
+- [`tests/uniffi/error-types`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/error-types)
+- [`tests/uniffi/interface-throws`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/interface-throws)
+- [`tests/uniffi/coverall`](https://github.com/UbiqueInnovation/oxikt/tree/main/tests/uniffi/coverall)

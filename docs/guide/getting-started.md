@@ -1,7 +1,7 @@
 # Getting started
 
 This page builds a minimal Kotlin Multiplatform library with one Rust function. It mirrors
-[`examples/quickstart`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/examples/quickstart),
+[`examples/quickstart`](https://github.com/UbiqueInnovation/oxikt/tree/main/examples/quickstart),
 which you can also use as a starting point.
 
 This guide follows the convention used throughout this repository: the crate's `Cargo.toml` sits

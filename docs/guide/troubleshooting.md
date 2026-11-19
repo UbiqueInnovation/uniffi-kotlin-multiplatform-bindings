@@ -69,7 +69,7 @@ one of your crates, or a dependency, sets a `#[global_allocator]`. That isn't su
 
 **The process aborts (exit code 134) when Rust calls a Kotlin callback**: most likely a Kotlin
 implementation of a trait from another module's crate was passed across modules. See
-[Multi-module projects](features/multi-module.md#limitations) and [#35](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/issues/35).
+[Multi-module projects](features/multi-module.md#limitations) and [#35](https://github.com/UbiqueInnovation/oxikt/issues/35).
 
 ## Swift interop with spmForKmp
 
@@ -137,5 +137,5 @@ fun uniffiDefFileFor(targetName: String): Provider<RegularFile> {
 }
 ```
 
-See [`examples/swift-interop`](https://github.com/UbiqueInnovation/uniffi-kotlin-multiplatform-bindings/tree/main/examples/swift-interop)
+See [`examples/swift-interop`](https://github.com/UbiqueInnovation/oxikt/tree/main/examples/swift-interop)
 for a module that calls both Rust and Swift.
