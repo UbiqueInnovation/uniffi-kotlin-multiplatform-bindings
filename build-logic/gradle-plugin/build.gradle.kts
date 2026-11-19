@@ -93,6 +93,15 @@ mavenPublishing {
     }
 }
 
+// The publish workflow stages the plugin and the runtime here, and uploads both as one Maven
+// Central deployment.
+providers.gradleProperty("stagingRepository").orNull?.let { stagingRepository ->
+    publishing.repositories.maven {
+        name = "staging"
+        url = uri(stagingRepository)
+    }
+}
+
 private fun getProjectVersion(): String {
     val versionFromGradleProperties = property("VERSION").toString()
     val versionFromWorkflow = runCatching { property("githubRefName").toString().removePrefix("v") }.getOrNull()
